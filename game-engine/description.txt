@@ -1,0 +1,16 @@
+Game Engine (C++ library)
+
+Pure logic:
+
+board
+
+piece
+
+collision
+
+line clear
+
+scoring
+
+
+(No sockets. No database. No JSON.)

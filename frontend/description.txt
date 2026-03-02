@@ -1,0 +1,37 @@
+Frontend (React + Three.js)
+
+Handles:
+
+auth UI (login/register, JWT handling)
+
+profile pages
+
+friends list UI
+
+
+tournament pages (create/join/view)
+
+leaderboard page
+
+match history page
+
+lobby (create/join game)
+
+
+WebSocket connection to C++ game server
+
+input handling (keyboard → server events)
+
+realtime state rendering (board, opponent board)
+
+
+Three.js scene setup (camera, lights, meshes)
+
+game UI overlay (score, timer, status)
+
+
+routing (protected routes)
+
+global state management (auth, match state)
+
+error + reconnect handling
