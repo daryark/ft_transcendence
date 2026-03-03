@@ -1,4 +1,4 @@
-Game Engine (C++ library)
+Game Engine (JavaScript)
 
 Pure logic:
 
@@ -11,6 +11,3 @@ collision
 line clear
 
 scoring
-
-
-(No sockets. No database. No JSON.)

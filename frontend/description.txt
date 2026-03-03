@@ -18,16 +18,14 @@ match history page
 lobby (create/join game)
 
 
-WebSocket connection to C++ game server
+WebSocket connection to Node.js game server
 
 input handling (keyboard → server events)
 
 realtime state rendering (board, opponent board)
 
 
-Three.js scene setup (camera, lights, meshes)
-
-game UI overlay (score, timer, status)
+game UI (score, timer, status)
 
 
 routing (protected routes)
