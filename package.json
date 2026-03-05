@@ -1,0 +1,32 @@
+{
+  "name": "ft_transcendence",
+  "version": "1.0.0",
+  "description": "A distributed multiplayer Tetris platform with a C++ game engine handling match logic, a Node.js backend for auth and data, and a React/Three.js frontend for real-time gameplay.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "start": "node backend/server/index.js",
+    "dev": "nodemon backend/server/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/daryark/ft_transcendence.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/daryark/ft_transcendence/issues"
+  },
+  "homepage": "https://github.com/daryark/ft_transcendence#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "socket.io": "^4.8.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
