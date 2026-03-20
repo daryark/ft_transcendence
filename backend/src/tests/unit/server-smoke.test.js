@@ -1,0 +1,5 @@
+describe('smoke', () => {
+    it('dummy test passes', () => {
+        expect(1 + 1).toBe(2);
+    });
+});
