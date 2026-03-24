@@ -1,0 +1,5 @@
+FROM	alpine:3.20
+
+RUN	apk update && apk upgrade
+
+EXPOSE	443

@@ -1,5 +1,83 @@
 services:
   nginx:
-    image: nginx: latest
+    build:
+      context: .
+      dockerfile: backend/services/nginx/Dockerfile
+    container_name: nginx
+    depends_on:
+      - backend
     ports:
       - "443:443"
+    networks:
+      - trancendence
+    #volumes:
+    #  - ./requirements/nginx/conf/:/etc/nginx/http.d/
+    #  - ./requirements/nginx/tools/:/etc/nginx/ssl/
+    #  - wp-volume:/var/www/
+    restart: always
+
+ # mariadb:
+  #  build:
+  #    context: .
+  #    dockerfile: requirements/mariadb/Dockerfile
+      #args:
+      #  DB_NAME: ${DB_NAME}
+      #  DB_USER: ${DB_USER}
+      #  DB_PASS: ${DB_PASS}
+      #  DB_ROOT: ${DB_ROOT}
+   # container_name: mariadb
+   # ports:
+   #   - "3306:3306"
+   # networks:
+   #   - trancendence
+   # volumes:
+   #   - db-volume:/var/lib/mysql
+   # restart: always
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      #args:
+      #  DB_NAME: ${DB_NAME}
+      #  DB_USER: ${DB_USER}
+      #  DB_PASS: ${DB_PASS}
+    container_name: backend
+   #depends_on:
+    #  - mariadb
+    ports:
+      - "3000:3000"
+    networks:
+      - trancendence
+    #volumes:
+    #  - wp-volume:/var/www/
+    restart: always
+
+  #redis:
+  #  build:
+  #    context: .
+  #    dockerfile: requirements/bonus/redis/Dockerfile
+  #  container_name: redis
+  #  ports:
+  #    - "6379:6379"
+  #  networks:
+  #    - trancendence
+  #  restart: always
+
+#volumes:
+#  wp-volume:
+#    driver_opts:
+#      o: bind
+#      type: none
+#      device: /home/${USER}/data/wordpress
+
+#  db-volume:
+#    driver_opts:
+#      o: bind
+#      type: none
+#      device: /home/${USER}/data/mariadb
+# o(option): bind mount allows to specify the directory on machine where to save, instead of default. type: none - default type file system
+
+networks:
+  trancendence:
+    driver: bridge

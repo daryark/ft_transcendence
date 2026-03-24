@@ -1,5 +1,8 @@
-FROM debian:latest
+FROM nginx:latest
 
-RUN apt-get update && apt-get install -y ngnix openssl
+
 RUN rm /etc/nginx/nginx.conf
-COPY ./nginx.conf /etc/nginx/
+COPY backend/services/nginx/nginx.conf /etc/nginx/nginx.conf
+COPY frontend/index.html /usr/share/nginx/html/
+
+EXPOSE 80
