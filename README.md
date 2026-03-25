@@ -18,11 +18,10 @@ Resources will be added in the process of work under the project.
 
 ## Main plan:
 
-- Web: Use frameworks (frontend + backend = 2pts) + ORM (1pt) = 3 points
+- Web: Use frameworks (frontend + backend = 2pts) + ORM (1pt) + Allow users to interact with other users->chat (2 pts) = 5 points
 - Accessibility and Internationalization: 3 browsers supoport (1pt) = 1 point
 - Gaming and user experience: Web-based game (2pts) + Remote players (2pts) + Multiplayer (2pts) + Game customization (1pt) + Spectator mode (1pt)  = 8 points
 - User Management: Standard user management (2pts) + OAuth (1pt) + Game statistics (1pt) = 4 points
-- DevOps: Backend as microservices (2pts) = 2 points  
 
 #### Total points: 3 + 1 + 8 + 4 + 2 = 18 points
 
@@ -36,9 +35,9 @@ Resources will be added in the process of work under the project.
 - User Management: + Advanced permission system (2pts) = 2 points
 - Artificial Intelligence: AI Opponent (2pts) = 2 points
 - Cybersecurity: WAF/ModSecurity and HashiCorp Vault (2pts) = 2 points
-- DevOps: ELK (2pts) + Prometheus and Grafana (2pts) = 4 points  
+- DevOps: ELK (2pts) + Prometheus and Grafana (2pts) + Backend as microservices (2pts) = 6 points
 
-##### Total points: 3 + 2 + 6 + 2 + 2 + 2 + 4 = 21 points
+##### Total points: 3 + 2 + 6 + 2 + 2 + 2 + 6 = 23 points
 
 ## IV.1 Web
 #### Major: Use a framework for both the frontend and backend. +  
