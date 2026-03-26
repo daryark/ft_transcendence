@@ -1,3 +1,5 @@
+const roomManager = require('./game/rooms/roomManager');
+
 module.exports = function registerSocketHandlers(io) {
     io.on('connection', (socket) => {
         console.log('socket connected:', socket.id);
@@ -8,9 +10,13 @@ module.exports = function registerSocketHandlers(io) {
 
             socket.on('join_room', (roomId) => {
             socket.join(roomId);
+
+            roomManager.addPlayerToRoom(roomId, socket.id);
+
             console.log(`Socket ${socket.id} joined room ${roomId}`);
-});
-        });
+            console.log('ROOM STATE:', roomManager.getRoom(roomId));
+                });
+            });
 
         /**
          * GAME EVENT (example placeholder)
@@ -26,18 +32,23 @@ module.exports = function registerSocketHandlers(io) {
         /**
          * CHAT EVENT (example placeholder)
          */
-        socket.on('chat:message', (msg) => {
-            console.log('Chat message from', socket.id, msg);
-            io.to("room1").emit('chat:message', msg);
+       socket.on('chat:message', ({ roomId, message }) => {
+            console.log(`Message in ${roomId}:`, message);
 
-            // later:
-            // broadcast to room
-
-            // send to everyone in room1 (temporary hardcode)
+            io.to(roomId).emit('chat:message', {
+                sender: socket.id,
+                message,
+            });
         });
 
-        socket.on('disconnect', (reason) => {
-            console.log('Client disconnected:', socket.id, reason);
+        socket.on('disconnect', () => {
+            console.log('Client disconnected:', socket.id);
+
+            const rooms = roomManager.getAllRooms();
+
+            for (const roomId in rooms) {
+                roomManager.removePlayerFromRoom(roomId, socket.id);
+            }
         });
     });
 };

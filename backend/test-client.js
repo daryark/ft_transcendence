@@ -3,14 +3,20 @@ const { io } = require("socket.io-client");
 const socket = io("http://localhost:3000");
 
 socket.on("connect", () => {
-    console.log("Connected with id:", socket.id);
-    socket.emit("client:ping", { msg: "hello server" });
+    console.log("Connected:", socket.id);
 
     socket.emit("join_room", "room1");
+
+    setTimeout(() => {
+        socket.emit("chat:message", {
+            roomId: "room1",
+            message: "hello room"
+        });
+    }, 1000);
 });
 
-socket.on("chat:message", (msg) => {
-    console.log("Chat received:", msg);
+socket.on("chat:message", (data) => {
+    console.log("Chat:", data);
 });
 
 // send message after 2 seconds
