@@ -1,5 +1,12 @@
-FROM	alpine:3.20
+FROM node:20-alpine
 
-RUN	apk update && apk upgrade
+WORKDIR /app
 
-EXPOSE	443
+COPY backend/server/package.json ./
+RUN npm install --omit=dev
+
+COPY backend/server ./server
+
+EXPOSE 3000
+
+CMD ["node", "server/index.js"]
