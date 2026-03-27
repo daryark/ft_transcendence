@@ -10,6 +10,11 @@ app.get('/', (req, res) => {
 // All routes here are under /api/... (matches nginx proxy_pass to this app)
 const api = express.Router();
 
+// to check
+// curl http://localhost:3000/api/something
+// curl http://localhost:3000/api/users/7
+
+
 // GET /api/something  → exact path
 api.get('/something', (req, res) => {
   res.json({ message: 'handled /api/something' });
