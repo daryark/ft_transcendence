@@ -1,29 +1,21 @@
-//* const http = require('http');
-//? core node module to create http server
-//*const express = require('express');
+//***Express.js***
+//->const express = require('express');
 //? Framework that handles http routing
-const registerSocketHandlers = require('./socket');
+//->const http = require('http');
+//? core node module to create http server
 
-const app = express();
-// require('dotenv').config();
-const cors = require('cors');
+//* app object - represents the whole Express app
+//->const app = express();
+//? it is used to define routes and middleware, and handling HTTP requests/responses
+//*Middleware - functions that have access to the req & res, next!
+//? and next()!!! middleware function in the application's req-res cycle.
+//? App object is used to apply middleware to your applicaiton.
+//*CORS middleware. Simple Usage (Enable All CORS Requests)
+//->const cors = require('cors');
+//->app.use(cors());
 
-app.use(cors());
-app.use(express.json());//??!
 
-//?! Understand later what I exactly need this for!?
-// Says that i'll use it to mount REST routes here (auth, user, matchmaking, HTTP and so on).
-app.get('/health', (req, res) => res.json({ status: 'ok' }));
-
-const server = http.createServer(app);
-const io = new Server(server, {
-    cors: { origin: '*',
-            methods: ["GET", "POST"],
-    }  //! todo - restrict origin in real env
-});
-
-registerSocketHandlers(io);
-
-server.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT}`);
-});
+Resources:
+1. WS vs Socket.IO - https://dev.to/alex_aslam/nodejs-websockets-when-to-use-ws-vs-socketio-and-why-we-switched-di9
+2. GeeksForGeeks, Node.js roadmap (short article on every important topic) - https://www.geeksforgeeks.org/node-js/node-js-roadmap/
+3. 
