@@ -7,7 +7,7 @@ services:
     depends_on:
       - backend
     ports:
-      - "80:80"
+      - "8080:80"
      #- "443:443"
     networks:
       - trancendence
@@ -26,6 +26,8 @@ services:
       - "5432:5432"
     networks:
       - trancendence
+    # volumes:
+    #   - db-volume:/var/lib/postgresql/data
     restart: always
 
   backend:
@@ -58,18 +60,18 @@ services:
   #    - trancendence
   #  restart: always
 
-#volumes:
+# volumes:
 #  wp-volume:
 #    driver_opts:
 #      o: bind
 #      type: none
 #      device: /home/${USER}/data/wordpress
 
-#  db-volume:
-#    driver_opts:
-#      o: bind
-#      type: none
-#      device: /home/${USER}/data/mariadb
+  # db-volume:
+  #   driver_opts:
+  #     type: none
+  #     o: bind
+  #     device: /home/${USER}/42Projects/test_data
 # o(option): bind mount allows to specify the directory on machine where to save, instead of default. type: none - default type file system
 
 networks:
