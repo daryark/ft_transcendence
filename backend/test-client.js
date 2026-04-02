@@ -9,7 +9,6 @@ socket.on("connect", () => {
 
     setTimeout(() => {
         socket.emit("chat:message", {
-            roomId: "room1",
             message: "hello room"
         });
     }, 1000);
@@ -18,11 +17,6 @@ socket.on("connect", () => {
 socket.on("chat:message", (data) => {
     console.log("Chat:", data);
 });
-
-// send message after 2 seconds
-setTimeout(() => {
-    socket.emit("chat:message", "hello room");
-}, 2000);
 
 socket.on("server:pong", (data) => {
     console.log("Received pong:", data);

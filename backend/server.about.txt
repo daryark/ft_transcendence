@@ -1,0 +1,42 @@
+//***Express.js***
+//? Framework that handles http routing
+//->const express = require('express');
+//? core node module to create http server
+//->const http = require('http');
+
+//->const app = express();
+//? app object - represents the whole Express app
+//? it is used to define routes and middleware, and handling HTTP requests/responses
+
+#1
+//->Middleware - functions that have access to the req & res, next!
+//? and next()!!! middleware function in the application's req-res cycle.
+//? App object is used to apply middleware to your applicaiton.
+#2
+//->const cors = require('cors');
+//->app.use(cors());
+//?CORS middleware. Simple Usage (Enable All CORS Requests)
+#3
+//->app.get('/health', () => {..})
+//?health path is being used by load-balancers, docker, kubernetes
+//? to ping, if server is running or there's a need to restart container and/or connections.
+
+//***Socket.IO***
+
+//*Socket
+#4
+//*Socket properties/attributes
+//->socket.id - unique connection id (changes randomly during the same connection)
+//->socket.rooms - rooms this socket joined
+//-> socket.data - your custom storage
+//? data is a buil-in plain! object provided by Socket.IO
+//? you can custom fileds inside to attach info to a specific socket connection
+
+#Tasks next/questions:
+1. understand io/socketServer naming importance
+2. understand handlers role, usage.
+
+Resources:
+1. WS vs Socket.IO - https://dev.to/alex_aslam/nodejs-websockets-when-to-use-ws-vs-socketio-and-why-we-switched-di9
+2. GeeksForGeeks, Node.js roadmap (short article on every important topic) - https://www.geeksforgeeks.org/node-js/node-js-roadmap/
+3. Socket.IO Server API - https://socket.io/docs/v4/server-api/#socketid

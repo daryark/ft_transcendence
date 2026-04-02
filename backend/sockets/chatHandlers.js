@@ -1,8 +1,16 @@
 module.exports = function chatHandlers(socketServer, socket) {
 
-    socket.on('caht:message', (msg) => {
-        //find the room the socket is connected to
-        //err check if the room exists
-        //server broadcast the message to all in room
+    socket.on('chat:message', (data) => {
+        const { roomId } = socket.data;
+
+        if (!roomId) return ;
+
+        socketServer.to(roomId).emit('chat:message', {
+            sender: socket.id,
+            message: data.message || data //! enforce {message: '...'} format and remove "|| data" part later
+        });
     });
 };
+
+
+// all about server info is in 'server.about.txt' in the root of the 'backend' folder.

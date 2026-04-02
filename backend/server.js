@@ -1,12 +1,11 @@
 const http = require('http');
 const { Server } = require('socket.io');
 
+const { PORT } = require('./config/env');
 const app = require('./app');
 const registerSocketHandlers = require('./socket');
-const { PORT } = require('./config/env');
 
 const server = http.createServer(app);
-
 const socketServer = new Server(server, {
     cors: { origin: '*',
             methods: ["GET", "POST"],
@@ -20,6 +19,4 @@ server.listen(PORT, () => {
 });
 
 
-
-
-
+// all about server info is in 'server.about.txt' in the root of the 'backend' folder.

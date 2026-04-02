@@ -17,7 +17,7 @@ function addPlayerToRoom(roomId, socketId) {
     }
 }
 
-function removePlayerFromRoom(roomId, socketId) {
+function deletePlayerFromRoom(roomId, socketId) {
     if (rooms[roomId]) {
         rooms[roomId].players = rooms[roomId].players.filter(id => id !== socketId);
     }
@@ -43,10 +43,20 @@ function getAllRooms() {
     return rooms;
 }
 
+function clearRooms() {
+    for (const key in rooms) {
+        delete rooms[key];
+    }
+}
+
 module.exports = {
     createRoom,
     addPlayerToRoom,
-    removePlayerFromRoom,
+    deletePlayerFromRoom,
     getRoom,
     getAllRooms,
+    clearRooms
 };
+
+
+// all about server info is in 'server.about.txt' in the root of the 'backend' folder.
