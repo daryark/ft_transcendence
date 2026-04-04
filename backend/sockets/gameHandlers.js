@@ -3,15 +3,20 @@ const roomManager = require('../game/rooms/roomManager');
 module.exports = function gameHandlers(socketServer, socket) {
     // void socketServer;
 
-    socket.on('join_room', (roomId) => {
+    socket.on('join_room', ({ roomId, role, type }) => {
+        const result = roomManager.joinRoom(roomId, socket.id, role, type);
+   
+        if (!result.success) {
+            socket.emit('join_error', result.reason);
+            return;
+        }
+        
         socket.join(roomId);
 
         socket.data.roomId = roomId; //#4
-        socket.data.role = 'player';
+        socket.data.role = role;
 
-        roomManager.addPlayerToRoom(roomId, socket.id);
-
-        console.log(`Socket ${socket.id} joined room ${roomId}`);
+        console.log(`Socket ${socket.id} joined room ${roomId} as ${role}. Game type: ${type}`);
         console.log('ROOM STATE:', roomManager.getRoom(roomId));
     });
 
@@ -19,7 +24,7 @@ module.exports = function gameHandlers(socketServer, socket) {
         const { roomId } = socket.data;
         
         if (roomId) {
-            roomManager.deletePlayerFromRoom(roomId, socket.id);
+            roomManager.leaveRoom(roomId, socket.id);
             console.log(`Socket ${socket.id} left room ${roomId}`);
             console.log('ROOM STATE:', roomManager.getRoom(roomId));
         }
