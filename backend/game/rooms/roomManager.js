@@ -1,18 +1,33 @@
+const PRESETS = require('../config/presets');
+// const quickplay = require('../rooms/quickplay');
+// const league = require('../rooms/league');
+// const solo = require('../rooms/solo');
+// const custom = require('../rooms/custom');
+
 const rooms = {};
 
-function createRoom(roomId, type) {
+function createRoom(roomId, preset = 'quickplay') {
     if (!rooms[roomId]) {
         rooms[roomId] = {
-            type: type,
+            id: roomId, //!is it the one from socket.io that always changes or a custom one?
+            
             players: [],
             spectators : [],
-            maxPlayers: getMaxPlayers(type)
+            
+            gameConfig: {
+                preset: preset,
+                settings: PRESETS[preset]
+            },
+            roomConfig: {
+                maxPlayers: getMaxPlayers(preset)
+            },
+            matchconfig: {},
         };
     }
 }
 
-function joinRoom(roomId, socketId, role = 'player', type = '1v1') {
-    createRoom(roomId, type);
+function joinRoom(roomId, socketId, role = 'player', preset = 'quickplay') {
+    createRoom(roomId, preset);
 
     const room = rooms[roomId];
 
@@ -21,7 +36,7 @@ function joinRoom(roomId, socketId, role = 'player', type = '1v1') {
     }
     
     if (role === 'player') {
-        if (room.players.length >= room.maxPlayers) {
+        if (room.players.length >= room.roomConfig.maxPlayers) {
             return { success: false, reason: 'room_full' };
         }
 
@@ -73,12 +88,12 @@ function clearRooms() {
 /**
  * Get max players based on room type
  */
-function getMaxPlayers(type) {
-    switch (type) {
+function getMaxPlayers(preset) {
+    switch (preset) {
         case 'solo': return 1;
         case '1v1': return 2;
         case 'league': return 2;
-        case 'multiplayer': return 100; //!can be modified later on server growth
+        case 'quickplay': return 100; //!can be modified later on server growth
         case 'room': return Infinity; //!can be modified (during room setup)
         default: return 2;
     }
