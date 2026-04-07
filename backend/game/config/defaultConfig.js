@@ -8,12 +8,12 @@ gameConfig = {
     spins: "ALL-MINI",
     comboMultiplier: true,
     boardWidth: 10,
-    boardHeight: 20
+    boardHeight: 20,
+    hold: true
   },
 
   garbage: {
-    messiness: 100,
-    cap: 0,
+    messiness: 0,
     sticky: true,
     doubleHole: false,
     volatile: false
@@ -27,8 +27,7 @@ gameConfig = {
   },
 
   gravity: {
-    gravity: 0.02,
-    level: 1,
+    gravity: 1,
     speed: 1,
     lockDelay: 30
   }

@@ -5,11 +5,15 @@ const socket = io("http://localhost:3000");
 socket.on("connect", () => {
     console.log("Connected:", socket.id);
 
-    socket.emit("join_room", {
-        roomId: "test_room",
-        role: "player",
-        preset: "quickplay"
+    socket.emit("quickplay:join", {
+        volatile: true,
+        messy: true
     });
+    // socket.emit("join_room", {
+    //     roomId: "test_room",
+    //     role: "player",
+    //     preset: "quickplay"
+    // });
 
     setTimeout(() => {
         socket.emit("chat:message", {
