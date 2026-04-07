@@ -1,0 +1,21 @@
+.mini-piece {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mini-row {
+  display: flex;
+  gap: 2px;
+}
+
+.mini-cell {
+  width: 10px;
+  height: 10px;
+  background: #222;
+  border-radius: 2px;
+}
+
+.mini-cell.filled {
+  background: #00ff99;
+}

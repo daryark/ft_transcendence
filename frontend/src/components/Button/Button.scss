@@ -11,7 +11,8 @@
   // border-radius: 12px;
   cursor: pointer;
   transition: all 0.25s ease;
-  text-align: left;
+
+  // text-align: right;
   // display: block;
   width: 100%;
   transform: translateX(15rem);
@@ -33,7 +34,10 @@
   }
 
   &:active {
-    transform: translateX(-4px);
+    transform: translateX(9rem);
+    background: linear-gradient(135deg, #1f1f3a 0%, #1a2745 100%);
+    border-color: rgba(255, 255, 255, 0.3);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
   }
 
   &__text {
@@ -59,4 +63,3 @@
     line-height: 1.4;
   }
 }
-

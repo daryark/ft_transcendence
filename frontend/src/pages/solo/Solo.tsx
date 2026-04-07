@@ -1,6 +1,10 @@
 import { soloModes } from "./data";
 import Button from "../../components/Button/Button";
-import BackButton from "../../components/Button-back/BackButton";
+import BackButton from "../../components/BackButton/BackButton";
+
+// import { useNavigate } from "react-router-dom";
+
+// const navigate = useNavigate();
 
 export default function Solo() {
   return (

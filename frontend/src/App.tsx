@@ -7,6 +7,8 @@ import Auth from "./pages/auth/Auth";
 import Multiplayer from "./pages/multiplayer/Multiplayer";
 import Solo from "./pages/solo/Solo";
 import "./styles/globals.scss";
+import GameBoard from "./components/GameBoard/GameBoard";
+import SoloGame from "./pages/game/SoloGame";
 
 export default function App() {
   return (
@@ -20,6 +22,7 @@ export default function App() {
           <Route path="auth" element={<Auth />} />
           <Route path="game/multiplayer" element={<Multiplayer />} />
           <Route path="game/solo" element={<Solo />} />
+          <Route path="game/solo/40lines" element={<SoloGame/>} />
         </Route>
       </Routes>
     </BrowserRouter>

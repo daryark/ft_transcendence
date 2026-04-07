@@ -1,30 +1,33 @@
-import multiIcon from '../../../public/button-icons/multi.svg';
+import quickIcon from '../../../public/button-icons/quickplay.svg';
+import leagueIcon from '../../../public/button-icons/league.svg';
+import customIcon from '../../../public/button-icons/customgame.svg';
+import roomsIcon from '../../../public/button-icons/roomlisting.svg';
 
 export const multiplayerModes = [
   {
     id: "quick",
-    path: multiIcon,
+    path: quickIcon,
     title: "Quick Game",
     description: "Fast match",
     route: "/game/multiplayer/quick",
   },
   {
     id: "league",
-    path: multiIcon,
+    path: leagueIcon,
     title: "Tetra League",
     description: "Ranked matches",
     route: "/game/multiplayer/league",
   },
   {
     id: "custom",
-    path: multiIcon,
+    path: customIcon,
     title: "Custom Game",
     description: "Create your own lobby",
     route: "/game/multiplayer/custom",
   },
   {
     id: "rooms",
-    path: multiIcon,
+    path: roomsIcon,
     title: "Room List",
     description: "Join existing rooms",
     route: "/game/multiplayer/rooms",

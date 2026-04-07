@@ -1,4 +1,7 @@
 import multiIcon from '../../../public/button-icons/multi.svg';
+import soloIcon from '../../../public/button-icons/solo.svg';
+import channelIcon from '../../../public/button-icons/channel.svg';
+import aboutIcon from '../../../public/button-icons/about.svg';
 
 export const gameModes = [
   {
@@ -11,7 +14,7 @@ export const gameModes = [
   },
   {
     id: "solo",
-    path: multiIcon,
+    path: soloIcon,
     title: "Solo",
     description: "Challenge yourself and top the leaderboards",
     gradient: "blue",
@@ -19,7 +22,7 @@ export const gameModes = [
   },
   {
     id: "tetra_channel",
-    path: multiIcon,
+    path: channelIcon,
     title: "Tetra Channel",
     description: "Compete in brackets",
     gradient: "green",
@@ -27,7 +30,7 @@ export const gameModes = [
   },
   {
     id: "about",
-    path: multiIcon,
+    path: aboutIcon,
     title: "About",
     description: "All about Tetris",
     gradient: "green",

@@ -1,8 +1,12 @@
+import BackButton from '../../components/BackButton/BackButton';
 import styles from './About.module.scss';
 
 const About = () => {
   return (
-    <div className={styles.about}>
+    <>
+    <BackButton/> 
+     <div className={styles.about}>
+      
       <div className={styles.card}>
         <h1 className={styles.title}>About Tetra</h1>
         
@@ -35,6 +39,8 @@ const About = () => {
         </div>
       </div>
     </div>
+    </>
+   
   );
 };
 
