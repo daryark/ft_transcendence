@@ -1,5 +1,3 @@
-.PHONY: prep build up down clean fclean check
-
 COMPOSE ?= docker-compose
 
 prep:
@@ -38,3 +36,4 @@ check:
 	@$(COMPOSE) exec -T database pg_isready -U myuser -d mydatabase
 	
 #docker exec -it 7ef22cde1b09 psql -U myuser -d mydatabase -c "SELECT * FROM users;"
+.PHONY: prep build up down clean fclean check

@@ -23,10 +23,14 @@
   },
   "homepage": "https://github.com/daryark/ft_transcendence#readme",
   "dependencies": {
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.4.1",
     "express": "^5.2.1",
     "socket.io": "^4.8.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.14"
+    "dotenv-expand": "^12.0.3",
+    "nodemon": "^3.1.14",
+    "prisma": "^7.6.0"
   }
 }

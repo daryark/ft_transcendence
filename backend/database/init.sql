@@ -8,9 +8,9 @@ CREATE TABLE IF NOT EXISTS users (
 );
 
 -- FRIENDS
-CREATE TYPE IF NOT EXISTS friend_status AS ENUM('pending', 'accepted', 'blocked');
+CREATE TYPE friend_status AS ENUM('pending', 'accepted', 'blocked');
 
-CREATE TABLE IF NOT EXISTSfriends (
+CREATE TABLE IF NOT EXISTS friends (
 	id SERIAL PRIMARY KEY,
 	user_id INT NOT NULL,
 	friend_id INT NOT NULL,
@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTSfriends (
 );
 
 -- MATCHES
-CREATE TYPE IF NOT EXISTS match_status AS ENUM('active', 'finished');
+CREATE TYPE match_status AS ENUM('active', 'finished');
 
 CREATE TABLE IF NOT EXISTS matches (
 	id SERIAL PRIMARY KEY,
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS matches (
 );
 
 -- MATCH_PLAYERS
-CREATE TYPE IF NOT EXISTS player_result AS ENUM('win', 'lose', 'draw');
+CREATE TYPE player_result AS ENUM('win', 'lose', 'draw');
 
 CREATE TABLE IF NOT EXISTS match_players (
 	id SERIAL PRIMARY KEY,
