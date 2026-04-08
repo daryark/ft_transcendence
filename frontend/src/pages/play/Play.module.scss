@@ -1,0 +1,261 @@
+.play{
+// margin: 500px;
+      margin-top: 60px;
+       margin-bottom: 60px;
+  position: relative;
+  background: aqua;
+  color: aquamarine;
+      margin-left: 500px;
+  // margin: 1200px;
+
+  
+}
+
+// .play {
+//   min-height: 70vh;
+//   display: flex;
+//   align-items: center;
+//   justify-content: center;
+// }
+
+// .container {
+//   display: flex;
+//   flex-direction: column;
+//   gap: 16px;
+//   width: 100%;
+//   max-width: 400px;
+// }
+
+// .card {
+//   border: 1px solid white;
+//   padding: 20px;
+//   background: black;
+//   color: white;
+//   text-align: left;
+//   cursor: pointer;
+// }
+
+// .card:hover {
+//   background: #111;
+// }
+
+// .icon {
+//   font-size: 32px;
+//   margin-bottom: 8px;
+// }
+
+// .title {
+//   font-size: 18px;
+//   font-weight: bold;
+//   margin-bottom: 4px;
+// }
+
+// .description {
+//   font-size: 14px;
+//   color: #888;
+// }
+
+// // @import '../styles/variables';
+// // @import '../styles/mixins';
+
+// // .play {
+// //   min-height: calc(100vh - 80px);
+// //   @include flex-center;
+// //   padding: $spacing-8 $spacing-4;
+// // }
+
+// // .container {
+// //   display: flex;
+// //   flex-direction: column;
+// //   gap: $spacing-6;
+// //   max-width: 600px;
+// //   width: 100%;
+  
+// //   @include mobile {
+// //     gap: $spacing-4;
+// //   }
+// // }
+
+// // .card {
+// //   display: flex;
+// //   align-items: center;
+// //   gap: $spacing-6;
+// //   padding: $spacing-6 $spacing-8;
+// //   border: 3px solid $gray-600;
+// //   background: $gray-800;
+// //   color: white;
+// //   cursor: pointer;
+// //   text-align: left;
+// //   width: 100%;
+// //   transition: $transition-none;
+// //   position: relative;
+// //   clip-path: polygon(
+// //     0% 0%,
+// //     100% 0%,
+// //     100% 85%,
+// //     95% 100%,
+// //     0% 100%
+// //   );
+  
+// //   &:hover {
+// //     transform: translate(-2px, -2px);
+// //     box-shadow: 6px 6px 0px rgba(0, 0, 0, 0.3);
+// //   }
+  
+// //   &:active {
+// //     transform: translate(2px, 2px);
+// //     box-shadow: 2px 2px 0px rgba(0, 0, 0, 0.3);
+// //   }
+  
+// //   @include mobile {
+// //     padding: $spacing-4 $spacing-6;
+// //     gap: $spacing-4;
+// //   }
+  
+// //   &.blue {
+// //     border-left: 8px solid $primary;
+    
+// //     &:hover {
+// //       border-left-color: lighten($primary, 10%);
+// //     }
+// //   }
+  
+// //   &.purple {
+// //     border-left: 8px solid #9b59b6;
+    
+// //     &:hover {
+// //       border-left-color: lighten(#9b59b6, 10%);
+// //     }
+// //   }
+  
+// //   &.yellow {
+// //     border-left: 8px solid #f1c40f;
+    
+// //     &:hover {
+// //       border-left-color: lighten(#f1c40f, 10%);
+// //     }
+// //   }
+  
+// //   &.green {
+// //     border-left: 8px solid #2ecc71;
+    
+// //     &:hover {
+// //       border-left-color: lighten(#2ecc71, 10%);
+// //     }
+// //   }
+// // }
+
+// // .icon {
+// //   font-size: 3rem;
+// //   filter: drop-shadow(3px 3px 0px rgba(0, 0, 0, 0.3));
+// //   flex-shrink: 0;
+  
+// //   @include mobile {
+// //     font-size: 2rem;
+// //   }
+// // }
+
+// // .content {
+// //   flex: 1;
+// // }
+
+// // .title {
+// //   font-size: 1.5rem;
+// //   font-weight: bold;
+// //   font-family: monospace;
+// //   text-transform: uppercase;
+// //   letter-spacing: 1px;
+// //   margin-bottom: $spacing-2;
+  
+// //   @include mobile {
+// //     font-size: 1.25rem;
+// //   }
+// // }
+
+// // .description {
+// //   color: $gray-400;
+// //   font-size: 0.875rem;
+// //   font-family: monospace;
+  
+// //   @include mobile {
+// //     font-size: 0.75rem;
+// //   }
+// // }
+// // // @import '../styles/variables';
+// // // @import '../styles/mixins';
+
+// // // .play {
+// // //   min-height: calc(100vh - 120px);
+// // //   @include flex-center;
+// // // }
+
+// // // .grid {
+// // //   display: grid;
+// // //   grid-template-columns: repeat(2, 1fr);
+// // //   gap: $spacing-6;
+// // //   max-width: 1024px;
+// // //   width: 100%;
+  
+// // //   @include mobile {
+// // //     grid-template-columns: 1fr;
+// // //     gap: $spacing-4;
+// // //   }
+// // // }
+
+// // // .card {
+// // //   position: relative;
+// // //   overflow: hidden;
+// // //   padding: $spacing-8;
+// // //   border-radius: 1rem;
+// // //   text-align: left;
+// // //   color: white;
+// // //   transition: all $transition-base;
+// // //   cursor: pointer;
+  
+// // //   &:hover {
+// // //     transform: scale(1.05);
+// // //     box-shadow: $shadow-xl;
+// // //   }
+  
+// // //   &:focus {
+// // //     outline: none;
+// // //     ring: 2px solid white;
+// // //   }
+  
+// // //   &.blue {
+// // //     background: $gradient-blue;
+// // //   }
+  
+// // //   &.purple {
+// // //     background: $gradient-purple;
+// // //   }
+  
+// // //   &.yellow {
+// // //     background: $gradient-yellow;
+// // //   }
+  
+// // //   &.green {
+// // //     background: $gradient-green;
+// // //   }
+// // // }
+
+// // // .icon {
+// // //   font-size: 4rem;
+// // //   margin-bottom: $spacing-4;
+// // //   transition: transform $transition-base;
+  
+// // //   .card:hover & {
+// // //     transform: scale(1.1) rotate(3deg);
+// // //   }
+// // // }
+
+// // // .title {
+// // //   font-size: 1.875rem;
+// // //   font-weight: bold;
+// // //   margin-bottom: $spacing-2;
+// // // }
+
+// // // .description {
+// // //   color: rgba(255, 255, 255, 0.8);
+// // //   font-size: 1.125rem;
+// // // }

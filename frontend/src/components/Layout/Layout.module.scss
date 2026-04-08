@@ -1,0 +1,76 @@
+.layout {
+  min-height: 100vh;
+}
+
+.main {
+  padding: 2rem 0;
+}
+
+// @import '../../styles/variables';
+// @import '../../styles/mixins';
+
+// .layout {
+//   min-height: 100vh;
+//   position: relative;
+  
+//   &::before {
+//     content: '';
+//     position: fixed;
+//     top: 0;
+//     left: 0;
+//     right: 0;
+//     bottom: 0;
+//     background-image: 
+//       linear-gradient(0deg, transparent 24%, rgba($primary, 0.05) 25%, rgba($primary, 0.05) 26%, transparent 27%, transparent),
+//       linear-gradient(90deg, transparent 24%, rgba($primary, 0.05) 25%, rgba($primary, 0.05) 26%, transparent 27%, transparent);
+//     background-size: 50px 50px;
+//     pointer-events: none;
+//     z-index: 0;
+//   }
+// }
+
+// .main {
+//   position: relative;
+//   z-index: 1;
+//   max-width: 1280px;
+//   margin: 0 auto;
+//   padding: $spacing-8 $spacing-4;
+//   min-height: calc(100vh - 80px);
+  
+//   @include mobile {
+//     padding: $spacing-6 $spacing-4;
+//   }
+// }
+
+// // @import '../../styles/variables';
+// // @import '../../styles/mixins';
+
+// // .layout {
+// //   min-height: 100vh;
+// // }
+
+// // .main {
+// //   max-width: 1280px;
+// //   margin: 0 auto;
+// //   padding: 0 $spacing-4;
+// //   padding-top: $spacing-8;
+// //   padding-bottom: $spacing-8;
+  
+// //   @include mobile {
+// //     padding: 0 $spacing-4;
+// //     padding-top: $spacing-6;
+// //     padding-bottom: $spacing-6;
+// //   }
+  
+// //   @include tablet {
+// //     padding: 0 $spacing-6;
+// //     padding-top: $spacing-8;
+// //     padding-bottom: $spacing-8;
+// //   }
+  
+// //   @include desktop {
+// //     padding: 0 $spacing-8;
+// //     padding-top: $spacing-8;
+// //     padding-bottom: $spacing-8;
+// //   }
+// // }

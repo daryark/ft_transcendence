@@ -1,0 +1,94 @@
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: backend/services/nginx/Dockerfile
+    container_name: nginx
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+     #- "443:443"
+    networks:
+      - trancendence
+    #volumes:
+    #  - ./requirements/nginx/conf/:/etc/nginx/http.d/
+    #  - ./requirements/nginx/tools/:/etc/nginx/ssl/
+    #  - wp-volume:/var/www/
+    restart: always
+
+  database:
+    build:
+      context: .
+      dockerfile: backend/database/Dockerfile
+    container_name: database
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    networks:
+      - trancendence
+    # volumes:
+    #   - db-volume:/var/lib/postgresql/data
+    restart: always
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+      #args:
+      #  DB_NAME: ${DB_NAME}
+      #  DB_USER: ${DB_USER}
+      #  DB_PASS: ${DB_PASS}
+    container_name: backend
+    depends_on:
+      - database
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    networks:
+      - trancendence
+    #volumes:
+    #  - wp-volume:/var/www/
+    restart: always
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: frontend
+    ports:
+      - "5173:5173"
+    networks:
+      - trancendence
+    restart: always
+
+  #redis:
+  #  build:
+  #    context: .
+  #    dockerfile: requirements/bonus/redis/Dockerfile
+  #  container_name: redis
+  #  ports:
+  #    - "6379:6379"
+  #  networks:
+  #    - trancendence
+  #  restart: always
+
+# volumes:
+#  wp-volume:
+#    driver_opts:
+#      o: bind
+#      type: none
+#      device: /home/${USER}/data/wordpress
+
+  # db-volume:
+  #   driver_opts:
+  #     type: none
+  #     o: bind
+  #     device: /home/${USER}/42Projects/test_data
+# o(option): bind mount allows to specify the directory on machine where to save, instead of default. type: none - default type file system
+
+networks:
+  trancendence:
+    driver: bridge
