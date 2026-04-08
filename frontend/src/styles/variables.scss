@@ -1,0 +1,109 @@
+// // Low Poly Color Palette
+// $primary: #4a90e2;
+// $primary-dark: #2c5a9e;
+// $secondary: #e24a6a;
+// $secondary-dark: #a62e48;
+// $success: #5cb85c;
+// $warning: #f0ad4e;
+// $danger: #d9534f;
+
+// // Geometric grayscale
+// $gray-900: #1a1a2e;
+// $gray-800: #16213e;
+// $gray-700: #0f3460;
+// $gray-600: #1a2a3a;
+// $gray-500: #2a3a4a;
+// $gray-400: #4a5a6a;
+// $gray-300: #8a9aae;
+// $gray-200: #b8c4d0;
+// $gray-100: #e8eef2;
+
+// // Low Poly Gradients (hard edges)
+// $gradient-primary: linear-gradient(135deg, $primary 0%, $primary-dark 100%);
+// $gradient-blue: linear-gradient(135deg, #4a90e2 0%, #2c5a9e 100%);
+// $gradient-purple: linear-gradient(135deg, #9b59b6 0%, #6c3483 100%);
+// $gradient-yellow: linear-gradient(135deg, #f1c40f 0%, #e67e22 100%);
+// $gradient-green: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+// $gradient-red: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+
+// // Hard shadows (no blur for low poly look)
+// $shadow-hard-sm: 4px 4px 0px rgba(0, 0, 0, 0.2);
+// $shadow-hard-md: 6px 6px 0px rgba(0, 0, 0, 0.25);
+// $shadow-hard-lg: 8px 8px 0px rgba(0, 0, 0, 0.3);
+// $shadow-hard-xl: 12px 12px 0px rgba(0, 0, 0, 0.35);
+
+// // Borders
+// $border-thin: 2px solid;
+// $border-thick: 3px solid;
+
+// // Spacing (geometric increments)
+// $spacing-1: 4px;
+// $spacing-2: 8px;
+// $spacing-3: 12px;
+// $spacing-4: 16px;
+// $spacing-6: 24px;
+// $spacing-8: 32px;
+// $spacing-12: 48px;
+// $spacing-16: 64px;
+
+// // Breakpoints (sharp breakpoints)
+// $breakpoint-mobile: 768px;
+// $breakpoint-tablet: 1024px;
+// $breakpoint-desktop: 1280px;
+
+// // No transitions - instant changes for low poly feel
+// $transition-none: 0ms;
+// // // Colors
+// // $primary: #3b82f6;
+// // $primary-dark: #2563eb;
+// // $secondary: #8b5cf6;
+// // $secondary-dark: #7c3aed;
+// // $success: #10b981;
+// // $warning: #f59e0b;
+// // $danger: #ef4444;
+
+// // // Grayscale
+// // $gray-900: #111827;
+// // $gray-800: #1f2937;
+// // $gray-700: #374151;
+// // $gray-600: #4b5563;
+// // $gray-500: #6b7280;
+// // $gray-400: #9ca3af;
+// // $gray-300: #d1d5db;
+// // $gray-200: #e5e7eb;
+// // $gray-100: #f3f4f6;
+
+// // // Gradients
+// // $gradient-primary: linear-gradient(135deg, $primary, $secondary);
+// // $gradient-blue: linear-gradient(135deg, #3b82f6, #06b6d4);
+// // $gradient-purple: linear-gradient(135deg, #8b5cf6, #ec489a);
+// // $gradient-yellow: linear-gradient(135deg, #f59e0b, #ef4444);
+// // $gradient-green: linear-gradient(135deg, #10b981, #14b8a6);
+
+// // // Spacing
+// // $spacing-1: 0.25rem;
+// // $spacing-2: 0.5rem;
+// // $spacing-3: 0.75rem;
+// // $spacing-4: 1rem;
+// // $spacing-6: 1.5rem;
+// // $spacing-8: 2rem;
+// // $spacing-12: 3rem;
+// // $spacing-16: 4rem;
+
+// // // Breakpoints
+// // $breakpoint-sm: 640px;
+// // $breakpoint-md: 768px;
+// // $breakpoint-lg: 1024px;
+// // $breakpoint-xl: 1280px;
+
+// // // Transitions
+// // $transition-fast: 150ms ease;
+// // $transition-base: 300ms ease;
+// // $transition-slow: 500ms ease;
+
+// // // Shadows
+// // $shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+// // $shadow-base: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+// // $shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+// // $shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+// // $shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);

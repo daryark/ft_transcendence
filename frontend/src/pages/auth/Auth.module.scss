@@ -1,0 +1,72 @@
+.auth {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 70vh;
+}
+
+.card {
+  border: 1px solid white;
+  padding: 32px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.title {
+  font-size: 24px;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  color: #888;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 14px;
+}
+
+.input {
+  padding: 10px;
+  background: #111;
+  border: 1px solid #333;
+  color: white;
+}
+
+.input:focus {
+  outline: none;
+  border-color: white;
+}
+
+.submitButton {
+  margin-top: 16px;
+  padding: 12px;
+  background: white;
+  color: black;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.submitButton:hover {
+  background: #ddd;
+}
+
+
+
+
