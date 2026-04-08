@@ -6,7 +6,7 @@ function clone(obj) {
     return JSON.parse(JSON.stringify(obj));
 }
 
-function quickplayBase() {
+function configBase() {
     return clone(DEFAULT);
 }
 
@@ -29,7 +29,7 @@ function applyModifiers(base, modifiers) {
 }
 
 module.exports = {
-    quickplayBase,
+    configBase,
     applyModifiers
 };
 

@@ -32,6 +32,14 @@
 //? data is a buil-in plain! object provided by Socket.IO
 //? you can custom fileds inside to attach info to a specific socket connection
 
+
+//***Jest***
+//->jest.fn()
+//? fake function that imitates something that doesnt' exist in test context, but need to be (to not fail).
+//? Ex: const socket = { id: 's1', join: jest.fn() }
+//? socket is not real (on real socket there's a method socket.join()), so we immitate that it exists
+//? and can check, if this fake function was called in the code is we want it.
+
 #Tasks next/questions:
 1. understand io/socketServer naming importance
 2. understand handlers role, usage.

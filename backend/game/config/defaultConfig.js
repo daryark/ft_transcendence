@@ -1,7 +1,7 @@
 /* Default Game Configuration */
 
 gameConfig = {
-  preset: "custom", // or "quickplay"
+  // preset: "custom", // or "quickplay"
 
   general: {
     bagType: "7-bag",
@@ -14,16 +14,15 @@ gameConfig = {
 
   garbage: {
     messiness: 0,
-    sticky: true,
-    doubleHole: false,
-    volatile: false
+    sticky: true
+    // doubleHole: false,
+    // volatile: false
   },
 
   controls: {
     allow180: true,
     hold: true,
     nextPieces: 5,
-    infiniteHold: false
   },
 
   gravity: {

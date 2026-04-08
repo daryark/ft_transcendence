@@ -7,7 +7,7 @@ describe('Room Manager', () => {
     });
 
     test('#1 should create room and add player', () => {
-        roomManager.createRoom('room1');
+        roomManager.createRoom({ id: 'room1', players: [], gameConfig: {} });
         roomManager.addPlayer('room1', 'socket1');
         const room = roomManager.getRoom('room1');
 
@@ -16,7 +16,7 @@ describe('Room Manager', () => {
     });
 
     test('#2 should not duplicate players', () => {
-        roomManager.createRoom('room1');
+        roomManager.createRoom({ id: 'room1', players: [], gameConfig: {} });
         roomManager.addPlayer('room1', 'socket1');
         roomManager.addPlayer('room1', 'socket1');
         const room = roomManager.getRoom('room1');
@@ -25,7 +25,7 @@ describe('Room Manager', () => {
     });
 
     test('#3 should remove player and delete room if no players left', () => {
-        roomManager.createRoom('room1');
+        roomManager.createRoom({ id: 'room1', players: [], gameConfig: {} });
         roomManager.addPlayer('room1', 'socket1');
         roomManager.removePlayer('room1', 'socket1');
         const room = roomManager.getRoom('room1');
@@ -34,19 +34,15 @@ describe('Room Manager', () => {
     });
 
     test('#4 should not overwrite existing room', () => {
-        roomManager.createRoom('room1');
-        roomManager.createRoom('room1', { players: ['socket1'] });
+        roomManager.createRoom({ id: 'room1', players: [], gameConfig: {} });
+        roomManager.createRoom({ id: 'room1', players: [], gameConfig: {}, players: ['socket1'] });
 
         const room = roomManager.getRoom('room1');
         expect(room.players).toEqual([]);
     });
 
     test('#5 returns room state', () => {
-        roomManager.createRoom('room1', {
-            id: 'room1',
-            players: ['s1'],
-            gameConfig: { test: true }
-        });
+        roomManager.createRoom({ id: 'room1', players: ['s1'], gameConfig: { test: true } });
     
         const state = roomManager.getRoomState('room1');
     
@@ -55,7 +51,7 @@ describe('Room Manager', () => {
     });
 
     // test('#4 should reject player when room is full', () => {
-    //     roomManager.createRoom('room1');
+    //     roomManager.createRoom({ id: 'room1', players: [], gameConfig: {} });
     //     roomManager.addPlayer('room1', 'socket1', 'player', '1v1');
     //     roomManager.addPlayer('room1', 'socket2', 'player', '1v1');
         
@@ -65,7 +61,7 @@ describe('Room Manager', () => {
     // });
 
     // test('#5 should allow spectators even if room is full', () => {
-    //     roomManager.createRoom('room1');
+    //     roomManager.createRoom({ id: 'room1', players: [], gameConfig: {} });
     //     roomManager.addPlayer('room1', 'socket1', 'player', '1v1');
     //     roomManager.addPlayer('room1', 'socket2', 'player', '1v1');
         
@@ -78,7 +74,7 @@ describe('Room Manager', () => {
     // });
 
     // test('#6 should create room with preset config', () => {
-    //     roomManager.createRoom('room1');
+    //     roomManager.createRoom({ id: 'room1', players: [], gameConfig: {} });
     //     roomManager.addPlayer('room1', 'socket1', 'player', 'quickplay');
     //     const room = roomManager.getRoom('room1');
         

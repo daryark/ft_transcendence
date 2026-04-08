@@ -1,7 +1,5 @@
 const roomManager = require('../rooms/roomManager');
-const { quickplayBase, applyModifiers } = require('../config/presets');
-
-// const QUICKPLAY_ROOM_ID = 'quickplay_pool';
+const { configBase, applyModifiers } = require('../config/presets');
 
 function validateModifiers(modifiers = {}) {
     for (const key in modifiers) {
@@ -24,17 +22,15 @@ function joinQuickplay(socket, modifiers) {
 
     let room = roomManager.getRoom(poolKey);
     if (!room) {
-        const baseConfig = quickplayBase();
-        const gameConfig = applyModifiers(baseConfig, modifiers);
-    
         room = {
             id: poolKey,
             mode: 'quickplay',
             players: [],
-            gameConfig
+            spectators: [],
+            gameConfig: applyModifiers(configBase(), modifiers)
         };
 
-        roomManager.createRoom(poolKey, room);
+        roomManager.createRoom(room);
     }
 
     roomManager.addPlayer(poolKey, socket.id);
