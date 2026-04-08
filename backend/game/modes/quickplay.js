@@ -26,7 +26,7 @@ function joinQuickplay(socket, modifiers) {
     if (!room) {
         const baseConfig = quickplayBase();
         const gameConfig = applyModifiers(baseConfig, modifiers);
-
+    
         room = {
             id: poolKey,
             mode: 'quickplay',

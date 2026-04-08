@@ -35,6 +35,8 @@
 #Tasks next/questions:
 1. understand io/socketServer naming importance
 2. understand handlers role, usage.
+3. add presets(different)
+4. clone DEFAULT + mode preset/custom changes on room config creation
 
 Resources:
 1. WS vs Socket.IO - https://dev.to/alex_aslam/nodejs-websockets-when-to-use-ws-vs-socketio-and-why-we-switched-di9

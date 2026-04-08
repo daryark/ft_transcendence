@@ -10,7 +10,7 @@ module.exports = function registerSocketHandlers(socketServer) {
             socket.emit('server:pong', { now: Date.now() });
         });
 
-        gameHandlers(socketServer, socket);
+        gameHandlers(socket);
         chatHandlers(socketServer, socket);
 
         socket.on('disconnect', () => {

@@ -32,3 +32,5 @@ gameConfig = {
     lockDelay: 30
   }
 };
+
+module.exports = gameConfig;

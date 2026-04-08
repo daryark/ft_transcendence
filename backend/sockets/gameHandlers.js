@@ -1,8 +1,7 @@
 const roomManager = require('../game/rooms/roomManager');
 const quickplay = require('../game/modes/quickplay');
 
-module.exports = function gameHandlers(socketServer, socket) {
-    // void socketServer;
+module.exports = function gameHandlers(socket) {
 
     socket.on('quickplay:join', (modifiers) => {
         const state = quickplay.joinQuickplay(socket, modifiers);
@@ -31,7 +30,7 @@ module.exports = function gameHandlers(socketServer, socket) {
         const { roomId } = socket.data;
         
         if (roomId) {
-            roomManager.leaveRoom(roomId, socket.id);
+            roomManager.removePlayer(roomId, socket.id);
             console.log(`Socket ${socket.id} left room ${roomId}`);
             console.log('ROOM STATE:', roomManager.getRoom(roomId));
         }

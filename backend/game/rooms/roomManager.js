@@ -91,12 +91,6 @@ const rooms = {};
 //     return rooms;
 // }
 
-// function clearRooms() {
-//     for (const key in rooms) {
-//         delete rooms[key];
-//     }
-// }
-
 // /**
 //  * Get max players based on room type
 //  */
@@ -112,11 +106,18 @@ const rooms = {};
 // }
 
 
-function createRoom(roomId, data) {
+function createRoom(roomId, data = {}) {
     if (!rooms[roomId]) {
-        rooms[roomId] = data;
+        const { id, players, spectators, gameConfig } = data;
+        rooms[roomId] = {
+            id: id || roomId, //!is it the one from socket.io that always changes or a custom one?
+            
+            players: players || [],
+            spectators : spectators || [],
+            
+            gameConfig: gameConfig || {}
+        }
     }
-    //!check if the config(data) is valid before creating the room
 }
 
 function getRoom(roomId) {
@@ -131,17 +132,25 @@ function addPlayer(roomId, player) { //joinRoom
     const room = rooms[roomId];
     if (!room) return;
 
-    room.players.push(player);
+    if (!room.players.some(p => p === player)) {
+        room.players.push(player);
+    }
 }
 
 function removePlayer(roomId, socketId) { //leaveRoom
     const room = rooms[roomId];
     if (!room) return;
 
-    room.players = room.players.filter(p => p.id !== socketId);
+    room.players = room.players.filter(p => p !== socketId);
 
     if (room.players.length === 0) {
         delete rooms[roomId]; // optional, or separate into deleteRoom fn
+    }
+}
+
+function clearRooms() {
+    for (const key in rooms) {
+        delete rooms[key];
     }
 }
 
@@ -162,7 +171,9 @@ module.exports = {
     deleteRoom,
     addPlayer,
     removePlayer,
-    getRoomState
+    getRoomState,
+
+    clearRooms
 };
 
 // module.exports = {
