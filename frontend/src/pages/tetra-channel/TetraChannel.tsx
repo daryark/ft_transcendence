@@ -1,18 +1,46 @@
-import styles from "./TetraChannel.module.scss";
-import BackButton from "../../components/BackButton/BackButton";
+import { useNavigate } from "react-router-dom";
+import "./TetraChannel.module.scss";
 
-const TetraChannel = () => {
+export default function TetraChannel() {
+  const navigate = useNavigate();
+
   return (
-    <div className={styles.channel}>
-      <BackButton />
-      <div className={styles.header}>
-        <h1 className={styles.title}>Tetra Channel</h1>
-        <p className={styles.subtitle}>
-          Watch live streams and highlights from the Tetra community
-        </p>
+    <div className="channel">
+      
+      {/* STATISTICS */}
+      <div className="channel__block center">
+        <button onClick={() => navigate("/channel/statistics")}>
+          <h2>Statistics</h2>
+          <p>Your game stats</p>
+        </button>
       </div>
+
+      {/* LEADERBOARDS */}
+      <div className="channel__block center">
+        <button onClick={() => navigate("/channel/leaderboards/40-lines/global")}>
+          <h2>Leaderboards</h2>
+          <p>Top players ranking</p>
+        </button>
+      </div>
+
+      {/* ME + PLAYERS */}
+      <div className="channel__row">
+        <button onClick={() => navigate("/channel/me")}>
+          <h2>Me</h2>
+        </button>
+
+        <button onClick={() => navigate("/channel/players")}>
+          <h2>Players</h2>
+        </button>
+      </div>
+
+      {/* ACHIEVEMENTS */}
+      <div className="channel__block center">
+        <button onClick={() => navigate("/channel/achievements")}>
+          <h2>Achievements</h2>
+        </button>
+      </div>
+
     </div>
   );
-};
-
-export default TetraChannel;
+}
