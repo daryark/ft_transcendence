@@ -7,12 +7,17 @@ import { defineConfig } from "prisma/config";
 // Allow DATABASE_URL to use ${VAR} references from .env.
 expand(loadEnv());
 
+const databaseUrl = process.env["DATABASE_URL"];
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL is not set");
+}
+
 export default defineConfig({
-  schema: "prisma/schema.prisma",
+  schema: "backend/prisma/schema.prisma",
   migrations: {
-    path: "prisma/migrations",
+    path: "backend/prisma/migrations",
   },
   datasource: {
-    url: process.env["DATABASE_URL"],
+    url: databaseUrl,
   },
 });
