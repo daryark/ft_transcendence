@@ -2,6 +2,8 @@ import { figures } from "./figures";
 import type { Figure, FigureType } from "./figures";
 import { createBag } from "./logic";
 
+import { collision } from "./logic";
+
 export interface GameState {
   board: number[][];
   current: Figure;
@@ -10,6 +12,9 @@ export interface GameState {
   canHold: boolean;
   rows: number;
   cols: number;
+  gameOver: boolean;
+  score: number;
+  lines: number; 
 }
 
 function createFigure(type: FigureType, cols: number): Figure {
@@ -19,7 +24,7 @@ function createFigure(type: FigureType, cols: number): Figure {
     type,
     shape,
     x: Math.floor((cols - shape[0].length) / 2),
-    y: -2, 
+    y: -2,
   };
 }
 
@@ -30,7 +35,7 @@ export function createEmptyBoard(rows: number, cols: number) {
 export function initGame(rows: number, cols: number): GameState {
   const bag = createBag();
   const nextTypes = [...bag, ...createBag()];
-  const next = nextTypes.map(t => createFigure(t, cols));
+  const next = nextTypes.map((t) => createFigure(t, cols));
 
   return {
     board: createEmptyBoard(rows, cols),
@@ -40,6 +45,9 @@ export function initGame(rows: number, cols: number): GameState {
     canHold: true,
     rows,
     cols,
+    gameOver: false,
+    score:0,
+    lines:0,
   };
 }
 
@@ -47,7 +55,7 @@ export function spawnPiece(state: GameState): GameState {
   let next = [...state.next];
 
   if (next.length < 5) {
-    next.push(...createBag().map(t => createFigure(t, state.cols)));
+    next.push(...createBag().map((t) => createFigure(t, state.cols)));
   }
 
   let current = next.shift()!;
@@ -58,10 +66,14 @@ export function spawnPiece(state: GameState): GameState {
     y: -2,
   };
 
+  // ← Game over: новая фигура сразу коллайдит с доской
+  const isGameOver = collision(state.board, { ...current, y: 0 });
+
   return {
     ...state,
     current,
     next,
     canHold: true,
+    gameOver: isGameOver,
   };
 }

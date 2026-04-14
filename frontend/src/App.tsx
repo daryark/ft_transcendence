@@ -27,7 +27,7 @@ export default function App() {
 
             <Route path="solo">
               <Route index element={<Solo />} />
-              <Route path="40-lines" element={<SoloGame />} />
+              <Route path="40lines" element={<SoloGame />} />
               {/* потом добавишь blitz, zen */}
             </Route>
           </Route>

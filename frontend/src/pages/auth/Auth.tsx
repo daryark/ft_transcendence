@@ -4,6 +4,12 @@ import styles from './Auth.module.scss';
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
 
+
+
+  //logic for send info to backend
+
+
+  //* */
   return (
     <div className={styles.auth}>
       <div className={styles.card}>

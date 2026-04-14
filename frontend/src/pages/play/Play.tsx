@@ -12,7 +12,7 @@ const Play = () => {
           <Button key={mode.id} {...mode} />
         ))}
       </div>
-      <Outlet />
+      {/* <Outlet /> */}
     </>
   );
 };

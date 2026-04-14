@@ -37,7 +37,9 @@ export function collision(board: number[][], f: Figure): boolean {
   return false;
 }
 
-export function clearLines(board: number[][]) {
+const LINE_SCORES = [0, 100, 300, 500, 800];
+
+export function clearLines(board: number[][], level = 1) {
   const newBoard = board.filter((row) => row.some((cell) => cell === 0));
   const cleared = board.length - newBoard.length;
 
@@ -45,8 +47,23 @@ export function clearLines(board: number[][]) {
     newBoard.unshift(Array(board[0].length).fill(0));
   }
 
-  return { newBoard, cleared };
+  return {
+    newBoard,
+    cleared,
+    scoreAdd: LINE_SCORES[cleared] * level,
+  };
 }
+
+// export function clearLines(board: number[][]) {
+//   const newBoard = board.filter((row) => row.some((cell) => cell === 0));
+//   const cleared = board.length - newBoard.length;
+
+//   for (let i = 0; i < cleared; i++) {
+//     newBoard.unshift(Array(board[0].length).fill(0));
+//   }
+
+//   return { newBoard, cleared };
+// }
 
 export function getGhostPosition(board: number[][], f: Figure): Figure {
   let ghost = { ...f };
@@ -64,19 +81,28 @@ export function holdPiece(state: GameState): GameState {
 
   let newCurrent: Figure;
   let newHold: Figure;
+  let newNext: Figure[];
 
   if (!state.hold) {
-    newCurrent = state.next.shift()!;
+    const [first, ...rest] = state.next;
+
+    if (!first) return state;
+
+    newCurrent = first;
+    newNext = rest;
     newHold = state.current;
   } else {
     newCurrent = state.hold;
     newHold = state.current;
+
+    // ✅ ВАЖНО — копия массива!
+    newNext = [...state.next];
   }
 
   newCurrent = {
     ...newCurrent,
     x: Math.floor((state.cols - newCurrent.shape[0].length) / 2),
-    y: 0,
+    y: -2,
   };
 
   return {
@@ -84,6 +110,41 @@ export function holdPiece(state: GameState): GameState {
     current: newCurrent,
     hold: newHold,
     canHold: false,
-    next: [...state.next],
+    next: newNext,
   };
 }
+
+// export function holdPiece(state: GameState): GameState {
+//   if (!state.canHold) return state;
+
+//   let newCurrent: Figure;
+//   let newHold: Figure;
+//   let newNext = state.next;
+
+//   if (!state.hold) {
+
+//     const [first, ...rest] = state.next;
+
+//     newCurrent = first;
+//     newNext = rest;
+
+//     newHold = state.current;
+//   } else {
+//     newCurrent = state.hold;
+//     newHold = state.current;
+//   }
+
+//   newCurrent = {
+//     ...newCurrent,
+//     x: Math.floor((state.cols - newCurrent.shape[0].length) / 2),
+//     y: -2,
+//   };
+
+//   return {
+//     ...state,
+//     current: newCurrent,
+//     hold: newHold,
+//     canHold: false,
+//     next: newNext,
+//   };
+// }
