@@ -2,7 +2,7 @@ services:
   nginx:
     build:
       context: .
-      dockerfile: backend/services/nginx/Dockerfile
+      dockerfile: nginx/Dockerfile
     container_name: nginx
     depends_on:
       - backend
