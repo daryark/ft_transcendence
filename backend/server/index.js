@@ -1,9 +1,9 @@
 const http = require('http');
 const { Server } = require('socket.io');
 
-const { PORT } = require('./config/env');
-const app = require('./app');
-const registerSocketHandlers = require('./socket');
+const { PORT } = require('../config/env');
+const app = require('../app');
+const registerSocketHandlers = require('../sockets/index');
 
 const server = http.createServer(app);
 const socketServer = new Server(server, {

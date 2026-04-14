@@ -1,5 +1,5 @@
-const chatHandlers = require('./sockets/chatHandlers');
-const gameHandlers = require('./sockets/gameHandlers');
+const chatHandlers = require('./chatHandlers');
+const gameHandlers = require('./gameHandlers');
 
 module.exports = function registerSocketHandlers(socketServer) {
 

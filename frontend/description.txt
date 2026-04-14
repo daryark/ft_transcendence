@@ -1,4 +1,6 @@
-Frontend (React + Three.js)
+Frontend (React)
+
+Style maket and refs: https://stitch.withgoogle.com/projects/1944299795583053910?pli=1
 
 Handles:
 

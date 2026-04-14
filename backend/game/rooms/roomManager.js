@@ -48,7 +48,7 @@ function removePlayer(roomId, socketId) {
     room.players = room.players.filter(p => p !== socketId);
 
     if (room.players.length === 0) {
-        delete rooms[roomId]; // optional, or separate into deleteRoom fn
+        deleteRoom(roomId) // optional, or separate into deleteRoom fn
     }
 }
 
