@@ -3,7 +3,7 @@ const { Server } = require('socket.io');
 
 const { PORT } = require('../config/env');
 const app = require('../app');
-const registerSocketHandlers = require('../sockets/index');
+const setupSockets = require('../sockets/index');
 
 const server = http.createServer(app);
 const socketServer = new Server(server, {
@@ -12,7 +12,7 @@ const socketServer = new Server(server, {
     }  //# todo - restrict origin in real env
 });
 
-registerSocketHandlers(socketServer);
+setupSockets(socketServer);
 
 server.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);

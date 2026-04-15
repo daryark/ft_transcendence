@@ -1,20 +1,26 @@
 const PRESETS = require('../config/presets');
-// const quickplay = require('../rooms/quickplay');
-// const league = require('../rooms/league');
-// const solo = require('../rooms/solo');
-// const custom = require('../rooms/custom');
 
-//-> 👉 If it affects simulation → gameConfig
-//-> 👉 If it affects flow → modeConfig
-//-> 👉 If it affects winning → matchConfig
-//-> 👉 If it affects who can join → roomConfig
-//# room = {
-//#   mode: 'quickplay' | 'solo' | 'league' | 'custom',
-//#   gameConfig: { ... },   // engine ONLY
-//#   matchConfig: { ... },  // rounds, timers
-//#   roomConfig: { ... },   // players, spectators
-//#   modeConfig: { ... }    // special behavior per mode
-//# };
+// class RoomService {
+//   constructor() {
+//     this.rooms = new Map();
+//   }
+
+//   createRoom(id, room) {
+//     this.rooms.set(id, room);
+//   }
+
+//   getRoom(id) {
+//     return this.rooms.get(id);
+//   }
+
+//   addPlayer(roomId, player) {
+//     const room = this.rooms.get(roomId);
+//     if (!room) return;
+
+//     room.players.push(player);
+//   }
+// }
+// module.exports = RoomService;
 
 const rooms = {};
 
