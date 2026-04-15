@@ -20,7 +20,7 @@ services:
   database:
     build:
       context: .
-      dockerfile: backend/database/Dockerfile
+      dockerfile: infra/postgres/Dockerfile
     container_name: database
     env_file:
       - .env
