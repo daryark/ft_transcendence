@@ -2,22 +2,7 @@ const roomManager = require('../rooms/roomManager');
 const { configBase } = require('../config/presets');
 const socket = require('../../socket');
 
-// 3 || 5 || 7 based on rank D-A || (S-)-SS || U, X
-// (based off the higher of the two player's ranks)
-function roundsToWin(player1, player2) {
-    const rankOrder = ['D', 'C', 'B', 'A', 'S', 'U', 'X']; //#add + - ranks later
-    const higherRank = rankOrder.indexOf(player1.rank) > rankOrder.indexOf(player2.rank) ? player1.rank : player2.rank;
-
-    if (['D', 'C', 'B', 'A'].includes(higherRank)) {
-        return 3;
-    } else if (['S'].includes(higherRank)) {
-        return 5;
-    } else {
-        return 7;
-    }
-}
-
-function createLeagueMatch(player1, player2) {
+function join(player1, player2) {
     const roomId = `league:${player1}:${player2}:${Date.now()}`;
 
     const room = {
@@ -52,6 +37,23 @@ function createLeagueMatch(player1, player2) {
     return roomManager.getRoomState(roomId);
 }
 
+
+// 3 || 5 || 7 based on rank D-A || (S-)-SS || U, X
+// (based off the higher of the two player's ranks)
+function roundsToWin(player1, player2) {
+    const rankOrder = ['D', 'C', 'B', 'A', 'S', 'U', 'X']; //#add + - ranks later
+    const higherRank = rankOrder.indexOf(player1.rank) > rankOrder.indexOf(player2.rank) ? player1.rank : player2.rank;
+
+    if (['D', 'C', 'B', 'A'].includes(higherRank)) {
+        return 3;
+    } else if (['S'].includes(higherRank)) {
+        return 5;
+    } else {
+        return 7;
+    }
+}
+
+
 module.exports = {
-    createLeagueMatch
+    join
 };

@@ -103,3 +103,6 @@ Resources:
 1. WS vs Socket.IO - https://dev.to/alex_aslam/nodejs-websockets-when-to-use-ws-vs-socketio-and-why-we-switched-di9
 2. GeeksForGeeks, Node.js roadmap (short article on every important topic) - https://www.geeksforgeeks.org/node-js/node-js-roadmap/
 3. Socket.IO Server API - https://socket.io/docs/v4/server-api/#socketid
+4. Teris wiki - https://tetris.wiki/TETR.IO#Garbage_Travel_Speed:_.22Passthrough.22
+5. Jest docs -https://jestjs.io/docs/setup-teardown
+6. .ttr file format - https://docs.fileformat.com/game/ttr/

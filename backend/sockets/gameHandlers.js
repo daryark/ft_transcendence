@@ -1,10 +1,7 @@
-const roomManager = require('../game/services/roomService');
-const modeManager = require('../game/services/modeService');
-
-module.exports = function gameHandlers(socket) {
+module.exports = function gameHandlers(socket, modeService) {
 
     socket.on("mode:join", ({ mode, payload }) => {
-        modeManager.join(mode, socket, payload);
+        modeService.join(mode, socket, payload);
     });
     // socket.on('join_room', ({ roomId, role, preset }) => {
     //     const result = roomManager.joinRoom(roomId, socket.id, role, preset);

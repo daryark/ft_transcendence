@@ -1,9 +1,9 @@
 const PRESETS = require('../config/presets');
 
-// class RoomService {
-//   constructor() {
-//     this.rooms = new Map();
-//   }
+class RoomService {
+  constructor() {
+    this.rooms = new Map();
+  }
 
 //   createRoom(id, room) {
 //     this.rooms.set(id, room);
@@ -19,8 +19,8 @@ const PRESETS = require('../config/presets');
 
 //     room.players.push(player);
 //   }
-// }
-// module.exports = RoomService;
+}
+module.exports = RoomService;
 
 const rooms = {};
 
