@@ -1,56 +1,49 @@
-const { configBase, applyModifiers } = require('../config/presets');
+const { configBase, applyModifiers } = require('../../config/presets');
+const { startGame } = require('../match/startGame');
 
 function join(socket, roomService, payload) {
-    validateModifiers(payload.modifiers);
-    const poolKey = getPoolKey(payload.modifiers);
+    validateModifiers(payload.gameConfig?.modifiers || {});
 
-    let room = roomService.getRoom(poolKey);
+    const mode = 'quickplay';
+    let room = roomService.getRoom(mode);
     if (!room) {
         room = {
-            id: poolKey,
-            mode: 'quickplay',
+            id: mode,
+            mode,
             players: [],
             spectators: [],
-            gameConfig: applyModifiers(configBase(), payload.modifiers)
+            gameConfig: applyModifiers(configBase(), payload.gameConfig?.modifiers || {})
         };
 
         roomService.createRoom(room);
     }
 
-    roomService.addPlayer(poolKey, socket.id);
-    socket.join(poolKey);
-    socket.data.roomId = poolKey;
+    roomService.addPlayer(room.id, socket.id);
+    socket.join(room.id);
+    socket.data.roomId = room.id;
 
-    return roomService.getRoomState(poolKey);
+    if (room.players.length === 2) {
+        startGame(room, roomService);
+    }
+
+    return roomService.getRoomState(room.id);
 }
 
 function validateModifiers(modifiers = {}) {
     for (const key in modifiers) {
-        if (typeof modifiers[key] !== 'boolean') {
-            throw new TypeError(`Modifier "${key}" must be a boolean`);
+        for (const subKey in modifiers[key]) {
+            if (typeof modifiers[key][subKey] !== 'boolean') {
+                throw new TypeError(`Modifier "${key}.${subKey}" must be a boolean`);
+            }
         }
     }
 }
 
-function getPoolKey(modifiers) {
-    return `quickplay:${Object.entries(modifiers).
-        map(([k, v]) => `${k}=${v}`)
-        .sort()
-        .join('|')}`;
-}
-
-function leaveQuickplay(socket) {
-    const roomId = socket.data.roomId;
-    if (!roomId) return;
-
-    roomManager.removePlayer(roomId, socket.id);
-    // if room empty for X minutes → delete
-    // socket.leave(roomId);
-    // delete socket.data.roomId;
-}
+// function leaveQuickplay(socket) {
+//     const roomId = socket.data.roomId;
+//     if (!roomId) return;
 
 
 module.exports = {
-    joinQuickplay,
-    leaveQuickplay
+    join,
 };

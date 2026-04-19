@@ -13,16 +13,16 @@ function configBase() {
 function applyModifiers(base, modifiers) {
     const config = clone(base);
 
-    if (modifiers.volatile) {
+    if (modifiers?.garbage?.volatile) {
         config.garbage.volatile = true;
     }
 
-    if (modifiers.messy) {
+    if (modifiers?.garbage?.messy) {
         config.garbage.messiness = 100;
     }
 
-    if (modifiers.zeroGravity) {
-        config.gravity.gravity = 0;
+    if (modifiers?.garbage?.sticky) {
+        config.gravity.sticky = 1;
     }
 
     return config;

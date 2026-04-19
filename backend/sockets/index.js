@@ -2,7 +2,7 @@ const chatHandlers = require('./chatHandlers');
 const gameHandlers = require('./gameHandlers');
 const RoomService = require('../game/services/roomService');
 const createModeService = require('../game/services/modeService');
-const mode = require('../game/mode');
+const mode = require('../game/domain/mode');
 
 module.exports = function socketSetup(socketServer) {
     const roomService = new RoomService();

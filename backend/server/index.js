@@ -3,7 +3,7 @@ const { Server } = require('socket.io');
 
 const { PORT } = require('../config/env');
 const app = require('../app');
-const setupSockets = require('../sockets/index');
+const setupSockets = require('../sockets');
 
 const server = http.createServer(app);
 const socketServer = new Server(server, {

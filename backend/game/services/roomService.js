@@ -2,89 +2,61 @@ const PRESETS = require('../config/presets');
 
 class RoomService {
   constructor() {
+    // this.rooms = new Room({ id: null, players: [], spectators: [], gameConfig: {} });
     this.rooms = new Map();
+}
+
+  createRoom(room) {
+    if (!this.rooms.has(room.id)) {
+      this.rooms.set(room.id, room);
+    }
   }
 
-//   createRoom(id, room) {
-//     this.rooms.set(id, room);
-//   }
+  getRoom(roomId) {
+    return this.rooms.get(roomId);
+  }
 
-//   getRoom(id) {
-//     return this.rooms.get(id);
-//   }
+  deleteRoom(roomId) {
+    this.rooms.delete(roomId);
+  }
 
-//   addPlayer(roomId, player) {
-//     const room = this.rooms.get(roomId);
-//     if (!room) return;
 
-//     room.players.push(player);
-//   }
-}
-module.exports = RoomService;
-
-const rooms = {};
-
-function createRoom(room) {
-    if (!rooms[room.id]) {
-        rooms[room.id] = room;
-    }
-}
-
-function getRoom(roomId) {
-    return rooms[roomId];
-}
-
-function deleteRoom(roomId) {
-    delete rooms[roomId];
-}
-
-function addPlayer(roomId, player) {
-    const room = rooms[roomId];
+  addPlayer(roomId, player) {
+    const room = this.rooms.get(roomId);
     if (!room) return;
 
     if (!room.players.includes(player)) {
         room.players.push(player);
+        }
+    }
+
+    removePlayer(roomId, player) {
+        const room = this.rooms.get(roomId);
+        if (!room) return;
+
+        room.players = room.players.filter(p => p !== player);
+        if (room.players.length === 0) {
+            this.deleteRoom(roomId);
+        }
+    }
+
+    clearRooms() {
+        this.rooms.clear();
+    }
+    
+    getRoomState(roomId) {
+        const room = this.rooms.get(roomId);
+        if (!room) return null;
+
+        return {
+            id: room.id,
+            players: room.players,
+            gameConfig: room.gameConfig
+        };
     }
 }
 
-function removePlayer(roomId, socketId) {
-    const room = rooms[roomId];
-    if (!room) return;
-
-    room.players = room.players.filter(p => p !== socketId);
-
-    if (room.players.length === 0) {
-        deleteRoom(roomId) // optional, or separate into deleteRoom fn
-    }
-}
-
-function clearRooms() {
-    for (const key in rooms) {
-        delete rooms[key];
-    }
-}
-
-function getRoomState(roomId) {
-    const room = rooms[roomId];
-    if (!room) return null;
-
-    return {
-        id: room.id,
-        players: room.players,
-        gameConfig: room.gameConfig
-    };
-}
-
-module.exports = {
-    createRoom,
-    getRoom,
-    deleteRoom,
-    addPlayer,
-    removePlayer,
-    getRoomState,
-
-    clearRooms
-};
+module.exports = RoomService;
 
 
 // all about server info is in 'server.about.txt' in the root of the 'backend' folder.

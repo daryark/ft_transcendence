@@ -1,4 +1,9 @@
 /* Default Game Configuration */
+//! make default
+//# whole room config (with empty objs for gameConfig, matchConfig, etc.)
+//# gameConfig (presets + modifiers for game rules, gravity, controls, etc.)
+//#? controllersCoinfig (button layout, sensitivity, etc.) - inside gameConfig or separate?
+//# matchConfig (rounds, scores, etc.)
 
 gameConfig = {
   // preset: "custom", // or "quickplay"
@@ -14,9 +19,9 @@ gameConfig = {
 
   garbage: {
     messiness: 0,
-    sticky: true
-    // doubleHole: false,
-    // volatile: false
+    sticky: true,
+    volatile: false
+    // doubleHole: false
   },
 
   controls: {

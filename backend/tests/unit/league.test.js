@@ -1,9 +1,10 @@
-const league = require('../../game/modes/league');
-const roomManager = require('../../game/rooms/roomManager');
+const league = require('../../game/domain/mode/league');
+const RoomService = require('../../game/services/roomService');
 
 describe('League', () => {
+    const roomService = new RoomService();
 
     beforeEach(() => {
-        roomManager.clearRooms();
+        roomService.clearRooms();
     });
 });

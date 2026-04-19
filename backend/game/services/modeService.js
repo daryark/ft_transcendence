@@ -9,5 +9,19 @@ module.exports = function createModeService({modes, roomService}) {
         
         return handler.join(socket, roomService, payload); //! remove try/catch here (handle at socket layer)
     }
-    return { join };
+
+    function leave(mode, socket) {
+        const handler = modes[mode];
+        if (!handler?.leave) {
+            socket.emit('mode_error', { reason: "INVALID_MODE" });//! or throw err
+            return;
+        }
+        
+        return handler.leave(socket, roomService);
+    }
+
+    return {
+        join,
+        leave,
+    };
 }
