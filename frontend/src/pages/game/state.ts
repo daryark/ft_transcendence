@@ -14,7 +14,7 @@ export interface GameState {
   cols: number;
   gameOver: boolean;
   score: number;
-  lines: number; 
+  lines: number;
 }
 
 function createFigure(type: FigureType, cols: number): Figure {
@@ -46,8 +46,8 @@ export function initGame(rows: number, cols: number): GameState {
     rows,
     cols,
     gameOver: false,
-    score:0,
-    lines:0,
+    score: 0,
+    lines: 0,
   };
 }
 
@@ -66,7 +66,7 @@ export function spawnPiece(state: GameState): GameState {
     y: -2,
   };
 
-  // ← Game over: новая фигура сразу коллайдит с доской
+  // Game over -  новая фигура сразу коллайдит с доской
   const isGameOver = collision(state.board, { ...current, y: 0 });
 
   return {

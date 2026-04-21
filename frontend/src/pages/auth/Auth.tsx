@@ -1,66 +1,155 @@
-import { useState } from 'react';
-import styles from './Auth.module.scss';
+import { useState } from "react";
+import "./Auth.scss";
+
+
+
+//tmp // addd to folder with sersises 
+export const registerUser = async (data: {
+  email: string;
+  password: string;
+  username: string;
+}) => {
+  const res = await fetch("/api/auth/register", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || "Registration failed");
+  }
+
+  return res.json();
+};
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
 
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [username, setUsername] = useState("");
 
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  //logic for send info to backend
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
+    //only resistation test
+    if (isLogin) return;
 
-  //* */
+    try {
+      setLoading(true);
+      setError("");
+
+      const data = await registerUser({
+        email,
+        password,
+        username,
+      });
+
+      // save token ? update when will you and create 
+      // localStorage.setItem("token", data.token);
+
+      // redicect
+      window.location.href = "/play";
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAnonymous = () => {
+    //tmp
+    console.log("Continue as Anonymous");
+  };
+
   return (
-    <div className={styles.auth}>
-      <div className={styles.card}>
-        <div className={styles.header}>
-          <h2 className={styles.title}>{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
-          <p className={styles.subtitle}>
-            {isLogin ? 'Sign in to continue' : 'Join the Tetra community'}
-          </p>
+    <div className="auth">
+      {/* left*/}
+      <div className="auth__left">
+        <div className="auth__overlay">
+          <h1>TETRA</h1>
+          <p>amazing game in this world</p>
         </div>
-        
-        <form className={styles.form}>
-          {!isLogin && (
-            <div className={styles.field}>
-              <label className={styles.label}>Username</label>
+      </div>
+
+      {/* rigth */}
+      <div className="auth__right">
+        <div className="auth__card">
+          {/* header form */}
+          <div className="auth__header">
+            <h2>{isLogin ? "Welcome back" : "Create account"}</h2>
+            <p>{isLogin ? "Enter your credentials" : "Start your journey"}</p>
+          </div>
+
+          {/* switch parts login/registration */}
+          <div className="auth__tabs">
+            <button
+              className={isLogin ? "active" : ""}
+              onClick={() => setIsLogin(true)}
+            >
+              Login
+            </button>
+
+            <button
+              className={!isLogin ? "active" : ""}
+              onClick={() => setIsLogin(false)}
+            >
+              Register
+            </button>
+          </div>
+
+          {/* form */}
+          <form onSubmit={handleSubmit} className="auth__form">
+            {!isLogin && (
               <input
                 type="text"
-                className={styles.input}
-                placeholder="Choose a username"
+                placeholder="Username"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
               />
-            </div>
-          )}
-          
-          <div className={styles.field}>
-            <label className={styles.label}>Email</label>
+            )}
+
             <input
               type="email"
-              className={styles.input}
-              placeholder="your@email.com"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
             />
-          </div>
-          
-          <div className={styles.field}>
-            <label className={styles.label}>Password</label>
+
             <input
               type="password"
-              className={styles.input}
-              placeholder="••••••••"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
+
+            <button className="auth__submit" disabled={loading}>
+              {loading ? "Loading..." : "Create account"}
+            </button>
+
+            {error && <p className="auth__error">{error}</p>}
+          </form>
+
+          <div className="auth__divider">
+            <span>or continue with</span>
           </div>
-          
-          <button type="submit" className={styles.submitButton}>
-            {isLogin ? 'Sign In' : 'Sign Up'}
-          </button>
-        </form>
-        
-        <div className={styles.submitButton}>
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className={styles.switchButton}
-          >
-            {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+
+          {/* Oauth buttons */}
+          <div className="auth__oauth">
+            <button className="oauth github">Continue with GitHub</button>
+
+            <button className="oauth forty-two">Continue with 42</button>
+          </div>
+
+          {/* anonymous */}
+          <button className="auth__anonymous" onClick={handleAnonymous}>
+            Play as anonymous
           </button>
         </div>
       </div>

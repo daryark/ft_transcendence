@@ -13,7 +13,7 @@ type Player = {
   country: string;
 };
 
-// request api?
+//  api?
 const fetchLeaderboard = async (mode: string, scope: string) => {
   const res = await fetch(
     `/api/leaderboards?mode=${mode}&scope=${scope}`

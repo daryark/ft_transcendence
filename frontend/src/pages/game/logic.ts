@@ -54,16 +54,6 @@ export function clearLines(board: number[][], level = 1) {
   };
 }
 
-// export function clearLines(board: number[][]) {
-//   const newBoard = board.filter((row) => row.some((cell) => cell === 0));
-//   const cleared = board.length - newBoard.length;
-
-//   for (let i = 0; i < cleared; i++) {
-//     newBoard.unshift(Array(board[0].length).fill(0));
-//   }
-
-//   return { newBoard, cleared };
-// }
 
 export function getGhostPosition(board: number[][], f: Figure): Figure {
   let ghost = { ...f };
@@ -95,7 +85,7 @@ export function holdPiece(state: GameState): GameState {
     newCurrent = state.hold;
     newHold = state.current;
 
-    // ✅ ВАЖНО — копия массива!
+    //copy array important **
     newNext = [...state.next];
   }
 
@@ -114,37 +104,3 @@ export function holdPiece(state: GameState): GameState {
   };
 }
 
-// export function holdPiece(state: GameState): GameState {
-//   if (!state.canHold) return state;
-
-//   let newCurrent: Figure;
-//   let newHold: Figure;
-//   let newNext = state.next;
-
-//   if (!state.hold) {
-
-//     const [first, ...rest] = state.next;
-
-//     newCurrent = first;
-//     newNext = rest;
-
-//     newHold = state.current;
-//   } else {
-//     newCurrent = state.hold;
-//     newHold = state.current;
-//   }
-
-//   newCurrent = {
-//     ...newCurrent,
-//     x: Math.floor((state.cols - newCurrent.shape[0].length) / 2),
-//     y: -2,
-//   };
-
-//   return {
-//     ...state,
-//     current: newCurrent,
-//     hold: newHold,
-//     canHold: false,
-//     next: newNext,
-//   };
-// }
