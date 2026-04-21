@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from "react";
+import React, { useRef, useEffect } from "react";
 
 import {
   moveFigure,
@@ -6,27 +6,45 @@ import {
   clearLines,
   rotate,
   getGhostPosition,
-  holdPiece,
 } from "../../pages/game/logic";
 
 import { figureColors } from "../../pages/game/figures";
-import { initGame, spawnPiece } from "../../pages/game/state";
+import { spawnPiece } from "../../pages/game/state";
 import type { GameState } from "../../pages/game/state";
 
 interface Props {
   rows: number;
   cols: number;
   cellSize: number;
+
+  gameState: GameState;
+  setGameState: React.Dispatch<React.SetStateAction<GameState>>;
+
+  onHold: () => void;
+  onRestart: () => void;
 }
 
-const GameBoard: React.FC<Props> = ({ rows, cols, cellSize }) => {
+//need to update and add 
+const GameBoard: React.FC<Props> = ({
+  rows,
+  cols,
+  cellSize,
+  gameState,
+  setGameState,
+  onHold,
+  onRestart,
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [game, setGame] = useState<GameState>(initGame(rows, cols));
 
-  // game lopp +
+  const BUFFER = 2;
+  const offsetY = BUFFER * cellSize;
+
+  //  game loop
   useEffect(() => {
+    if (gameState.gameOver) return;
+
     const interval = setInterval(() => {
-      setGame((prev) => {
+      setGameState((prev) => {
         let moved = moveFigure(prev.current, 0, 1);
 
         if (collision(prev.board, moved)) {
@@ -55,12 +73,14 @@ const GameBoard: React.FC<Props> = ({ rows, cols, cellSize }) => {
     }, 500);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [gameState.gameOver, setGameState]);
 
-  // movement +
+ //movement 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      setGame((prev) => {
+      if (gameState.gameOver) return;
+
+      setGameState((prev) => {
         let piece = { ...prev.current };
 
         if (e.key === "ArrowLeft") piece = moveFigure(piece, -1, 0);
@@ -73,6 +93,7 @@ const GameBoard: React.FC<Props> = ({ rows, cols, cellSize }) => {
           if (!collision(prev.board, test)) piece = test;
         }
 
+        // HARD DROP
         if (e.key === " ") {
           while (!collision(prev.board, piece)) {
             piece = moveFigure(piece, 0, 1);
@@ -99,8 +120,10 @@ const GameBoard: React.FC<Props> = ({ rows, cols, cellSize }) => {
           });
         }
 
+        //hold - move to different file (future) ////
         if (e.key === "c") {
-          return holdPiece(prev);
+          onHold(); 
+          return prev;
         }
 
         if (collision(prev.board, piece)) return prev;
@@ -111,40 +134,51 @@ const GameBoard: React.FC<Props> = ({ rows, cols, cellSize }) => {
 
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, []);
+  }, [gameState.gameOver, setGameState, onHold]);
 
-  // render +
+  // render
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
     canvas.width = cols * cellSize;
-    canvas.height = (rows + 2)  * cellSize;
+    canvas.height = (rows + BUFFER) * cellSize;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // fild +
-    ctx.strokeStyle = "#222";
+    // grid (update to color like figures)
+    ctx.strokeStyle = "#444";
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        ctx.strokeRect(c * cellSize, r * cellSize, cellSize, cellSize);
+        ctx.strokeRect(
+          c * cellSize,
+          r * cellSize + offsetY,
+          cellSize,
+          cellSize
+        );
       }
     }
 
-    // blocks +
+    // bord show
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        if (game.board[r][c]) {
+        if (gameState.board[r][c]) {
           ctx.fillStyle = "#666";
-          ctx.fillRect(c * cellSize, r * cellSize, cellSize, cellSize);
+          ctx.fillRect(
+            c * cellSize,
+            r * cellSize + offsetY,
+            cellSize,
+            cellSize
+          );
         }
       }
     }
 
-    // ghost figure +
-    const ghost = getGhostPosition(game.board, game.current);
+    // gost figure 
+    const ghost = getGhostPosition(gameState.board, gameState.current);
     ctx.globalAlpha = 0.3;
     ctx.fillStyle = figureColors[ghost.type];
 
@@ -153,9 +187,9 @@ const GameBoard: React.FC<Props> = ({ rows, cols, cellSize }) => {
         if (cell) {
           ctx.fillRect(
             (ghost.x + c) * cellSize,
-            (ghost.y + r) * cellSize,
+            (ghost.y + r) * cellSize + offsetY,
             cellSize,
-            cellSize,
+            cellSize
           );
         }
       });
@@ -163,8 +197,8 @@ const GameBoard: React.FC<Props> = ({ rows, cols, cellSize }) => {
 
     ctx.globalAlpha = 1;
 
-    // current figure +
-    const piece = game.current;
+    // current
+    const piece = gameState.current;
     ctx.fillStyle = figureColors[piece.type];
 
     piece.shape.forEach((row, r) => {
@@ -172,14 +206,36 @@ const GameBoard: React.FC<Props> = ({ rows, cols, cellSize }) => {
         if (cell) {
           ctx.fillRect(
             (piece.x + c) * cellSize,
-            (piece.y + r) * cellSize,
+            (piece.y + r) * cellSize + offsetY,
             cellSize,
-            cellSize,
+            cellSize
           );
         }
       });
     });
-  }, [game]);
+
+    // game over
+    if (gameState.gameOver) {
+      ctx.fillStyle = "rgba(0,0,0,0.7)";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#fff";
+      ctx.font = `bold ${cellSize}px monospace`;
+      ctx.textAlign = "center";
+
+      ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
+    }
+  }, [gameState, cols, rows, cellSize]);
+
+  // reset game
+  useEffect(() => {
+    const handleRestart = (e: KeyboardEvent) => {
+      if (e.key === "r") onRestart();
+    };
+
+    window.addEventListener("keydown", handleRestart);
+    return () => window.removeEventListener("keydown", handleRestart);
+  }, [onRestart]);
 
   return <canvas ref={canvasRef} />;
 };

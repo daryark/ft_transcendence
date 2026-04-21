@@ -9,20 +9,20 @@ export const soloModes = [
     path: l40Icon,
     title: "40 Lines",
     description: "Clear 40 lines fast",
-    route: "/game/solo/40lines",
+    route: "/play/solo/40lines",
   },
   {
     id: "blitz",
     path: blitzIcon,
     title: "Blitz",
     description: "Score in 2 minutes",
-    route: "/game/solo/blitz",
+    route: "/play/solo/blitz",
   },
   {
     id: "zen",
     path: zenIcon,
     title: "Zen",
     description: "Relaxed mode",
-    route: "/game/solo/zen",
+    route: "/play/solo/zen",
   },
 ];

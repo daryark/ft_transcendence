@@ -25,8 +25,8 @@ const Header = () => {
                 Play
               </Link>
               <Link 
-                to="/tetra-channel" 
-                className={`${styles.navLink} ${isActive('/tetra-channel') ? styles.active : ''}`}
+                to="/channel" 
+                className={`${styles.navLink} ${isActive('/channel') ? styles.active : ''}`}
               >
                 Tetra Channel
               </Link>

@@ -1,0 +1,23 @@
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.leaderboard__row {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.leaderboard__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.leaderboard__table th,
+.leaderboard__table td {
+  border: 1px solid #ccc;
+  padding: 10px;
+  text-align: center;
+}
