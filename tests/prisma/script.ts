@@ -1,6 +1,6 @@
 import { config as loadEnv } from "dotenv";
 import { expand } from "dotenv-expand";
-import { PrismaClient } from "../generated/prisma/client";
+import { PrismaClient } from "../../backend/generated/prisma/client";
 
 expand(loadEnv());
 

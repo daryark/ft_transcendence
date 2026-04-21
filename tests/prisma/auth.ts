@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { prisma } from "./prisma";
+import { prisma } from "../../backend/prisma/prisma";
 
 type PublicUser = {
 	id: number;
