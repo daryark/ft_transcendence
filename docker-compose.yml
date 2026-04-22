@@ -25,10 +25,11 @@ services:
     container_name: database
     env_file:
       - .env
-    # environment:
-    #   POSTGRES_USER: ${POSTGRES_USER:-myuser}
-    #   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
-    #   POSTGRES_DB: ${POSTGRES_DB:-mydatabase}
+    #environment:
+     # POSTGRES_USER: ${POSTGRES_USER:-myuser}
+     # POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
+     # POSTGRES_DB: ${POSTGRES_DB:-mydatabase}
+     # DATABASE_URL: postgresql://${POSTGRES_USER:-myuser}:${POSTGRES_PASSWORD:-mypassword}@database:5432/${POSTGRES_DB:-mydatabase}
     ports:
       - "5432:5432"
     networks:
