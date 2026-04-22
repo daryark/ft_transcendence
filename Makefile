@@ -1,16 +1,30 @@
+COMPOSE ?= docker-compose
+
 prep:
-	docker --version
-	docker-compose --version
+	@docker --version
+	@$(COMPOSE) --version
 
 
 build:
-	docker-compose build
+	@$(COMPOSE) up -d --build
 
 up:
-	docker-compose up -d
+	@$(COMPOSE) up -d
 
 down:
-	docker-compose down
+	@$(COMPOSE) down -v
+
+clean: down
+	@docker system prune -a
+
+fclean:
+	-@docker stop $$(docker ps -qa)
+	@docker system prune --all --force --volumes
+	@docker network prune --force
+	@docker volume prune --force
+
+re: down
+	@$(COMPOSE) up -d --build
 
 check:
 	echo "Checking API..."
@@ -28,7 +42,4 @@ cert:
 	mkcert ft-transcendence.42.fr
 	
 #docker exec -it 7ef22cde1b09 psql -U myuser -d mydatabase -c "SELECT * FROM users;"
-	
-
-
-
+.PHONY: prep build up down clean fclean re check cert

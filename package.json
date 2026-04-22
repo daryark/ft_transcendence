@@ -9,7 +9,16 @@
   "scripts": {
     "start": "node backend/server.js",
     "dev": "nodemon backend/server.js",
-    "test": "jest"
+    "test": "jest",
+    "prisma:generate": "prisma generate",
+    "prisma:script": "tsx tests/prisma/script.ts",
+    "prisma:auth": "tsx tests/prisma/auth.ts",
+    "prisma:test:connection": "tsx tests/prisma/test-connection.ts",
+    "prisma:test:bcrypt": "tsx tests/prisma/test-bcrypt.ts",
+    "prisma:test:auth": "tsx tests/prisma/test-auth-flow.ts",
+    "prisma:test:all": "npm run prisma:test:connection && npm run prisma:test:bcrypt && npm run prisma:test:auth",
+    "prisma:seed:fill": "tsx tests/prisma/fill-db.ts",
+    "prisma:seed:clear": "tsx tests/prisma/clear-seed-db.ts"
   },
   "repository": {
     "type": "git",
@@ -23,14 +32,25 @@
   },
   "homepage": "https://github.com/daryark/ft_transcendence#readme",
   "dependencies": {
+    "@prisma/adapter-pg": "^6.19.3",
+    "@prisma/client": "^6.19.3",
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "express": "^5.2.1",
-    "socket.io": "^4.8.3"
+    "jsonwebtoken": "^9.0.3",
+    "pg": "^8.20.0",
+    "socket.io": "^4.8.3",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "dotenv": "^17.4.2",
+    "dotenv-expand": "^12.0.3",
     "jest": "^30.3.0",
     "nodemon": "^3.1.14",
+    "prisma": "^6.19.3",
     "socket.io-client": "^4.8.3",
-    "supertest": "^7.2.2"
+    "supertest": "^7.2.2",
+    "tsx": "^4.21.0"
   }
 }

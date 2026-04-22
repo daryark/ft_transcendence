@@ -20,6 +20,8 @@ api.get('/something', (req, res) => {
   res.json({ message: 'handled /api/something' });
 });
 
+
+
 // GET /api/users/42  → param "id"
 api.get('/users/:id', (req, res) => {
   res.json({ userId: req.params.id });
