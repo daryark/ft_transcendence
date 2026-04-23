@@ -10,7 +10,7 @@ function configBase() {
     return clone(DEFAULT);
 }
 
-function applyModifiers(base, modifiers) {
+function applyModifiers(base, modifiers = {}) {
     const config = clone(base);
 
     if (modifiers?.garbage?.volatile) {

@@ -6,13 +6,13 @@ const setupSockets = require('../sockets');
 const { PORT } = require('../config/env');
 
 const server = http.createServer(app);
-const socketServer = new Server(server, {
+const io = new Server(server, {
     cors: { origin: '*',
             methods: ["GET", "POST"],
     }  //# todo - restrict origin in real env
 });
 
-setupSockets(socketServer);
+setupSockets(io);
 
 server.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);

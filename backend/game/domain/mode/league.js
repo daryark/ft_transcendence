@@ -11,15 +11,33 @@ const { configBase } = require('../../config/presets');
 //*     else:
 //*       wait in queue
 
+//# enter mode →
+//#   lobby →
+//#     ready / config →
+//#       start trigger →
+//#         game →
+//#           end →
+//#             back to lobby / exit
+
 function join(socket, roomService, payload) {
-    const queue = [];
-    queue.push(socket);
+    const mode = 'league';
+roomService.enqueue(socket);
 
-    if (queue.length >= 2) {
-        const player1 = queue.shift();
-        const player2 = queue.shift();
+    if (roomService.queue.length >= 2) { //!add matchmacking logic instead IF
+        const player1 = roomService.dequeue(socket.id);
+        const player2 = roomService.dequeue(socket.id);
 
-        return createLeagueRoom(player1, player2, roomService);
+        const roomId = `league:${player1.id}:${player2.id}:${Date.now()}`;
+        roomService.createRoom(roomId, { mode, players: [player1, player2] });
+
+        player1.join(roomId);
+        player2.join(roomId);
+        player1.data.roomId = roomId;
+        player2.data.roomId = roomId;
+
+        roomService.startGame(roomId);
+
+        return roomService.getRoomState(roomId);
     }
 
     return { status: 'waiting' };

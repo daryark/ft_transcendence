@@ -1,6 +1,6 @@
 module.exports = function gameHandlers(socket, modeService) {
 
-    socket.on("mode:join", ({ mode, payload }) => {
+    socket.on("mode:join", ({ mode, payload = {} }) => {
         modeService.join(mode, socket, payload);
     });
     // socket.on('join_room', ({ roomId, role, preset }) => {

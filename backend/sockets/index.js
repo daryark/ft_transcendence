@@ -4,11 +4,11 @@ const RoomService = require('../game/services/roomService');
 const createModeService = require('../game/services/modeService');
 const mode = require('../game/domain/mode');
 
-module.exports = function socketSetup(socketServer) {
-    const roomService = new RoomService();
+module.exports = function socketSetup(io) {
+    const roomService = new RoomService(io);
     const modeService = createModeService({mode, roomService});
 
-    socketServer.on('connection', (socket) => {
+    io.on('connection', (socket) => {
         console.log('New client connected:', socket.id);
     
         socket.on('client:ping', () => {

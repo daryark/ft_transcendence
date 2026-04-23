@@ -94,7 +94,7 @@ socket is not real (on real socket there's a method socket.join()), so we immita
 and can check, if this fake function was called in the code is we want it.
 
 #Tasks next/questions:
-1. understand io/socketServer naming importance
+1. understand io/io naming importance
 2. understand handlers role, usage.
 3. add presets(different)
 4. clone DEFAULT + mode preset/custom changes on room config creation
