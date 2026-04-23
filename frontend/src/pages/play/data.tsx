@@ -10,7 +10,7 @@ export const gameModes = [
     title: "Multiplayer",
     description: "Play online with friends and foes",
     gradient: "purple",
-    route: "/game/multiplayer",
+    route: "/play/multiplayer",
   },
   {
     id: "solo",
@@ -18,7 +18,7 @@ export const gameModes = [
     title: "Solo",
     description: "Challenge yourself and top the leaderboards",
     gradient: "blue",
-    route: "/game/solo",
+    route: "/play/solo",
   },
   {
     id: "tetra_channel",
@@ -26,7 +26,7 @@ export const gameModes = [
     title: "Tetra Channel",
     description: "Compete in brackets",
     gradient: "green",
-    route: "/tetra-channel",
+    route: "/channel",
   },
   {
     id: "about",

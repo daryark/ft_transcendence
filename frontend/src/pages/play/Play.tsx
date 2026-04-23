@@ -1,4 +1,5 @@
 // import styles from "./Play.module.scss";
+import { Outlet } from "react-router-dom";
 import { gameModes } from "./data";
 import Button from "../../components/Button/Button";
 import "./Play.module.scss"
@@ -11,6 +12,7 @@ const Play = () => {
           <Button key={mode.id} {...mode} />
         ))}
       </div>
+      {/* <Outlet /> */}
     </>
   );
 };
