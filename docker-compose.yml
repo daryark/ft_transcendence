@@ -2,12 +2,13 @@ services:
   nginx:
     build:
       context: .
-      dockerfile: backend/services/nginx/Dockerfile
+      dockerfile: nginx/Dockerfile
     container_name: nginx
     depends_on:
       - backend
+      - frontend
     ports:
-      - "8080:80"
+      - "80:80"
      #- "443:443"
     networks:
       - trancendence
@@ -24,6 +25,10 @@ services:
     container_name: database
     env_file:
       - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-myuser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
+      POSTGRES_DB: ${POSTGRES_DB:-mydatabase}
     ports:
       - "5432:5432"
     networks:
@@ -36,10 +41,6 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
-      #args:
-      #  DB_NAME: ${DB_NAME}
-      #  DB_USER: ${DB_USER}
-      #  DB_PASS: ${DB_PASS}
     container_name: backend
     depends_on:
       - database
