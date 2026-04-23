@@ -9,7 +9,7 @@ import {
 } from "../../pages/game/logic";
 
 import { figureColors } from "../../pages/game/figures";
-import { spawnPiece } from "../../pages/game/state";
+import { spawnFigure } from "../../pages/game/state";
 import type { GameState } from "../../pages/game/state";
 
 interface Props {
@@ -24,7 +24,7 @@ interface Props {
   onRestart: () => void;
 }
 
-//need to update and add 
+//need to update and add
 const GameBoard: React.FC<Props> = ({
   rows,
   cols,
@@ -62,7 +62,7 @@ const GameBoard: React.FC<Props> = ({
 
           const { newBoard: clearedBoard } = clearLines(newBoard);
 
-          return spawnPiece({
+          return spawnFigure({
             ...prev,
             board: clearedBoard,
           });
@@ -75,38 +75,38 @@ const GameBoard: React.FC<Props> = ({
     return () => clearInterval(interval);
   }, [gameState.gameOver, setGameState]);
 
- //movement 
+  //movement
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (gameState.gameOver) return;
 
       setGameState((prev) => {
-        let piece = { ...prev.current };
+        let figure = { ...prev.current };
 
-        if (e.key === "ArrowLeft") piece = moveFigure(piece, -1, 0);
-        if (e.key === "ArrowRight") piece = moveFigure(piece, 1, 0);
-        if (e.key === "ArrowDown") piece = moveFigure(piece, 0, 1);
+        if (e.key === "ArrowLeft") figure = moveFigure(figure, -1, 0);
+        if (e.key === "ArrowRight") figure = moveFigure(figure, 1, 0);
+        if (e.key === "ArrowDown") figure = moveFigure(figure, 0, 1);
 
         if (e.key === "ArrowUp") {
-          const rotated = rotate(piece.shape);
-          const test = { ...piece, shape: rotated };
-          if (!collision(prev.board, test)) piece = test;
+          const rotated = rotate(figure.shape);
+          const test = { ...figure, shape: rotated };
+          if (!collision(prev.board, test)) figure = test;
         }
 
         // HARD DROP
         if (e.key === " ") {
-          while (!collision(prev.board, piece)) {
-            piece = moveFigure(piece, 0, 1);
+          while (!collision(prev.board, figure)) {
+            figure = moveFigure(figure, 0, 1);
           }
-          piece.y -= 1;
+          figure.y -= 1;
 
           const newBoard = prev.board.map((row) => [...row]);
 
-          piece.shape.forEach((row, r) => {
+          figure.shape.forEach((row, r) => {
             row.forEach((cell, c) => {
               if (cell) {
-                const y = piece.y + r;
-                const x = piece.x + c;
+                const y = figure.y + r;
+                const x = figure.x + c;
                 if (y >= 0) newBoard[y][x] = 1;
               }
             });
@@ -114,7 +114,7 @@ const GameBoard: React.FC<Props> = ({
 
           const { newBoard: clearedBoard } = clearLines(newBoard);
 
-          return spawnPiece({
+          return spawnFigure({
             ...prev,
             board: clearedBoard,
           });
@@ -122,13 +122,13 @@ const GameBoard: React.FC<Props> = ({
 
         //hold - move to different file (future) ////
         if (e.key === "c") {
-          onHold(); 
+          onHold();
           return prev;
         }
 
-        if (collision(prev.board, piece)) return prev;
+        if (collision(prev.board, figure)) return prev;
 
-        return { ...prev, current: piece };
+        return { ...prev, current: figure };
       });
     };
 
@@ -157,7 +157,7 @@ const GameBoard: React.FC<Props> = ({
           c * cellSize,
           r * cellSize + offsetY,
           cellSize,
-          cellSize
+          cellSize,
         );
       }
     }
@@ -171,13 +171,13 @@ const GameBoard: React.FC<Props> = ({
             c * cellSize,
             r * cellSize + offsetY,
             cellSize,
-            cellSize
+            cellSize,
           );
         }
       }
     }
 
-    // gost figure 
+    // gost figure
     const ghost = getGhostPosition(gameState.board, gameState.current);
     ctx.globalAlpha = 0.3;
     ctx.fillStyle = figureColors[ghost.type];
@@ -189,7 +189,7 @@ const GameBoard: React.FC<Props> = ({
             (ghost.x + c) * cellSize,
             (ghost.y + r) * cellSize + offsetY,
             cellSize,
-            cellSize
+            cellSize,
           );
         }
       });
@@ -198,17 +198,17 @@ const GameBoard: React.FC<Props> = ({
     ctx.globalAlpha = 1;
 
     // current
-    const piece = gameState.current;
-    ctx.fillStyle = figureColors[piece.type];
+    const figure = gameState.current;
+    ctx.fillStyle = figureColors[figure.type];
 
-    piece.shape.forEach((row, r) => {
+    figure.shape.forEach((row, r) => {
       row.forEach((cell, c) => {
         if (cell) {
           ctx.fillRect(
-            (piece.x + c) * cellSize,
-            (piece.y + r) * cellSize + offsetY,
+            (figure.x + c) * cellSize,
+            (figure.y + r) * cellSize + offsetY,
             cellSize,
-            cellSize
+            cellSize,
           );
         }
       });

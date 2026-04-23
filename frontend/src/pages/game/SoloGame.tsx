@@ -1,19 +1,19 @@
 import { useState } from "react";
 import GameBoard from "../../components/GameBoard/GameBoard";
-import HoldPanel from "../../components/MiniPiece/MiniPiece";
-import MiniPiece from "../../components/MiniPiece/MiniPiece";
+import HoldPanel from "../../components/MiniFigure/MiniFigure";
+import MiniFigure from "../../components/MiniFigure/MiniFigure";
 import type { GameState } from "../game/state";
 import type { Figure } from "../game/figures";
 import { initGame } from "../game/state";
 import "./SoloGame.scss";
 
-import { holdPiece } from "./logic";
+import { holdFigure } from "./logic";
 
 export default function SoloGame() {
   const [gameState, setGameState] = useState(() => initGame(20, 10));
 
   const handleHold = () => {
-    setGameState((prev) => holdPiece(prev));
+    setGameState((prev) => holdFigure(prev));
     console.log(gameState.hold);
   };
 
@@ -26,7 +26,7 @@ export default function SoloGame() {
 
           <div className="hold__box">
             {gameState.hold ? (
-              <HoldPanel piece={gameState.hold} size={18} />
+              <HoldPanel figure={gameState.hold} size={18} />
             ) : (
               <div className="empty">—</div>
             )}
@@ -48,9 +48,9 @@ export default function SoloGame() {
           <h3>NEXT</h3>
 
           <div className="next__list">
-            {gameState.next.slice(0, 5).map((piece, i) => (
+            {gameState.next.slice(0, 5).map((figure, i) => (
               <div key={i} className="next__item">
-                <MiniPiece piece={piece} size={14} />
+                <MiniFigure figure={figure} size={14} />
               </div>
             ))}
           </div>

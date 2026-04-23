@@ -2,22 +2,20 @@ import type { Figure } from "../../pages/game/figures";
 import { figureColors } from "../../pages/game/figures";
 
 type Props = {
-  piece: Figure;
+  figure: Figure;
   //change size
-  size?: number; 
+  size?: number;
 };
 
 const GRID = 4;
 
-export default function MiniPiece({ piece, size = 14 }: Props) {
-  const grid = Array.from({ length: GRID }, () =>
-    Array(GRID).fill(0)
-  );
+export default function MiniFigure({ figure, size = 14 }: Props) {
+  const grid = Array.from({ length: GRID }, () => Array(GRID).fill(0));
 
-  const offsetY = Math.floor((GRID - piece.shape.length) / 2);
-  const offsetX = Math.floor((GRID - piece.shape[0].length) / 2);
+  const offsetY = Math.floor((GRID - figure.shape.length) / 2);
+  const offsetX = Math.floor((GRID - figure.shape[0].length) / 2);
 
-  piece.shape.forEach((row, r) => {
+  figure.shape.forEach((row, r) => {
     row.forEach((cell, c) => {
       if (cell) {
         const y = r + offsetY;
@@ -31,7 +29,7 @@ export default function MiniPiece({ piece, size = 14 }: Props) {
 
   return (
     <div className="mini-wrapper">
-      <div className="mini-piece">
+      <div className="mini-figure">
         {grid.map((row, r) => (
           <div key={r} className="mini-row">
             {row.map((cell, c) => (
@@ -40,7 +38,7 @@ export default function MiniPiece({ piece, size = 14 }: Props) {
                 style={{
                   width: size,
                   height: size,
-                  background: cell ? figureColors[piece.type] : "transparent",
+                  background: cell ? figureColors[figure.type] : "transparent",
                   border: "1px solid rgba(255,255,255,0.05)",
                 }}
               />

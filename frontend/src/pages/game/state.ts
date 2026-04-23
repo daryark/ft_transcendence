@@ -51,7 +51,7 @@ export function initGame(rows: number, cols: number): GameState {
   };
 }
 
-export function spawnPiece(state: GameState): GameState {
+export function spawnFigure(state: GameState): GameState {
   let next = [...state.next];
 
   if (next.length < 5) {

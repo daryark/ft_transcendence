@@ -54,7 +54,6 @@ export function clearLines(board: number[][], level = 1) {
   };
 }
 
-
 export function getGhostPosition(board: number[][], f: Figure): Figure {
   let ghost = { ...f };
 
@@ -66,7 +65,7 @@ export function getGhostPosition(board: number[][], f: Figure): Figure {
   return ghost;
 }
 
-export function holdPiece(state: GameState): GameState {
+export function holdFigure(state: GameState): GameState {
   if (!state.canHold) return state;
 
   let newCurrent: Figure;
@@ -103,4 +102,3 @@ export function holdPiece(state: GameState): GameState {
     next: newNext,
   };
 }
-
