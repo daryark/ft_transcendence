@@ -18,5 +18,4 @@ server.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);
 });
 
-
 // all about server info is in 'server.about.txt' in the root of the 'backend' folder.

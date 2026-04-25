@@ -418,4 +418,5 @@ FodyWeavers.xsd
 *.msm
 *.msp
 
-/generated/prisma
+# Prisma generated client
+backend/generated/prisma

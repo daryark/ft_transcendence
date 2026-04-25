@@ -4,9 +4,10 @@ WORKDIR /app
 
 COPY backend/package.json ./
 RUN npm install --omit=dev
-
-COPY backend/server ./server
+RUN npm install tsx bcrypt zod prisma @prisma/client dotenv dotenv-expand @prisma/adapter-pg pg
+COPY backend ./
+RUN npx prisma generate
 
 EXPOSE 3000
 
-CMD ["node", "server/index.js"]
+CMD ["npx", "tsx", "server/index.js"]
