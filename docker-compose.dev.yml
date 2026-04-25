@@ -1,0 +1,95 @@
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: infra/nginx/dev-nginx.Dockerfile
+    container_name: nginx
+    depends_on:
+      - backend
+      - frontend
+    ports:
+      - "80:80"
+    networks:
+      - trancendence
+    volumes:
+    #  - ./requirements/nginx/conf/:/etc/nginx/http.d/
+      - ./tools/:/etc/nginx/ssl/
+    #  - wp-volume:/var/www/
+    restart: always
+
+  database:
+    build:
+      context: .
+      dockerfile: infra/postgres/Dockerfile
+    container_name: database
+    env_file:
+      - .env
+    #environment:
+     # POSTGRES_USER: ${POSTGRES_USER:-myuser}
+     # POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
+     # POSTGRES_DB: ${POSTGRES_DB:-mydatabase}
+     # DATABASE_URL: postgresql://${POSTGRES_USER:-myuser}:${POSTGRES_PASSWORD:-mypassword}@database:5432/${POSTGRES_DB:-mydatabase}
+    ports:
+      - "5432:5432"
+    networks:
+      - trancendence
+    # volumes:
+    #   - db-volume:/var/lib/postgresql/data
+    restart: always
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: backend
+    depends_on:
+      - database
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    networks:
+      - trancendence
+    #volumes:
+    #  - wp-volume:/var/www/
+    restart: always
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: frontend
+    ports:
+      - "5173:5173"
+    networks:
+      - trancendence
+    restart: always
+
+  #redis:
+  #  build:
+  #    context: .
+  #    dockerfile: requirements/bonus/redis/Dockerfile
+  #  container_name: redis
+  #  ports:
+  #    - "6379:6379"
+  #  networks:
+  #    - trancendence
+  #  restart: always
+
+# volumes:
+#  wp-volume:
+#    driver_opts:
+#      o: bind
+#      type: none
+#      device: /home/${USER}/data/wordpress
+
+  # db-volume:
+  #   driver_opts:
+  #     type: none
+  #     o: bind
+  #     device: /home/${USER}/42Projects/test_data
+# o(option): bind mount allows to specify the directory on machine where to save, instead of default. type: none - default type file system
+
+networks:
+  trancendence:
+    driver: bridge

@@ -8,6 +8,9 @@ prep:
 build:
 	@$(COMPOSE) up -d --build
 
+dev-build:
+	@$(COMPOSE) -f docker-compose.dev.yml up -d --build
+
 up:
 	@$(COMPOSE) up -d
 
