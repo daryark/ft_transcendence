@@ -1,4 +1,4 @@
-***Backend architecture desision, explanations
+***Backend architecture & contents decision, explanations
 
 ->app.js, server.js, socket.js
 👉 app.js
@@ -16,6 +16,15 @@
 - handles socket connections
 - routes socket events
 - connects handlers (game/chat)
+
+-> Layer      | Responsibility                       |
+| ----------- | ------------------------------------ |
+| Engine (TS) | "What happens if player moves left?" |
+| Game loop   | "When does gravity happen?"          |
+| Room        | "Which players are in this game?"    |
+| Mode        | "Who starts / matchmaking?"          |
+| Socket      | "Send/receive events"                |
+
 
 ->room config
 👉 If it affects simulation → gameConfig
@@ -36,12 +45,23 @@ modeService - "decides what game we play", factory(stateless) - dispatcher to th
 ->mode handlers
 "define how a game behaves", config and fully check the room according to the mode
 
-
 ->error handling
 use socket.emit - send error to user, for user errors
 use throw for server/invariant failures
 
+->socket events, being used
+👉client->server (type: control)
+mode:join
+mode:leave
+room:start
+player:move
+room:updateConfig (optional)
 
+👉server->client (type: state)
+game:start
+game:update
+game:end
+room:update (optional)
 
 
 ***Express.js***

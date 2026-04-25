@@ -7,8 +7,9 @@
         "test": "tests"
     },
     "scripts": {
-        "start": "node server/index.js",
-        "dev": "nodemon server/index.js",
+        "build": "tsc",
+        "start": "npm run build && node dist/server/index.js",
+        "dev": "tsc -w & nodemon dist/server/index.js",
         "test": "jest"
     },
     "dependencies": {
@@ -20,6 +21,8 @@
         "typescript": "^6.0.3"
     },
     "devDependencies": {
+        "@types/socket.io": "^3.0.1",
+        "concurrently": "^9.2.1",
         "jest": "^30.3.0",
         "nodemon": "^3.1.14",
         "socket.io-client": "^4.8.3",

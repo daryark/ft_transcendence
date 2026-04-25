@@ -1,6 +1,5 @@
 import type { Figure, FigureType } from "./figures";
-import type { GameState } from "../../../../frontend/src/pages/game/state";
-
+import type { GameState } from "./state";
 const BAG: FigureType[] = ["I", "O", "T", "S", "Z", "J", "L"];
 
 export function createBag(): FigureType[] {
