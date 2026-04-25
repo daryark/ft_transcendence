@@ -6,30 +6,30 @@ function clone(obj) {
     return JSON.parse(JSON.stringify(obj));
 }
 
-function quickplayBase() {
+function configBase() {
     return clone(DEFAULT);
 }
 
-function applyModifiers(base, modifiers) {
+function applyModifiers(base, modifiers = {}) {
     const config = clone(base);
 
-    if (modifiers.volatile) {
+    if (modifiers?.garbage?.volatile) {
         config.garbage.volatile = true;
     }
 
-    if (modifiers.messy) {
+    if (modifiers?.garbage?.messy) {
         config.garbage.messiness = 100;
     }
 
-    if (modifiers.zeroGravity) {
-        config.gravity.gravity = 0;
+    if (modifiers?.garbage?.sticky) {
+        config.gravity.sticky = 1;
     }
 
     return config;
 }
 
 module.exports = {
-    quickplayBase,
+    configBase,
     applyModifiers
 };
 

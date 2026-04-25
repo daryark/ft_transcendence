@@ -1,37 +1,21 @@
-const express = require('express');
-const app = express();
+const http = require('http');
+const { Server } = require('socket.io');
 
-app.use(express.json());
+const app = require('../app');
+const setupSockets = require('../sockets');
+const { PORT } = require('../config/env');
 
-app.get('/', (req, res) => {
-  res.send('Hello World!');
+const server = http.createServer(app);
+const io = new Server(server, {
+    cors: { origin: '*',
+            methods: ["GET", "POST"],
+    }  //# todo - restrict origin in real env
 });
 
-// All routes here are under /api/... (matches nginx proxy_pass to this app)
-const api = express.Router();
+setupSockets(io);
 
-// to check
-// curl http://localhost:3000/api/something
-// curl http://localhost:3000/api/users/7
-
-
-// GET /api/something  → exact path
-api.get('/something', (req, res) => {
-  res.json({ message: 'handled /api/something' });
+server.listen(PORT, () => {
+    console.log(`Server listening on port ${PORT}`);
 });
 
-// GET /api/users/42  → param "id"
-api.get('/users/:id', (req, res) => {
-  res.json({ userId: req.params.id });
-});
-
-// POST /api/items  (example)
-//api.post('/items', (req, res) => {
-//  res.status(201).json({ received: req.body });
-//});
-
-app.use('/api', api);
-
-app.listen(3000, '0.0.0.0', () => {
-  console.log('Example app listening on port 3000');
-});
+// all about server info is in 'server.about.txt' in the root of the 'backend' folder.

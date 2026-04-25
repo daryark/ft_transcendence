@@ -1,11 +1,11 @@
-module.exports = function chatHandlers(socketServer, socket) {
+module.exports = function chatHandlers(io, socket) {
 
     socket.on('chat:message', (data) => {
         const { roomId } = socket.data;
 
         if (!roomId) return ;
 
-        socketServer.to(roomId).emit('chat:message', {
+        io.to(roomId).emit('chat:message', {
             sender: socket.id,
             message: data.message || data //! enforce {message: '...'} format and remove "|| data" part later
         });

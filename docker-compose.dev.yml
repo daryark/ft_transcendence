@@ -2,14 +2,13 @@ services:
   nginx:
     build:
       context: .
-      dockerfile: infra/nginx/Dockerfile
+      dockerfile: infra/nginx/dev-nginx.Dockerfile
     container_name: nginx
     depends_on:
       - backend
       - frontend
     ports:
-      #- "80:80"
-      - "443:443"
+      - "80:80"
     networks:
       - trancendence
     volumes:

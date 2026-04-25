@@ -1,13 +1,7 @@
-const roomManager = require('../game/rooms/roomManager');
-const quickplay = require('../game/modes/quickplay');
+module.exports = function gameHandlers(socket, modeService) {
 
-module.exports = function gameHandlers(socket) {
-
-    socket.on('quickplay:join', (modifiers) => {
-        const state = quickplay.joinQuickplay(socket, modifiers);
-        socket.emit('room_state', state);
-
-        socket.to(state.id).emit('player_joined', { playerId: socket.id });
+    socket.on("mode:join", ({ mode, payload = {} }) => {
+        modeService.join(mode, socket, payload);
     });
     // socket.on('join_room', ({ roomId, role, preset }) => {
     //     const result = roomManager.joinRoom(roomId, socket.id, role, preset);
