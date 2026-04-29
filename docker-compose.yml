@@ -66,16 +66,16 @@ services:
       - trancendence
     restart: always
 
-  #redis:
-  #  build:
-  #    context: .
-  #    dockerfile: requirements/bonus/redis/Dockerfile
-  #  container_name: redis
-  #  ports:
-  #    - "6379:6379"
-  #  networks:
-  #    - trancendence
-  #  restart: always
+  redis:
+    build:
+      context: .
+      dockerfile: infra/redis/Dockerfile
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - trancendence
+    restart: always
 
 # volumes:
 #  wp-volume:
