@@ -77,6 +77,11 @@ services:
       - trancendence
     restart: always
 
+  fake-logger:
+    build:
+      context: .
+      dockerfile: infra/fake-logger/Dockerfile
+
 # volumes:
 #  wp-volume:
 #    driver_opts:
