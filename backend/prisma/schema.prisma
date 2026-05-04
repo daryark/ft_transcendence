@@ -46,6 +46,7 @@ model match_players {
 model matches {
   id            Int             @id @default(autoincrement())
   status        match_status?   @default(active)
+  gamemode      gamemode?       @default(classic)
   created_at    DateTime?       @default(now()) @db.Timestamp(6)
   match_players match_players[]
 }
@@ -75,4 +76,10 @@ enum player_result {
   win
   lose
   draw
+}
+
+enum gamemode {
+  classic
+  blitz
+  rush
 }

@@ -2,6 +2,9 @@ import bcrypt from "bcrypt";
 import { z } from "zod";
 import { prisma } from "./prisma";
 
+/**
+ * Public user shape returned by auth functions
+ */
 export type PublicUser = {
   id: number;
   email: string;
@@ -20,19 +23,19 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
-/* For Frontend Usage Example:
-
-await fetch("/api/auth/login", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({ email, password })
-});
-
- */
-
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 
+/**
+ * Register a new user.
+ * - Validates input with Zod
+ * - Ensures email/username uniqueness
+ * - Hashes the password with bcrypt
+ * - Returns the created public user record
+ *
+ * Example:
+ * const user = await registerUser({ email: 'a@b.com', username: 'foo', password: 'longpass' });
+ */
 export async function registerUser(rawInput: RegisterInput): Promise<PublicUser> {
   const input = registerSchema.parse(rawInput);
 
@@ -64,6 +67,15 @@ export async function registerUser(rawInput: RegisterInput): Promise<PublicUser>
   });
 }
 
+/**
+ * Login a user by email and password.
+ * - Validates input with Zod
+ * - Verifies password using bcrypt
+ * - Returns public user on success, or null on failure
+ *
+ * Example:
+ * const user = await loginUser({ email: 'a@b.com', password: 'longpass' });
+ */
 export async function loginUser(rawInput: LoginInput): Promise<PublicUser | null> {
   const input = loginSchema.parse(rawInput);
 
