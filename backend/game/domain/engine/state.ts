@@ -15,7 +15,7 @@ export interface GameState {
   lines: number;
 }
 
-function createFigure(type: FigureType, cols: number): Figure {
+export function createFigure(type: FigureType, cols: number): Figure {
   const shape = figures[type][0];
 
   return {

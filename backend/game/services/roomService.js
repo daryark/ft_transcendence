@@ -5,7 +5,7 @@ class RoomService {
     // this.rooms = new Room({ id: null, players: [], spectators: [], gameConfig: {} });
     this.rooms = new Map();
     this.queue = new Array();
-    this.io = this.io;
+    this.io = io;
     
 }
 
@@ -76,23 +76,12 @@ class RoomService {
     return this.queue = this.queue.filter(p => p.id !== socketId);
   }
 
-  startGame(room) {
-    if (room.status === "playing") return;
+  broadcast(roomId, event, data) {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
 
-    room.status = 'playing';
-
-    room.state = {
-    board: Array.from({ length: 20 }, () => Array(10).fill(0)),
-    currentPiece: null
-  };
-
-    room.engine = createEngine(room, roomService);
-    roomService.broadcast(room.id, "game:start", {
-    roomId: room.id,
-    state: room.state,
-    config: room.gameConfig
-  });
-}
+    this.io.to(roomId).emit(event, data);
+  }
 
   clearRooms() {
     this.rooms.clear();
