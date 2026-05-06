@@ -15,6 +15,7 @@ services:
     volumes:
     #  - ./requirements/nginx/conf/:/etc/nginx/http.d/
       - ./tools/:/etc/nginx/ssl/
+      - nginx-logs:/var/log/nginx
     #  - wp-volume:/var/www/
     restart: always
 
@@ -81,11 +82,14 @@ services:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.3
     environment:
       - discovery.type=single-node
-      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
     ports:
       - "9200:9200"
     volumes:
       - esdata:/usr/share/elasticsearch/data
+    networks:
+      - trancendence
+    restart: always
 
   logstash:
     image: docker.elastic.co/logstash/logstash:7.17.3
@@ -93,23 +97,35 @@ services:
     ports: ["5044:5044"]
     volumes:
       - ./infra/elk/logstash/pipeline/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    networks:
+      - trancendence
+    restart: always
 
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:7.17.3
+    depends_on: 
+      - nginx
+      - logstash
+    volumes:
+      - nginx-logs:/var/log/nginx:ro
+      - ./infra/elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+    networks:
+      - trancendence
+    restart: always
+    
   kibana:
     image: docker.elastic.co/kibana/kibana:7.17.3
     depends_on: [elasticsearch]
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports: ["5601:5601"]
+    networks:
+      - trancendence
+    restart: always
 
 volumes:
   esdata:
-
-  # db-volume:
-  #   driver_opts:
-  #     type: none
-  #     o: bind
-  #     device: /home/${USER}/42Projects/test_data
-# o(option): bind mount allows to specify the directory on machine where to save, instead of default. type: none - default type file system
+  nginx-logs:
 
 networks:
   trancendence:
