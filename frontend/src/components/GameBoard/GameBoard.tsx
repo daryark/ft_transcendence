@@ -1,142 +1,28 @@
 import React, { useRef, useEffect } from "react";
 
-import {
-  moveFigure,
-  collision,
-  clearLines,
-  rotate,
-  getGhostPosition,
-} from "../../pages/game/logic";
-
-import { figureColors } from "../../pages/game/figures";
-import { spawnFigure } from "../../pages/game/state";
-import type { GameState } from "../../pages/game/state";
-
 interface Props {
-  rows: number;
-  cols: number;
+  gameState: any; 
   cellSize: number;
-
-  gameState: GameState;
-  setGameState: React.Dispatch<React.SetStateAction<GameState>>;
-
-  onHold: () => void;
-  onRestart: () => void;
 }
 
-//need to update and add
-const GameBoard: React.FC<Props> = ({
-  rows,
-  cols,
-  cellSize,
-  gameState,
-  setGameState,
-  onHold,
-  onRestart,
-}) => {
+const figureColors: Record<string, string> = {
+  I: "#00f0f0",
+  O: "#f0f000",
+  T: "#a000f0",
+  S: "#00f000",
+  Z: "#f00000",
+  J: "#0000f0",
+  L: "#f0a000",
+};
+
+const GameBoard: React.FC<Props> = ({ gameState, cellSize }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const { rows, cols, board, current, ghost } = gameState;
 
   const BUFFER = 2;
   const offsetY = BUFFER * cellSize;
 
-  //  game loop
-  useEffect(() => {
-    if (gameState.gameOver) return;
-
-    const interval = setInterval(() => {
-      setGameState((prev) => {
-        let moved = moveFigure(prev.current, 0, 1);
-
-        if (collision(prev.board, moved)) {
-          const newBoard = prev.board.map((row) => [...row]);
-
-          prev.current.shape.forEach((row, r) => {
-            row.forEach((cell, c) => {
-              if (cell) {
-                const y = prev.current.y + r;
-                const x = prev.current.x + c;
-                if (y >= 0) newBoard[y][x] = 1;
-              }
-            });
-          });
-
-          const { newBoard: clearedBoard } = clearLines(newBoard);
-
-          return spawnFigure({
-            ...prev,
-            board: clearedBoard,
-          });
-        }
-
-        return { ...prev, current: moved };
-      });
-    }, 500);
-
-    return () => clearInterval(interval);
-  }, [gameState.gameOver, setGameState]);
-
-  //movement
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (gameState.gameOver) return;
-
-      setGameState((prev) => {
-        let figure = { ...prev.current };
-
-        if (e.key === "ArrowLeft") figure = moveFigure(figure, -1, 0);
-        if (e.key === "ArrowRight") figure = moveFigure(figure, 1, 0);
-        if (e.key === "ArrowDown") figure = moveFigure(figure, 0, 1);
-
-        if (e.key === "ArrowUp") {
-          const rotated = rotate(figure.shape);
-          const test = { ...figure, shape: rotated };
-          if (!collision(prev.board, test)) figure = test;
-        }
-
-        // HARD DROP
-        if (e.key === " ") {
-          while (!collision(prev.board, figure)) {
-            figure = moveFigure(figure, 0, 1);
-          }
-          figure.y -= 1;
-
-          const newBoard = prev.board.map((row) => [...row]);
-
-          figure.shape.forEach((row, r) => {
-            row.forEach((cell, c) => {
-              if (cell) {
-                const y = figure.y + r;
-                const x = figure.x + c;
-                if (y >= 0) newBoard[y][x] = 1;
-              }
-            });
-          });
-
-          const { newBoard: clearedBoard } = clearLines(newBoard);
-
-          return spawnFigure({
-            ...prev,
-            board: clearedBoard,
-          });
-        }
-
-        //hold - move to different file (future) ////
-        if (e.key === "c") {
-          onHold();
-          return prev;
-        }
-
-        if (collision(prev.board, figure)) return prev;
-
-        return { ...prev, current: figure };
-      });
-    };
-
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [gameState.gameOver, setGameState, onHold]);
-
-  // render
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -149,93 +35,82 @@ const GameBoard: React.FC<Props> = ({
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // grid (update to color like figures)
-    ctx.strokeStyle = "#444";
+    // GRID
+    ctx.strokeStyle = "#222";
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
         ctx.strokeRect(
           c * cellSize,
           r * cellSize + offsetY,
           cellSize,
-          cellSize,
+          cellSize
         );
       }
     }
 
-    // bord show
+    // BOARD
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols; c++) {
-        if (gameState.board[r][c]) {
+        if (board[r][c]) {
           ctx.fillStyle = "#666";
           ctx.fillRect(
             c * cellSize,
             r * cellSize + offsetY,
             cellSize,
-            cellSize,
+            cellSize
           );
         }
       }
     }
 
-    // gost figure
-    const ghost = getGhostPosition(gameState.board, gameState.current);
-    ctx.globalAlpha = 0.3;
-    ctx.fillStyle = figureColors[ghost.type];
+    // GHOST (с сервера)
+    if (ghost) {
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = figureColors[ghost.type];
 
-    ghost.shape.forEach((row, r) => {
-      row.forEach((cell, c) => {
+      ghost.shape.forEach((row: number[], r: number) => {
+        row.forEach((cell: number, c: number) => {
+          if (cell) {
+            ctx.fillRect(
+              (ghost.x + c) * cellSize,
+              (ghost.y + r) * cellSize + offsetY,
+              cellSize,
+              cellSize
+            );
+          }
+        });
+      });
+
+      ctx.globalAlpha = 1;
+    }
+
+    // CURRENT
+    ctx.fillStyle = figureColors[current.type];
+
+    current.shape.forEach((row: number[], r: number) => {
+      row.forEach((cell: number, c: number) => {
         if (cell) {
           ctx.fillRect(
-            (ghost.x + c) * cellSize,
-            (ghost.y + r) * cellSize + offsetY,
+            (current.x + c) * cellSize,
+            (current.y + r) * cellSize + offsetY,
             cellSize,
-            cellSize,
+            cellSize
           );
         }
       });
     });
 
-    ctx.globalAlpha = 1;
-
-    // current
-    const figure = gameState.current;
-    ctx.fillStyle = figureColors[figure.type];
-
-    figure.shape.forEach((row, r) => {
-      row.forEach((cell, c) => {
-        if (cell) {
-          ctx.fillRect(
-            (figure.x + c) * cellSize,
-            (figure.y + r) * cellSize + offsetY,
-            cellSize,
-            cellSize,
-          );
-        }
-      });
-    });
-
-    // game over
+    // GAME OVER
     if (gameState.gameOver) {
-      ctx.fillStyle = "rgba(0,0,0,0.7)";
+      ctx.fillStyle = "rgba(0,0,0,0.8)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.fillStyle = "#fff";
-      ctx.font = `bold ${cellSize}px monospace`;
+      ctx.font = `bold ${cellSize * 1.2}px monospace`;
       ctx.textAlign = "center";
-
       ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
     }
-  }, [gameState, cols, rows, cellSize]);
-
-  // reset game
-  useEffect(() => {
-    const handleRestart = (e: KeyboardEvent) => {
-      if (e.key === "r") onRestart();
-    };
-
-    window.addEventListener("keydown", handleRestart);
-    return () => window.removeEventListener("keydown", handleRestart);
-  }, [onRestart]);
+  }, [gameState, cellSize]);
 
   return <canvas ref={canvasRef} />;
 };

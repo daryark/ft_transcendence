@@ -1,61 +1,97 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
+import { io, Socket } from "socket.io-client";
+
 import GameBoard from "../../components/GameBoard/GameBoard";
-import HoldPanel from "../../components/MiniFigure/MiniFigure";
 import MiniFigure from "../../components/MiniFigure/MiniFigure";
 import type { GameState } from "../game/state";
-import type { Figure } from "../game/figures";
-import { initGame } from "../game/state";
+
 import "./SoloGame.scss";
 
-import { holdFigure } from "./logic";
-
 export default function SoloGame() {
-  const [gameState, setGameState] = useState(() => initGame(20, 10));
+  const { gameId } = useParams();
 
-  const handleHold = () => {
-    setGameState((prev) => holdFigure(prev));
-    console.log(gameState.hold);
-  };
+  const [socket, setSocket] = useState<Socket | null>(null);
+  const [gameState, setGameState] = useState<GameState | null>(null);
+
+  // 🔥 подключение к серверу
+  useEffect(() => {
+    const s = io("http://localhost:3001");
+
+    setSocket(s);
+
+    s.emit("join", { gameId });
+
+    s.on("state", (state: GameState) => {
+      setGameState(state);
+    });
+
+    return () => {
+      s.disconnect();
+    };
+  }, [gameId]);
+
+  // 🔥 отправка input (клавиши)
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleKey = (e: KeyboardEvent) => {
+      let action = null;
+
+      if (e.key === "ArrowLeft") action = { type: "LEFT" };
+      if (e.key === "ArrowRight") action = { type: "RIGHT" };
+      if (e.key === "ArrowDown") action = { type: "DOWN" };
+      if (e.key === "ArrowUp") action = { type: "ROTATE" };
+      if (e.key === " ") action = { type: "DROP" };
+      if (e.key.toLowerCase() === "c") action = { type: "HOLD" };
+
+      if (action) {
+        socket.emit("action", { gameId, action });
+      }
+    };
+
+    window.addEventListener("keydown", handleKey);
+
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [socket, gameId]);
+
+  if (!gameState) return <div>Loading...</div>;
 
   return (
-    <>
-      <div className="board">
-        {/* HOLD */}
-        <div className="hold">
-          <h3>HOLD</h3>
+    <div className="board">
+      {/* HOLD */}
+      <div className="hold">
+        <h3>HOLD</h3>
 
-          <div className="hold__box">
-            {gameState.hold ? (
-              <HoldPanel figure={gameState.hold} size={18} />
-            ) : (
-              <div className="empty">—</div>
-            )}
-          </div>
-        </div>
+        {gameState.hold ? (
+          <MiniFigure figure={gameState.hold} />
+        ) : (
+          <div className="empty">—</div>
+        )}
+      </div>
 
-        {/* GAME */}
-        <GameBoard
-          rows={20}
-          cols={10}
-          cellSize={30}
-          gameState={gameState} // передаем state
-          setGameState={setGameState} // передаем управление
-          onHold={handleHold} // передаем холд
-          onRestart={() => setGameState(initGame(20, 10))}
-        />
+      {/* GAME */}
+      <GameBoard
+        rows={gameState.rows}
+        cols={gameState.cols}
+        cellSize={30}
+        gameState={gameState} // 🔥 теперь приходит с сервера
+      />
 
-        <div className="next">
-          <h3>NEXT</h3>
+      {/* NEXT */}
+      <div className="next">
+        <h3>NEXT</h3>
 
-          <div className="next__list">
-            {gameState.next.slice(0, 5).map((figure, i) => (
-              <div key={i} className="next__item">
-                <MiniFigure figure={figure} size={14} />
-              </div>
-            ))}
-          </div>
+        <div className="next__list">
+          {gameState.next.slice(0, 5).map((figure, i) => (
+            <div key={i} className="next__item">
+              <MiniFigure figure={figure} />
+            </div>
+          ))}
         </div>
       </div>
-    </>
+    </div>
   );
 }
