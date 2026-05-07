@@ -73,13 +73,13 @@ services:
       dockerfile: infra/redis/Dockerfile
     container_name: redis
     ports:
-      - "6379:6379"
+      - "6380:6379"
     networks:
       - trancendence
     restart: always
 
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.3
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.27
     environment:
       - discovery.type=single-node
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
@@ -92,7 +92,7 @@ services:
     restart: always
 
   logstash:
-    image: docker.elastic.co/logstash/logstash:7.17.3
+    image: docker.elastic.co/logstash/logstash:7.17.27
     depends_on: [elasticsearch]
     ports: ["5044:5044"]
     volumes:
@@ -102,7 +102,7 @@ services:
     restart: always
 
   filebeat:
-    image: docker.elastic.co/beats/filebeat:7.17.3
+    image: docker.elastic.co/beats/filebeat:7.17.27
     depends_on: 
       - nginx
       - logstash
@@ -114,7 +114,7 @@ services:
     restart: always
     
   kibana:
-    image: docker.elastic.co/kibana/kibana:7.17.3
+    image: docker.elastic.co/kibana/kibana:7.17.27
     depends_on: [elasticsearch]
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
