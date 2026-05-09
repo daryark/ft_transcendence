@@ -1,13 +1,13 @@
 const PRESETS = require('../config/presets');
 
-class RoomService {
+module.exports = class RoomService {
   constructor(io) {
     // this.rooms = new Room({ id: null, players: [], spectators: [], gameConfig: {} });
     this.rooms = new Map();
     this.queue = new Array();
     this.io = io;
-    
-}
+
+  }
 
   createRoom(roomId, partial = {}) {
 
@@ -38,8 +38,8 @@ class RoomService {
     if (!room) return;
 
     if (!room.players.includes(player)) {
-        room.players.push(player);
-        }
+      room.players.push(player);
+    }
   }
 
   addSpectator(roomId, spectator) {
@@ -47,8 +47,8 @@ class RoomService {
     if (!room) return;
 
     if (!room.spectators.includes(spectator)) {
-        room.spectators.push(spectator);
-        }
+      room.spectators.push(spectator);
+    }
   }
 
   removePlayer(roomId, player) {
@@ -57,7 +57,7 @@ class RoomService {
 
     room.players = room.players.filter(p => p !== player);
     if (room.players.length === 0) {
-        this.deleteRoom(roomId);
+      this.deleteRoom(roomId);
     }
   }
 
@@ -86,20 +86,18 @@ class RoomService {
   clearRooms() {
     this.rooms.clear();
   }
-    
+
   getRoomState(roomId) {
     const room = this.rooms.get(roomId);
     if (!room) return null;
 
     return {
-        id: room.id,
-        players: room.players,
-        gameConfig: room.gameConfig
+      id: room.id,
+      players: room.players,
+      gameConfig: room.gameConfig
     };
   }
 }
-
-module.exports = RoomService;
 
 
 // all about server info is in 'server.about.txt' in the root of the 'backend' folder.

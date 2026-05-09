@@ -4,17 +4,18 @@ module.exports = function gameHandlers(socket, modeService) {
         modeService.join(mode, socket, payload);
     });
 
-    socket.on("player:move", ({ direction }) => {
+    socket.on("player:move", ({ type }) => {
         const { roomId } = socket.data;
         if (roomId) {
-            modeService.getRoom(roomId).engine.pushInput(direction);
+            const room = modeService.getRoom(roomId);
+            room?.engine.pushInput(type);
         }
     });
 
 
     socket.on('disconnect', () => {
         const { roomId } = socket.data;
-        
+
         if (roomId) {
             roomManager.removePlayer(roomId, socket.id);
             console.log(`Socket ${socket.id} left room ${roomId}`);

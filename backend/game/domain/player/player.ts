@@ -1,7 +1,7 @@
 export default class Player {
-  id: string;        // stable identity
-  socketId: string;  // current connection
-  roomId?: string;
+  private id: string;        // stable identity
+  private socketId: string;  // current connection
+  private roomId?: string;
 
   constructor(id: string, socketId: string) {
     this.id = id;
@@ -11,4 +11,24 @@ export default class Player {
   attachSocket(socketId: string) {
     this.socketId = socketId;
   }
+
+  //  getId() {
+  //    return this.id;
+  //  }
+  //
+  //  getSocketId() {
+  //    return this.socketId;
+  //  }
+  //
+  //  getRoomId() {
+  //    return this.roomId;
+  //  }
+  //
+  //  joinRoom(roomId: string) {
+  //    this.roomId = roomId;
+  //  }
+  //
+  //  leaveRoom() {
+  //    this.roomId = undefined;
+  //  }
 }
