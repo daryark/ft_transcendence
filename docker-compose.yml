@@ -13,10 +13,8 @@ services:
     networks:
       - trancendence
     volumes:
-    #  - ./requirements/nginx/conf/:/etc/nginx/http.d/
       - ./tools/:/etc/nginx/ssl/
       - nginx-logs:/var/log/nginx
-    #  - wp-volume:/var/www/
     restart: always
 
   database:
@@ -107,7 +105,7 @@ services:
       - nginx
       - logstash
     volumes:
-      - nginx-logs:/var/log/nginx:ro
+      - ./nginx-logs:/var/log/nginx:ro
       - ./infra/elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
     networks:
       - trancendence
