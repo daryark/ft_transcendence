@@ -11,32 +11,22 @@
   color: white;
 
   border: none;
-  // padding: 12px 20px;
-  // padding-left: 16px;
 
   font-weight: bold;
   text-transform: uppercase;
   flex-direction: row-reverse;
-  // letter-spacing: 1px;
 
   cursor: pointer;
 
-
   transition: all 0.3s ease;
 
-  /* чтобы текст не прыгал */
   display: flex;
   align-items: center;
 }
 
-/* hover эффект — удлиняется вправо */
 .back-button:hover {
-//   transform: scale(1.1);
-  // transform: scaleX(1.5);
-  // width:
-
-  
   transform: translateX(-2rem);
   // padding-right: 40px;
   background: #3a3a3a;
 }
+
