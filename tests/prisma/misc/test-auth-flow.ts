@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { prisma } from "../../backend/prisma/prisma";
+import { prisma } from "../../../backend/prisma/prisma";
 
 async function main() {
   const suffix = Date.now();

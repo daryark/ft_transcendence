@@ -30,10 +30,12 @@ CREATE TABLE IF NOT EXISTS friends (
 
 -- MATCHES
 CREATE TYPE match_status AS ENUM('active', 'finished');
+CREATE TYPE gamemode AS ENUM('classic', 'blitz', 'rush');
 
 CREATE TABLE IF NOT EXISTS matches (
 	id SERIAL PRIMARY KEY,
 	status match_status DEFAULT 'active',
+	gamemode gamemode DEFAULT 'classic',
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

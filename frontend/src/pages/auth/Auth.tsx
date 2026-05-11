@@ -1,12 +1,15 @@
-import { useState } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import "./Auth.scss";
 
-//tmp // addd to folder with sersises
+type AuthResponse = {
+  token: string;
+};
+
 export const registerUser = async (data: {
   email: string;
   password: string;
   username: string;
-}) => {
+}): Promise<AuthResponse> => {
   const res = await fetch("/api/auth/register", {
     method: "POST",
     headers: {
@@ -23,6 +26,26 @@ export const registerUser = async (data: {
   return res.json();
 };
 
+export const loginUser = async (data: {
+  email: string;
+  password: string;
+}): Promise<AuthResponse> => {
+  const res = await fetch("/api/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+
+  if (!res.ok) {
+    const error = await res.json();
+    throw new Error(error.message || "Login failed");
+  }
+
+  return res.json();
+};
+
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
 
@@ -33,26 +56,24 @@ const Auth = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
-    //only resistation test
-    if (isLogin) return;
 
     try {
       setLoading(true);
       setError("");
 
-      const data = await registerUser({
-        email,
-        password,
-        username,
-      });
+      const data = isLogin
+        ? await loginUser({ email, password })
+        : await registerUser({
+            email,
+            password,
+            username,
+          });
 
-      // save token ? update when will you and create
-      // localStorage.setItem("token", data.token);
+      // save token ? update when will you and create 
+      localStorage.setItem("token", data.token);
 
-      // redicect
       window.location.href = "/play";
     } catch (err: any) {
       setError(err.message);
@@ -116,7 +137,7 @@ const Auth = () => {
                 type="text"
                 placeholder="Username"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
               />
             )}
 
@@ -124,18 +145,18 @@ const Auth = () => {
               type="email"
               placeholder="Email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
             />
 
             <input
               type="password"
               placeholder="Password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
             />
 
             <button className="auth__submit" disabled={loading}>
-              {loading ? "Loading..." : "Create account"}
+              {loading ? "Loading..." : isLogin ? "Login" : "Create account"}
             </button>
 
             {error && <p className="auth__error">{error}</p>}
