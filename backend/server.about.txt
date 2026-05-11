@@ -1,39 +1,120 @@
-//***Express.js***
-//? Framework that handles http routing
-//->const express = require('express');
-//? core node module to create http server
-//->const http = require('http');
+***Backend architecture & contents decision, explanations
 
-//->const app = express();
-//? app object - represents the whole Express app
-//? it is used to define routes and middleware, and handling HTTP requests/responses
+->app.js, server.js, socket.js
+👉 app.js
+- creates express instance
+- defines middlewares (cors, json)
+- defines routes (/health, /api/...)
+- NO network, NO sockets
+
+👉 sever.js
+- creates HTTP server from app
+- attaches Socket.IO
+- starts listening on PORT
+
+👉 socket.js
+- handles socket connections
+- routes socket events
+- connects handlers (game/chat)
+
+-> Layer      | Responsibility                       |
+| ----------- | ------------------------------------ |
+| Engine (TS) | "What happens if player moves left?" |
+| Game loop   | "When does gravity happen?"          |
+| Room        | "Which players are in this game?"    |
+| Mode        | "Who starts / matchmaking?"          |
+| Socket      | "Send/receive events"                |
+
+
+->room config
+👉 If it affects simulation → gameConfig
+👉 If it affects flow → modeConfig
+👉 If it affects winning → matchConfig
+👉 If it affects who can join → roomConfig
+room = {
+  mode: 'quickplay' | 'solo' | 'league' | 'custom',
+  gameConfig: { ... },   // engine ONLY
+  matchConfig: { ... },  // rounds, timers
+  roomConfig: { ... },   // players, spectators
+  modeConfig: { ... }    // special behavior per mode
+};
+
+->services
+roomService - "keeps track of all active games", class(has state - rooms)
+modeService - "decides what game we play", factory(stateless) - dispatcher to the mode specific handlers.
+->mode handlers
+"define how a game behaves", config and fully check the room according to the mode
+
+->error handling
+use socket.emit - send error to user, for user errors
+use throw for server/invariant failures
+
+->socket events, being used
+👉client->server (type: control)
+mode:join
+mode:leave
+room:start
+player:move
+room:updateConfig (optional)
+
+👉server->client (type: state)
+game:start
+game:update
+game:end
+room:update (optional)
+
+
+***Express.js***
+-> Framework that handles http routing
+const express = require('express');
+-> http - core node module to create http server
+const http = require('http');
+
+->app object
+const app = express();
+app object - represents the whole Express app
+it is used to define routes and middleware, and handling HTTP requests/responses
 
 #1
-//->Middleware - functions that have access to the req & res, next!
-//? and next()!!! middleware function in the application's req-res cycle.
-//? App object is used to apply middleware to your applicaiton.
+->Middlewares: app.use() - functions using which you have access to the req & res, next!
+and next()!!! middleware function in the application's req-res cycle.
+App object is used to apply middleware to your applicaiton.
 #2
-//->const cors = require('cors');
-//->app.use(cors());
-//?CORS middleware. Simple Usage (Enable All CORS Requests)
+->CORS middleware. Simple Usage (Enable All CORS Requests)
+const cors = require('cors');
+app.use(cors());
 #3
-//->app.get('/health', () => {..})
-//?health path is being used by load-balancers, docker, kubernetes
-//? to ping, if server is running or there's a need to restart container and/or connections.
+-> /health
+app.get('/health', () => {..})
+health path is being used by load-balancers, docker, kubernetes
+to ping, if server is running or there's a need to restart container and/or connections.
 
-//***Socket.IO***
 
-//*Socket
+***Socket.IO***
+
 #4
-//*Socket properties/attributes
-//->socket.id - unique connection id (changes randomly during the same connection)
-//->socket.rooms - rooms this socket joined
-//-> socket.data - your custom storage
-//? data is a buil-in plain! object provided by Socket.IO
-//? you can custom fileds inside to attach info to a specific socket connection
+->Socket properties/attributes
+socket.id - unique connection id (changes randomly during the same connection)
+socket.rooms - rooms this socket joined
+socket.data - your custom storage,data is a built-in plain! object provided by Socket.IO, you can custom fileds inside to attach info to a specific socket connection
+#5
+->socket.on(eventName, listener);
+    socket.on("details", (...args) => { });
+Adds the listener function to the end of the listeners array for the event named eventName
+->eventName on socket.on();
+Socket.IO event names are just strings, but you design them as:
+<domain>:<action>   ("quickplay:join"/"league:join"/"game:state"/"room:join"...)
+
+
+***Jest***
+->jest.fn()
+fake function that imitates something that doesnt' exist in test context, but need to be (to not fail).
+Ex: const socket = { id: 's1', join: jest.fn() }
+socket is not real (on real socket there's a method socket.join()), so we immitate that it exists
+and can check, if this fake function was called in the code is we want it.
 
 #Tasks next/questions:
-1. understand io/socketServer naming importance
+1. understand io/io naming importance
 2. understand handlers role, usage.
 3. add presets(different)
 4. clone DEFAULT + mode preset/custom changes on room config creation
@@ -42,3 +123,6 @@ Resources:
 1. WS vs Socket.IO - https://dev.to/alex_aslam/nodejs-websockets-when-to-use-ws-vs-socketio-and-why-we-switched-di9
 2. GeeksForGeeks, Node.js roadmap (short article on every important topic) - https://www.geeksforgeeks.org/node-js/node-js-roadmap/
 3. Socket.IO Server API - https://socket.io/docs/v4/server-api/#socketid
+4. Teris wiki - https://tetris.wiki/TETR.IO#Garbage_Travel_Speed:_.22Passthrough.22
+5. Jest docs -https://jestjs.io/docs/setup-teardown
+6. .ttr file format - https://docs.fileformat.com/game/ttr/
