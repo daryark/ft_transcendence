@@ -14,13 +14,16 @@
         "prisma": "prisma generate",
         "prisma:migrate:dev": "prisma migrate dev --schema=prisma/schema.prisma --name \"$npm_config_name\"",
         "prisma:dbpush": "prisma db push --schema=prisma/schema.prisma",
-        "prisma:test:auth": "tsx ../tests/prisma/test-auth.ts",
-        "prisma:test:auth:keep": "KEEP_TEST_USER=1 tsx ../tests/prisma/test-auth.ts",
-        "prisma:test:leaderboard": "tsx ../tests/prisma/test-leaderboard.ts",
-        "prisma:test:leaderboard:keep": "KEEP_TEST_DATA=1 tsx ../tests/prisma/test-leaderboard.ts",
-        "prisma:test:matches": "tsx ../tests/prisma/test-matches.ts",
-        "prisma:test:friends": "tsx ../tests/prisma/test-friends.ts",
-        "prisma:test:messages": "tsx ../tests/prisma/test-messages.ts"
+        "prisma:test:auth": "npx tsx ../tests/prisma/test-auth.ts",
+        "prisma:test:auth:keep": "KEEP_TEST_USER=1 npx tsx ../tests/prisma/test-auth.ts",
+        "prisma:test:leaderboard": "npx tsx ../tests/prisma/test-leaderboard.ts",
+        "prisma:test:leaderboard:keep": "KEEP_TEST_DATA=1 npx tsx ../tests/prisma/test-leaderboard.ts",
+        "prisma:test:matches": "npx tsx ../tests/prisma/test-matches.ts",
+        "prisma:test:matches:keep": "KEEP_TEST_DATA=1 npx tsx ../tests/prisma/test-matches.ts",
+        "prisma:test:friends": "npx tsx ../tests/prisma/test-friends.ts",
+        "prisma:test:friends:keep": "KEEP_TEST_DATA=1 npx tsx ../tests/prisma/test-friends.ts",
+        "prisma:test:messages": "npx tsx ../tests/prisma/test-messages.ts",
+        "prisma:test:messages:keep": "KEEP_TEST_DATA=1 npx tsx ../tests/prisma/test-messages.ts"
     },
     "dependencies": {
         "@prisma/adapter-pg": "6.19.3",

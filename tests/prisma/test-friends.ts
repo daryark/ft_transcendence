@@ -7,6 +7,13 @@ import {
 	listFriends,
 } from "../../backend/prisma/friends";
 
+/**
+ * End-to-end style Prisma script:
+ * - seed demo rows
+ * - assert expected behavior
+ * - cleanup unless KEEP_TEST_DATA=1
+ */
+
 type Created = {
 	users: { id: number }[];
 	friendship: { id: number };

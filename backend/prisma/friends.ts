@@ -1,5 +1,9 @@
 import { prisma } from "./prisma";
 
+/**
+ * Friends table helpers keep API-level checks close to DB writes.
+ */
+
 export type FriendStatus = "pending" | "accepted" | "blocked";
 
 export type FriendRecord = {
@@ -37,6 +41,12 @@ function assertDifferentUsers(userId: number, friendId: number) {
 	}
 }
 
+/**
+ * Create a friend request row.
+ * - Validates user ids and self-friendship
+ * - Ensures both users exist
+ * - Prevents duplicate friendship pairs in both directions
+ */
 export async function createFriendRequest(rawInput: CreateFriendRequestInput): Promise<FriendRecord> {
 	assertPositiveInteger(rawInput.userId, "userId");
 	assertPositiveInteger(rawInput.friendId, "friendId");
@@ -91,6 +101,9 @@ export async function createFriendRequest(rawInput: CreateFriendRequestInput): P
 	});
 }
 
+/**
+ * Get one friendship by id with related user identities.
+ */
 export async function getFriendshipById(friendshipId: number) {
 	assertPositiveInteger(friendshipId, "friendshipId");
 
@@ -107,6 +120,9 @@ export async function getFriendshipById(friendshipId: number) {
 	});
 }
 
+/**
+ * Get one friendship by user pair, treating A-B and B-A as the same relation.
+ */
 export async function getFriendshipByPair(userId: number, friendId: number) {
 	assertPositiveInteger(userId, "userId");
 	assertPositiveInteger(friendId, "friendId");
@@ -127,6 +143,10 @@ export async function getFriendshipByPair(userId: number, friendId: number) {
 	});
 }
 
+/**
+ * List friendships for a user.
+ * Defaults to accepted relationships when status is omitted.
+ */
 export async function listFriends(options: ListFriendsOptions) {
 	assertPositiveInteger(options.userId, "userId");
 
@@ -141,6 +161,9 @@ export async function listFriends(options: ListFriendsOptions) {
 	});
 }
 
+/**
+ * Update friendship status.
+ */
 export async function updateFriendStatus(friendshipId: number, rawInput: UpdateFriendStatusInput) {
 	assertPositiveInteger(friendshipId, "friendshipId");
 
@@ -157,14 +180,23 @@ export async function updateFriendStatus(friendshipId: number, rawInput: UpdateF
 	});
 }
 
+/**
+ * Convenience wrapper for accepting a friend request.
+ */
 export async function acceptFriendRequest(friendshipId: number) {
 	return updateFriendStatus(friendshipId, { status: "accepted" });
 }
 
+/**
+ * Convenience wrapper for blocking a friend request.
+ */
 export async function blockFriendRequest(friendshipId: number) {
 	return updateFriendStatus(friendshipId, { status: "blocked" });
 }
 
+/**
+ * Delete a friendship row by id.
+ */
 export async function deleteFriendship(friendshipId: number) {
 	assertPositiveInteger(friendshipId, "friendshipId");
 

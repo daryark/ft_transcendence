@@ -1,5 +1,9 @@
 import { prisma } from "./prisma";
 
+/**
+ * Messaging helpers with validation for common chat constraints.
+ */
+
 export type MessageRecord = {
 	id: number;
 	sender_id: number;
@@ -35,6 +39,12 @@ function normalizeContent(content: string) {
 	return trimmed;
 }
 
+/**
+ * Send a message between two users.
+ * - Validates ids and message content
+ * - Blocks self-messages
+ * - Ensures sender and receiver exist
+ */
 export async function sendMessage(rawInput: SendMessageInput): Promise<MessageRecord> {
 	assertPositiveInteger(rawInput.senderId, "senderId");
 	assertPositiveInteger(rawInput.receiverId, "receiverId");
@@ -75,6 +85,9 @@ export async function sendMessage(rawInput: SendMessageInput): Promise<MessageRe
 	});
 }
 
+/**
+ * Get one message by id with sender and receiver usernames.
+ */
 export async function getMessageById(messageId: number) {
 	assertPositiveInteger(messageId, "messageId");
 
@@ -91,6 +104,9 @@ export async function getMessageById(messageId: number) {
 	});
 }
 
+/**
+ * List conversation messages between two users in chronological order.
+ */
 export async function listConversation(userAId: number, userBId: number, options: ListConversationOptions = {}) {
 	assertPositiveInteger(userAId, "userAId");
 	assertPositiveInteger(userBId, "userBId");
@@ -112,6 +128,9 @@ export async function listConversation(userAId: number, userBId: number, options
 	});
 }
 
+/**
+ * List all messages where the user is sender or receiver.
+ */
 export async function listUserMessages(userId: number, limit = 100) {
 	assertPositiveInteger(userId, "userId");
 	assertPositiveInteger(limit, "limit");
@@ -127,6 +146,9 @@ export async function listUserMessages(userId: number, limit = 100) {
 	});
 }
 
+/**
+ * Delete one message row.
+ */
 export async function deleteMessage(messageId: number) {
 	assertPositiveInteger(messageId, "messageId");
 

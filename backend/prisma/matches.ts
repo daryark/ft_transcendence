@@ -1,5 +1,9 @@
 import { prisma } from "./prisma";
 
+/**
+ * Helpers for both matches and match_players tables.
+ */
+
 export type MatchStatus = "active" | "finished";
 export type GameMode = "classic" | "blitz" | "rush";
 export type PlayerResult = "win" | "lose" | "draw";
@@ -48,6 +52,9 @@ function assertPositiveInteger(value: number, label: string) {
 	}
 }
 
+/**
+ * Create a match row with optional status and game mode.
+ */
 export async function createMatch(rawInput: CreateMatchInput = {}): Promise<MatchRecord> {
 	return prisma.matches.create({
 		data: {
@@ -63,6 +70,9 @@ export async function createMatch(rawInput: CreateMatchInput = {}): Promise<Matc
 	});
 }
 
+/**
+ * Get one match with all its players and usernames.
+ */
 export async function getMatchById(matchId: number) {
 	assertPositiveInteger(matchId, "matchId");
 
@@ -86,6 +96,9 @@ export async function getMatchById(matchId: number) {
 	});
 }
 
+/**
+ * List matches with optional filters.
+ */
 export async function listMatches(options: ListMatchesOptions = {}) {
 	const limit = options.limit ?? 100;
 	assertPositiveInteger(limit, "limit");
@@ -112,6 +125,9 @@ export async function listMatches(options: ListMatchesOptions = {}) {
 	});
 }
 
+/**
+ * Update one match.
+ */
 export async function updateMatch(matchId: number, rawInput: UpdateMatchInput) {
 	assertPositiveInteger(matchId, "matchId");
 
@@ -130,6 +146,9 @@ export async function updateMatch(matchId: number, rawInput: UpdateMatchInput) {
 	});
 }
 
+/**
+ * Delete one match.
+ */
 export async function deleteMatch(matchId: number) {
 	assertPositiveInteger(matchId, "matchId");
 
@@ -138,6 +157,11 @@ export async function deleteMatch(matchId: number) {
 	});
 }
 
+/**
+ * Add a player row to a match.
+ * - Verifies referenced match and user exist
+ * - Prevents duplicate (match_id, user_id) rows
+ */
 export async function addMatchPlayer(rawInput: AddMatchPlayerInput): Promise<MatchPlayerRecord> {
 	assertPositiveInteger(rawInput.matchId, "matchId");
 	assertPositiveInteger(rawInput.userId, "userId");
@@ -186,6 +210,9 @@ export async function addMatchPlayer(rawInput: AddMatchPlayerInput): Promise<Mat
 	});
 }
 
+/**
+ * List all players for a specific match.
+ */
 export async function listMatchPlayers(matchId: number) {
 	assertPositiveInteger(matchId, "matchId");
 
@@ -203,6 +230,9 @@ export async function listMatchPlayers(matchId: number) {
 	});
 }
 
+/**
+ * Convenience wrapper that marks a match as finished.
+ */
 export async function finishMatch(matchId: number) {
 	return updateMatch(matchId, { status: "finished" });
 }
