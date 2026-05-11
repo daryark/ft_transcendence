@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import { prisma } from "../../backend/prisma/prisma";
+import { prisma } from "../../../backend/prisma/prisma";
 
 const SEED_PREFIX = "manual_seed_";
 const DEFAULT_PASSWORD = "SeedPass123!";

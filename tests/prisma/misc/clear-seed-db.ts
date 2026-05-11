@@ -1,4 +1,4 @@
-import { prisma } from "../../backend/prisma/prisma";
+import { prisma } from "../../../backend/prisma/prisma";
 
 const SEED_PREFIX = "manual_seed_";
 
