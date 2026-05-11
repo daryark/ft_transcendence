@@ -1,4 +1,5 @@
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "./prisma";
 
@@ -26,6 +27,35 @@ const loginSchema = z.object({
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 
+export type AuthResult = {
+  user: PublicUser;
+  token: string;
+};
+
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET;
+
+  if (!secret) {
+    throw new Error("JWT_SECRET is not set");
+  }
+
+  return secret;
+}
+
+function createAuthToken(user: PublicUser): string {
+  return jwt.sign(
+    {
+      sub: user.id,
+      email: user.email,
+      username: user.username,
+    },
+    getJwtSecret(),
+    {
+      expiresIn: "7d",
+    }
+  );
+}
+
 /**
  * Register a new user.
  * - Validates input with Zod
@@ -36,7 +66,7 @@ export type LoginInput = z.infer<typeof loginSchema>;
  * Example:
  * const user = await registerUser({ email: 'a@b.com', username: 'foo', password: 'longpass' });
  */
-export async function registerUser(rawInput: RegisterInput): Promise<PublicUser> {
+export async function registerUser(rawInput: RegisterInput): Promise<AuthResult> {
   const input = registerSchema.parse(rawInput);
 
   const existing = await prisma.users.findFirst({
@@ -52,7 +82,7 @@ export async function registerUser(rawInput: RegisterInput): Promise<PublicUser>
 
   const password_hash = await bcrypt.hash(input.password, 10);
 
-  return prisma.users.create({
+  const user = await prisma.users.create({
     data: {
       email: input.email,
       username: input.username,
@@ -65,6 +95,11 @@ export async function registerUser(rawInput: RegisterInput): Promise<PublicUser>
       created_at: true,
     },
   });
+
+  return {
+    user,
+    token: createAuthToken(user),
+  };
 }
 
 /**
@@ -76,7 +111,7 @@ export async function registerUser(rawInput: RegisterInput): Promise<PublicUser>
  * Example:
  * const user = await loginUser({ email: 'a@b.com', password: 'longpass' });
  */
-export async function loginUser(rawInput: LoginInput): Promise<PublicUser | null> {
+export async function loginUser(rawInput: LoginInput): Promise<AuthResult | null> {
   const input = loginSchema.parse(rawInput);
 
   const user = await prisma.users.findUnique({
@@ -99,10 +134,15 @@ export async function loginUser(rawInput: LoginInput): Promise<PublicUser | null
     return null;
   }
 
-  return {
+  const publicUser = {
     id: user.id,
     email: user.email,
     username: user.username,
     created_at: user.created_at,
+  };
+
+  return {
+    user: publicUser,
+    token: createAuthToken(publicUser),
   };
 }

@@ -4,6 +4,7 @@ const cors = require('cors');
 // const authRoutes = require('./routes/auth.routes');
 
 const app = express();
+const { authenticateToken } = require('./middleware/auth');
 
 app.use(cors()); //#2
 app.use(express.json());
@@ -14,8 +15,8 @@ const { registerUser, loginUser} = require('./prisma/auth.ts');
 
 api.post('/auth/register', async (req, res) => {
   try{
-    const user = await registerUser(req.body);
-    res.status(201).json({ message: 'User registered!', user });
+    const auth = await registerUser(req.body);
+    res.status(201).json({ message: 'User registered!', ...auth });
   } catch (error) {
     res.status(400).json({ message: 'Failed to register user', error: error.message });
   }
@@ -23,11 +24,20 @@ api.post('/auth/register', async (req, res) => {
 
 api.post('/auth/login', async (req, res) => {
   try{
-    const user = await loginUser(req.body);
-    res.status(201).json({ message: 'User is logged in!', user });
+    const auth = await loginUser(req.body);
+
+    if (!auth) {
+      return res.status(401).json({ message: 'Invalid email or password' });
+    }
+
+    res.status(200).json({ message: 'User is logged in!', ...auth });
   } catch (error) {
     res.status(400).json({ message: 'Failed to log in!', error: error.message });
   }
+});
+
+api.get('/auth/me', authenticateToken, (req, res) => {
+  res.json({ user: req.user });
 });
 
 // to check
