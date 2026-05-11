@@ -1,0 +1,334 @@
+// ModeLayout.scss
+
+.mode-layout {
+  --accent: #7B2D2D; // fallback
+  --accent-hover: #{darken(#7B2D2D, 10%)};
+  --bg-primary: #0a0a0f;
+  --bg-secondary: #111118;
+  --bg-card: #16161f;
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0b0;
+  --border: #2a2a35;
+  
+  min-height: 100vh;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', 'Segoe UI', monospace;
+  padding: 2rem;
+  position: relative;
+  
+  @media (max-width: 768px) {
+    padding: 1rem;
+  }
+}
+
+// Кнопка BACK
+.mode-layout__back {
+  position: fixed;
+  top: 2rem;
+  left: 2rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  padding: 0.5rem 1.5rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  z-index: 10;
+  
+  &:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  
+  @media (max-width: 768px) {
+    top: 1rem;
+    left: 1rem;
+    padding: 0.375rem 1rem;
+    font-size: 0.75rem;
+  }
+}
+
+// Основной контент
+.mode-layout__content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+  
+  @media (max-width: 768px) {
+    padding: 2rem 1rem;
+  }
+}
+
+// Инфо-карточка (левая часть с описанием)
+.mode-layout__info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+  margin-bottom: 3rem;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+}
+
+.mode-layout__info-left {
+  flex: 1;
+  
+  h2 {
+    font-size: 3rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin: 0 0 1.5rem 0;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    
+    @media (max-width: 768px) {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+  }
+  
+  p {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin: 0 0 1rem 0;
+    
+    &:last-of-type {
+      margin-bottom: 0;
+    }
+  }
+}
+
+// PERSONAL BEST блок
+.mode-layout__pb {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+.mode-layout__pb-label {
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.mode-layout__pb-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-family: monospace;
+  color: var(--accent);
+  
+  @media (max-width: 768px) {
+    font-size: 1.25rem;
+  }
+}
+
+// Правая часть инфо (кнопки RESET/EXPORT)
+.mode-layout__info-right {
+  button {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    padding: 0.5rem 1.25rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    
+    &:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+  }
+}
+
+// Строка с музыкой и START
+.mode-layout__start-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 3rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--border);
+  
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+}
+
+.mode-layout__music {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+  
+  &::before {
+    content: '♪ ';
+    color: var(--accent);
+  }
+}
+
+.mode-layout__start {
+  background: var(--accent);
+  border: none;
+  color: white;
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 200px;
+  
+  &:hover {
+    background: var(--accent-hover);
+    transform: scale(0.98);
+  }
+  
+  &:active {
+    transform: scale(0.96);
+  }
+  
+  @media (max-width: 768px) {
+    width: 100%;
+  }
+}
+
+// OPTIONS секция
+.mode-layout__options {
+  margin: 2rem 0;
+  
+  h3 {
+    font-size: 0.875rem;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+    margin: 0 0 1rem 0;
+  }
+}
+
+.mode-layout__options-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.mode-option {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  padding: 0.75rem 1rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  color: var(--text-primary);
+  
+  &:hover {
+    border-color: var(--accent);
+  }
+  
+  &--active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: white;
+  }
+}
+
+// ADVANCED секция
+.mode-layout__advanced {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  
+  h3 {
+    font-size: 0.875rem;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+    margin: 0 0 1rem 0;
+  }
+}
+
+// Футер с подсказкой
+.mode-layout__footer-hint {
+  margin-top: 3rem;
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  letter-spacing: 0.05em;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+
+// TABS для Custom режима (если есть)
+.mode-layout__tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+  
+  button {
+    background: transparent;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    
+    &--active {
+      color: var(--accent);
+      
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--accent);
+      }
+    }
+  }
+}
+
+// Анимации
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mode-layout__info,
+.mode-layout__start-row,
+.mode-layout__options,
+.mode-layout__advanced {
+  animation: fadeIn 0.3s ease-out forwards;
+}

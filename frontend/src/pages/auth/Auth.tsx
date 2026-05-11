@@ -5,9 +5,6 @@ type AuthResponse = {
   token: string;
 };
 
-
-
-//tmp // addd to folder with sersises 
 export const registerUser = async (data: {
   email: string;
   password: string;
@@ -74,6 +71,7 @@ const Auth = () => {
             username,
           });
 
+      // save token ? update when will you and create 
       localStorage.setItem("token", data.token);
 
       window.location.href = "/play";
@@ -93,6 +91,13 @@ const Auth = () => {
     <div className="auth">
       {/* left*/}
       <div className="auth__left">
+        <div className="auth__tetris-animation">
+          {[...Array(20)].map((_, i) => (
+            <div key={i} className="tetris-block">
+              {["🟦", "🟧", "🟪", "🟩", "🟥"][i % 5]}
+            </div>
+          ))}
+        </div>
         <div className="auth__overlay">
           <h1>TETRA</h1>
           <p>amazing game in this world</p>
@@ -163,9 +168,9 @@ const Auth = () => {
 
           {/* Oauth buttons */}
           <div className="auth__oauth">
-            <button className="oauth github">Continue with GitHub</button>
+            <button className="oauth github">GitHub</button>
 
-            <button className="oauth forty-two">Continue with 42</button>
+            <button className="oauth forty-two">42</button>
           </div>
 
           {/* anonymous */}

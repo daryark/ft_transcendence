@@ -2,8 +2,6 @@ import { figures } from "./figures";
 import type { Figure, FigureType } from "./figures";
 import { createBag } from "./logic";
 
-import { collision } from "./logic";
-
 export interface GameState {
   board: number[][];
   current: Figure;
@@ -17,7 +15,7 @@ export interface GameState {
   lines: number;
 }
 
-function createFigure(type: FigureType, cols: number): Figure {
+export function createFigure(type: FigureType, cols: number): Figure {
   const shape = figures[type][0];
 
   return {
@@ -51,29 +49,3 @@ export function initGame(rows: number, cols: number): GameState {
   };
 }
 
-export function spawnPiece(state: GameState): GameState {
-  let next = [...state.next];
-
-  if (next.length < 5) {
-    next.push(...createBag().map((t) => createFigure(t, state.cols)));
-  }
-
-  let current = next.shift()!;
-
-  current = {
-    ...current,
-    x: Math.floor((state.cols - current.shape[0].length) / 2),
-    y: -2,
-  };
-
-  // Game over -  новая фигура сразу коллайдит с доской
-  const isGameOver = collision(state.board, { ...current, y: 0 });
-
-  return {
-    ...state,
-    current,
-    next,
-    canHold: true,
-    gameOver: isGameOver,
-  };
-}

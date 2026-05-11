@@ -1,16 +1,15 @@
+import { initGame } from "../engine/state";
 
 module.exports = function startGame(room, roomService) {
-    if (room.status === "playing") return;
+  if (room.status === "playing") return;
 
-    room.status = 'playing';
+  room.status = 'playing';
 
-    room.state = {
-    board: Array.from({ length: 20 }, () => Array(10).fill(0)),
-    currentPiece: null
-  };
+  const { boardHeight, boardWidth } = room.gameConfig.general;
+  room.state = initGame(boardHeight, boardWidth);
 
-    room.engine = createEngine(room, roomService);
-    roomService.broadcast(room.id, "game:start", {
+  room.engine = createEngine(room, roomService);
+  roomService.broadcast(room.id, "game:start", {
     roomId: room.id,
     state: room.state,
     config: room.gameConfig
