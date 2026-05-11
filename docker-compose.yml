@@ -33,8 +33,6 @@ services:
       - "5432:5432"
     networks:
       - trancendence
-    # volumes:
-    #   - db-volume:/var/lib/postgresql/data
     restart: always
 
   backend:
@@ -50,8 +48,6 @@ services:
       - "3000:3000"
     networks:
       - trancendence
-    #volumes:
-    #  - wp-volume:/var/www/
     restart: always
 
   frontend:

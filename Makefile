@@ -22,6 +22,7 @@ fclean:
 	@docker system prune --all --force --volumes
 	@docker network prune --force
 	@docker volume prune --force
+	@docker volume rm trans_nginx-logs
 
 re: down
 	@$(COMPOSE) up -d --build
