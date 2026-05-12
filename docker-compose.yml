@@ -101,7 +101,7 @@ services:
       - nginx
       - logstash
     volumes:
-      - ./nginx-logs:/var/log/nginx:ro
+      - nginx-logs:/var/log/nginx:ro
       - ./infra/elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
     networks:
       - trancendence
