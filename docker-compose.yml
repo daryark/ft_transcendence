@@ -101,8 +101,9 @@ services:
       - nginx
       - logstash
     volumes:
-      - nginx-logs:/var/log/nginx:ro
-      - ./infra/elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - ./infra/elk/kibana/basic_dash.ndjson:/tmp/dashboard.ndjson:ro
+      - ./infra/elk/kibana/setup-kibana.sh:/tmp/setup-kibana.sh:ro
+    entrypoint: ["sh", "/tmp/setup-kibana.sh"]
     networks:
       - trancendence
     restart: always
@@ -110,6 +111,9 @@ services:
   kibana:
     image: docker.elastic.co/kibana/kibana:7.17.27
     depends_on: [elasticsearch]
+    volumes:
+      - nginx-logs:/var/log/nginx:ro
+      - ./infra/elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports: ["5601:5601"]
