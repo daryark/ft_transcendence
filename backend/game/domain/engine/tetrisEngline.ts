@@ -1,6 +1,6 @@
 import {
   moveFigure,
-  rotate
+  rotate,
   collision,
   clearLines,
   createBag
@@ -22,7 +22,7 @@ type RoomService = {
 };
 
 //!inputs in GameState or where?
-type Input =
+export type Input =
   | { type: "left" }
   | { type: "right" }
   | { type: "down" } //speed up soft drop

@@ -1,20 +1,21 @@
+import { createCipheriv } from 'node:crypto';
+import { createConfig } from '../../../config/configBase';
+
 const { configBase, applyModifiers } = require('../../config/presets');
 const { startGame } = require('../match/startGame');
 
 function join(socket, roomService, payload = {}) {
-//     validateModifiers(payload.gameConfig?.modifiers || {});
+    //     validateModifiers(payload.gameConfig?.modifiers || {});
 
-    const mode = 'quickplay';
     let room = roomService.getRoom(mode);
     if (!room) {
         room = {
-            mode,
-            gameConfig: applyModifiers(configBase(), payload?.gameConfig?.modifiers),
-            matchConfig: payload.matchConfig || {},
-            roomConfig: payload.roomConfig || {},
+            mode: 'quickplay',
+            ...createConfig('quickplay'),
+            ...payload,
         };
 
-        roomService.createRoom(mode, room);
+        roomService.createRoom(room);
     }
 
     //!auto add as a spectator, always able to press start (after > 1player - auto start) and change from spectator=>player
@@ -25,25 +26,14 @@ function join(socket, roomService, payload = {}) {
     socket.data.roomId = room.id;
     socket.data.role = 'player';
 
-     console.log(`Socket ${socket.id} joined room ${room.id} as player. Game type: ${room.gameConfig.preset}`);
-     console.log('ROOM STATE:', roomService.getRoom(room.id));
+    console.log(`Socket ${socket.id} joined room ${room.id} as player. Game type: ${room.gameConfig.preset}`);
+    console.log('ROOM STATE:', roomService.getRoom(room.id));
 
     if (room.players.length === 2) {
         startGame(room, roomService);
     }
 
     return roomService.getRoomState(room.id);
-}
-
-//#connect TS or do validation fn for the basic config for all modes. In game/config/
-function validateModifiers(modifiers = {}) {
-    for (const key in modifiers) {
-        for (const subKey in modifiers[key]) {
-            if (typeof modifiers[key][subKey] !== 'boolean') {
-                throw new TypeError(`Modifier "${key}.${subKey}" must be a boolean`);
-            }
-        }
-    }
 }
 
 // function leaveQuickplay(socket) {

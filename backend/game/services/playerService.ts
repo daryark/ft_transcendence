@@ -1,7 +1,7 @@
-import Player from "../domain/player/player";
+import Player from "../domain/player";
 
 export default class PlayerService {
-    private players: Map<string, Player>;
+  private players: Map<string, Player>;
 
   constructor() {
     this.players = new Map(); // playerId -> Player

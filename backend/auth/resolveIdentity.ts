@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import jwt from "jsonwebtoken";
+// import jwt from "jsonwebtoken";
 
 export type Identity =
     | {
@@ -13,9 +13,9 @@ export type Identity =
 
 
 export function resolveIdentity(auth: string | null): Identity {
-    const token = auth?.token;
+    // const token = auth?.token;
 
-    if (token) {
+    if (auth) {
         return {
             id: "123",
             type: "registered"

@@ -1,4 +1,4 @@
-import type { Config } from "../../../config/config.types.";
+import type Config from "../../../config/config.types.";
 
 export const quickplayBase: Config = {
 
@@ -10,6 +10,7 @@ export const quickplayBase: Config = {
     },
 
     gameConfig: {
+        mode: "quickplay",
 
         general: {
             bagType: "7-bag",
