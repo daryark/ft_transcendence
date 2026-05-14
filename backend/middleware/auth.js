@@ -1,4 +1,5 @@
 const jwt = require("jsonwebtoken");
+const { randomUUID } = require("crypto");
 
 const JWT_SECRET = process.env.JWT_SECRET;
 
@@ -24,6 +25,37 @@ function authenticateToken(req, res, next) {
     }
 }
 
+/**
+ * Resolves user identity from auth token or creates an anonymous identity.
+ * Works with both REST (header auth) and WebSocket (handshake auth) contexts.
+ * 
+ * @param {Object|null} auth - Auth object with optional token property
+ * @returns {Object} Identity object with id and type ("registered" or "anonymous")
+ */
+function resolveIdentity(auth) {
+    const token = auth?.token;
+
+    if (token) {
+        try {
+            const decoded = jwt.verify(token, JWT_SECRET);
+            return {
+                id: decoded.id || decoded.sub || decoded.userId,
+                type: "registered",
+            };
+        } catch (error) {
+            console.warn("Invalid token provided, falling back to anonymous:", error.message);
+        }
+    }
+
+    // Create anonymous identity
+    const anonymousId = randomUUID();
+    return {
+        id: anonymousId,
+        type: "anonymous",
+    };
+}
+
 module.exports = {
     authenticateToken,
+    resolveIdentity,
 };
