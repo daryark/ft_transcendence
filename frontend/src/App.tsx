@@ -7,6 +7,11 @@ import Auth from "./pages/auth/Auth";
 import Leaderboard from "./pages/leaderboard/Leaderboard";
 import NotFound from "./pages/notFound/NotFound";
 import SoloModePage from "./pages/modes/solo/SoloModePage";
+import Quick from "./pages/modes/multiplayer/Quick";
+import League from "./pages/modes/multiplayer/League";
+import Rooms from "./pages/modes/multiplayer/Rooms";
+import Custom from "./pages/modes/multiplayer/Custom";
+import ProtectedRoute from "./components/Auth/ProtectedRoute";
 
 import "./styles/globals.scss";
 
@@ -16,8 +21,56 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Auth />} />
-          <Route path="play/*" element={<Play />} />
-          <Route path="play/solo/:modeId" element={<SoloModePage />} />
+          <Route
+            path="play/*"
+            element={
+              <ProtectedRoute>
+                <Play />
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="play/solo/:modeId"
+            element={
+              <ProtectedRoute>
+                <SoloModePage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="play/multiplayer/quick"
+            element={
+              <ProtectedRoute>
+                <Quick />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="play/multiplayer/league"
+            element={
+              <ProtectedRoute>
+                <League />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="play/multiplayer/rooms"
+            element={
+              <ProtectedRoute>
+                <Rooms />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="play/multiplayer/custom"
+            element={
+              <ProtectedRoute>
+                <Custom />
+              </ProtectedRoute>
+            }
+          />
 
 
           {/* <Route path="channel/*" element={<TetraChannel />} /> */}

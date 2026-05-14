@@ -1,0 +1,673 @@
+.header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  padding: 0;
+  background: linear-gradient(180deg, #171923 0%, #0f1118 100%);
+  box-shadow: 0 0.2rem 0 rgba(0, 0, 0, 0.65);
+  position: relative;
+  z-index: 40;
+}
+
+.content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  min-height: 5.4rem;
+  padding: 0 1.35rem;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.logo {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.logo:hover {
+  opacity: 0.7;
+}
+
+.nav {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+.navLink {
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.navLink:hover {
+  text-decoration: underline;
+}
+
+.active {
+  text-decoration: underline;
+}
+
+.pageTitle {
+  color: #aeb6d4;
+  font-family: "Arial Narrow", "Segoe UI", Arial, sans-serif;
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  color: #aeb4cf;
+  font-size: clamp(1.15rem, 2.4vw, 2rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.crumb a {
+  color: #c8cee9;
+}
+
+.crumb a:hover {
+  color: white;
+}
+
+.separator {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.current {
+  color: white;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.userIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  color: white;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.userIcon svg {
+  width: 24px;
+  height: 24px;
+  fill: white;
+}
+
+.userIcon:hover {
+  opacity: 0.7;
+}
+
+.playerCard {
+  display: grid;
+  grid-template-columns: minmax(10rem, auto) 4rem;
+  align-items: center;
+  min-width: 18rem;
+  height: 4.5rem;
+  padding: 0.25rem;
+  background: linear-gradient(180deg, #050506 0%, #111115 100%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.7), 0 0.2rem 0 rgba(0, 0, 0, 0.65);
+  color: #ffffff;
+  cursor: pointer;
+  font-family: "Arial Narrow", "Segoe UI", Arial, sans-serif;
+  text-align: left;
+}
+
+.playerCard:hover {
+  filter: brightness(1.12);
+}
+
+.playerText {
+  min-width: 0;
+  display: grid;
+  gap: 0.25rem;
+  padding: 0 0.5rem;
+}
+
+.playerName {
+  overflow: hidden;
+  color: #ffffff;
+  font-size: 1.45rem;
+  font-weight: 900;
+  letter-spacing: 0.05em;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.playerMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.levelBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.05rem;
+  height: 1.55rem;
+  padding: 0 0.3rem;
+  color: #121212;
+  background: #e9eef1;
+  border-radius: 0.2rem;
+  font-size: 1.05rem;
+  font-weight: 900;
+}
+
+.rankBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  height: 1.55rem;
+  color: #caa1ff;
+  background: rgba(111, 57, 142, 0.28);
+  font-size: 1.15rem;
+  font-weight: 900;
+}
+
+.anonymousLabel {
+  display: block;
+  padding: 0.2rem 0.5rem;
+  color: #ff4f62;
+  background: #3a0809;
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  text-align: center;
+}
+
+.playerAvatar {
+  width: 3.45rem;
+  height: 3.45rem;
+  display: grid;
+  place-items: center;
+  justify-self: end;
+  color: #111;
+  background:
+    linear-gradient(90deg, transparent 0 20%, #d6cc1e 20% 80%, transparent 80%),
+    linear-gradient(#d6cc1e 0 36%, transparent 36% 58%, #d6cc1e 58% 100%);
+  border: 1px solid rgba(0, 0, 0, 0.65);
+  font-size: 2.2rem;
+  font-weight: 900;
+}
+
+.anonymousCard .playerAvatar {
+  color: #1a1a1a;
+  background: #f2f2f2;
+  border: 0.2rem solid #191919;
+}
+
+.profileOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgba(0, 0, 0, 0.82);
+}
+
+.profileModal {
+  position: relative;
+  width: min(66rem, calc(100vw - 2rem));
+  padding: 1.35rem 1.5rem 1.2rem;
+  color: #b9ffc0;
+  background: #1f4b26;
+  border: 2px solid #457d4a;
+  box-shadow: 0 0.35rem 0 rgba(0, 0, 0, 0.65), 0 1rem 3rem rgba(0, 0, 0, 0.5);
+  font-family: "Arial Narrow", "Segoe UI", Arial, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.closeProfile {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.35rem;
+  color: #82bd86;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.7rem;
+  letter-spacing: 0.12em;
+}
+
+.closeProfile:hover {
+  color: #d5ffda;
+}
+
+.profileHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-height: 4.8rem;
+  padding-right: 8rem;
+}
+
+.profileAvatar {
+  width: 5rem;
+  height: 5rem;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: #111;
+  background:
+    linear-gradient(90deg, transparent 0 20%, #d6cc1e 20% 80%, transparent 80%),
+    linear-gradient(#d6cc1e 0 36%, transparent 36% 58%, #d6cc1e 58% 100%);
+  border: 1px solid rgba(0, 0, 0, 0.65);
+  box-shadow: 0 0.2rem 0 rgba(0, 0, 0, 0.55);
+  font-size: 3.1rem;
+  font-weight: 900;
+}
+
+.anonymousProfile .profileAvatar {
+  background: #f2f2f2;
+  border: 0.2rem solid #191919;
+}
+
+.profileHeader h2 {
+  margin: 0;
+  color: #caffcf;
+  font-size: clamp(2rem, 5vw, 3rem);
+  line-height: 1;
+}
+
+.profileHeader p {
+  margin: 0.25rem 0 0;
+  color: #9edba4;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.profileLevel {
+  margin-top: 0.45rem;
+}
+
+.profileStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.65rem;
+  margin-top: 0.75rem;
+}
+
+.profileStats article {
+  min-height: 6rem;
+  padding: 0.65rem;
+  background: rgba(15, 48, 22, 0.62);
+  border: 1px solid rgba(101, 164, 103, 0.16);
+}
+
+.profileStats span,
+.profileStats small {
+  display: block;
+  color: rgba(185, 255, 192, 0.48);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.profileStats strong {
+  display: block;
+  margin: 0.45rem 0;
+  color: #caffcf;
+  font-size: clamp(1.8rem, 4vw, 2.65rem);
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 0 0.45rem rgba(202, 255, 207, 0.45);
+}
+
+.fullProfile {
+  width: 100%;
+  margin-top: 0.85rem;
+  padding: 0.75rem;
+  color: #caffcf;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.65rem;
+  letter-spacing: 0.1em;
+}
+
+.fullProfile:hover {
+  background: rgba(15, 48, 22, 0.36);
+}
+
+.anonymousNotice {
+  margin-top: 1rem;
+  padding: 1.7rem;
+  color: #caffcf;
+  background: rgba(15, 48, 22, 0.82);
+  font-size: clamp(1rem, 2.6vw, 1.65rem);
+  font-weight: 900;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .content {
+    min-height: 4.8rem;
+    padding: 0 0.75rem;
+  }
+
+  .playerCard {
+    grid-template-columns: minmax(7.5rem, auto) 3.2rem;
+    min-width: 13rem;
+    height: 4rem;
+  }
+
+  .playerName {
+    font-size: 1.05rem;
+  }
+
+  .profileOverlay {
+    align-items: flex-start;
+    padding: 5.5rem 1rem 1rem;
+  }
+
+  .profileHeader {
+    padding-right: 0;
+  }
+
+  .closeProfile {
+    top: 0.6rem;
+    right: 0.75rem;
+    font-size: 1.1rem;
+  }
+
+  .profileStats {
+    grid-template-columns: 1fr;
+  }
+}
+
+
+.socialButton {
+  height: 48px;
+
+  padding: 0 18px;
+
+  border: 1px solid #2a2a2a;
+  background: #111;
+
+  color: white;
+
+  font-weight: 700;
+  letter-spacing: 0.08em;
+
+  cursor: pointer;
+
+  transition: 0.2s;
+
+  &:hover {
+    background: #1a1a1a;
+  }
+}
+
+// @import '../../styles/variables';
+// @import '../../styles/mixins';
+
+// .header {
+//   position: sticky;
+//   top: 0;
+//   z-index: 50;
+//   background: $gray-800;
+//   border-bottom: 3px solid $gray-600;
+//   box-shadow: 0 4px 0 rgba(0, 0, 0, 0.2);
+// }
+
+// .container {
+//   max-width: 1280px;
+//   margin: 0 auto;
+//   padding: 0 $spacing-4;
+// }
+
+// .content {
+//   @include flex-between;
+//   padding: $spacing-4 0;
+// }
+
+// .left {
+//   @include flex-center;
+//   gap: $spacing-8;
+  
+//   @include mobile {
+//     gap: $spacing-4;
+//   }
+// }
+
+// .logo {
+//   font-size: 1.5rem;
+//   font-weight: bold;
+//   font-family: monospace;
+//   background: $gradient-primary;
+//   -webkit-background-clip: text;
+//   background-clip: text;
+//   color: transparent;
+//   text-transform: uppercase;
+//   letter-spacing: 2px;
+//   position: relative;
+//   padding: $spacing-1 $spacing-2;
+  
+//   &::before {
+//     content: '[';
+//     position: absolute;
+//     left: -$spacing-2;
+//     color: $primary;
+//   }
+  
+//   &::after {
+//     content: ']';
+//     position: absolute;
+//     right: -$spacing-2;
+//     color: $primary;
+//   }
+  
+//   &:hover {
+//     opacity: 0.8;
+//   }
+// }
+
+// .nav {
+//   display: flex;
+//   gap: $spacing-2;
+  
+//   @include mobile {
+//     gap: $spacing-1;
+//   }
+// }
+
+// .navLink {
+//   color: $gray-300;
+//   font-weight: bold;
+//   font-family: monospace;
+//   text-transform: uppercase;
+//   letter-spacing: 1px;
+//   padding: $spacing-2 $spacing-4;
+//   position: relative;
+//   transition: $transition-none;
+  
+//   &::before {
+//     content: '';
+//     position: absolute;
+//     bottom: -2px;
+//     left: 0;
+//     right: 0;
+//     height: 2px;
+//     background: $primary;
+//     transform: scaleX(0);
+//     transition: $transition-none;
+//   }
+  
+//   &:hover {
+//     color: white;
+//     background: rgba($primary, 0.1);
+//   }
+  
+//   &.active {
+//     color: $primary;
+//     background: rgba($primary, 0.15);
+    
+//     &::before {
+//       transform: scaleX(1);
+//     }
+//   }
+// }
+
+// .userIcon {
+//   padding: $spacing-2;
+//   border: 2px solid $gray-600;
+//   background: $gray-700;
+//   transition: $transition-none;
+//   display: flex;
+//   align-items: center;
+//   justify-content: center;
+  
+//   &:active {
+//     transform: translate(2px, 2px);
+//   }
+  
+//   svg {
+//     width: 1.25rem;
+//     height: 1.25rem;
+//     color: $gray-300;
+//     stroke-width: 2;
+    
+//     &:hover {
+//       color: $primary;
+//     }
+//   }
+// }
+// // @import '../../styles/variables';
+// // @import '../../styles/mixins';
+
+// // .header {
+// //   position: sticky;
+// //   top: 0;
+// //   z-index: 50;
+// //   background: rgba($gray-900, 0.8);
+// //   backdrop-filter: blur(12px);
+// //   border-bottom: 1px solid rgba($gray-700, 0.5);
+// // }
+
+// // .container {
+// //   max-width: 1280px;
+// //   margin: 0 auto;
+// //   padding: 0 $spacing-4;
+  
+// //   @include mobile {
+// //     padding: 0 $spacing-4;
+// //   }
+  
+// //   @include tablet {
+// //     padding: 0 $spacing-6;
+// //   }
+  
+// //   @include desktop {
+// //     padding: 0 $spacing-8;
+// //   }
+// // }
+
+// // .content {
+// //   @include flex-between;
+// //   padding: $spacing-4 0;
+// // }
+
+// // .left {
+// //   @include flex-center;
+// //   gap: $spacing-8;
+  
+// //   @include mobile {
+// //     gap: $spacing-4;
+// //   }
+// // }
+
+// // .logo {
+// //   font-size: 1.5rem;
+// //   font-weight: bold;
+// //   @include gradient-text($gradient-primary);
+// //   transition: opacity $transition-fast;
+  
+// //   &:hover {
+// //     opacity: 0.8;
+// //   }
+// // }
+
+// // .nav {
+// //   display: flex;
+// //   gap: $spacing-6;
+  
+// //   @include mobile {
+// //     gap: $spacing-4;
+// //   }
+// // }
+
+// // .navLink {
+// //   color: $gray-300;
+// //   font-weight: 500;
+// //   transition: all $transition-fast;
+// //   padding-bottom: $spacing-1;
+  
+// //   &:hover {
+// //     color: white;
+// //   }
+  
+// //   &.active {
+// //     color: $primary;
+// //     border-bottom: 2px solid $primary;
+// //   }
+// // }
+
+// // .userIcon {
+// //   padding: $spacing-2;
+// //   border-radius: 9999px;
+// //   transition: all $transition-fast;
+// //   display: flex;
+// //   align-items: center;
+// //   justify-content: center;
+  
+// //   &:hover {
+// //     background: rgba($gray-700, 0.5);
+// //   }
+  
+// //   svg {
+// //     width: 1.5rem;
+// //     height: 1.5rem;
+// //     color: $gray-300;
+// //     transition: color $transition-fast;
+    
+// //     &:hover {
+// //       color: white;
+// //     }
+// //   }
+// // }
