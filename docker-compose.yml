@@ -74,6 +74,7 @@ services:
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.27
+    container_name: elasticsearch
     environment:
       - discovery.type=single-node
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
@@ -87,6 +88,7 @@ services:
 
   logstash:
     image: docker.elastic.co/logstash/logstash:7.17.27
+    container_name: logstash
     depends_on: [elasticsearch]
     ports: ["5044:5044"]
     volumes:
@@ -97,6 +99,7 @@ services:
 
   filebeat:
     image: docker.elastic.co/beats/filebeat:7.17.27
+    container_name: filebeat
     depends_on: 
       - nginx
       - logstash
@@ -110,6 +113,7 @@ services:
     
   kibana:
     image: docker.elastic.co/kibana/kibana:7.17.27
+    container_name: kibana
     depends_on: [elasticsearch]
     volumes:
       - nginx-logs:/var/log/nginx:ro
@@ -120,6 +124,66 @@ services:
     networks:
       - trancendence
     restart: always
+  
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    depends_on:
+      - nginx
+    ports: ["9090:9090"]
+    networks:
+      - trancendence
+    restart: always
+  
+  #grafana:
+  #  image: grafana/grafana
+  #  container_name: grafana
+  #  depends_on:
+  #    - prometheus
+  #  ports: ["3001:3001"]
+  #  networks:
+  #    - trancendence
+  #  restart: always
+  
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter
+    container_name: nginx-exporter
+    depends_on:
+      - nginx
+    ports: ["9113:9113"]
+    networks:
+      - trancendence
+    restart: always
+  
+  #postgres-exporter:
+  #  image: prometheuscommunity/postgres-exporter
+  #  container_name: postgres-exporter
+  #  depends_on:
+  #    - database
+  #  ports: ["9187:91187"]
+  #  networks:
+  #    - trancendence
+  #  restart: always
+  
+  #redis-exporter:
+  #  image: oliver006/redis-exporter
+  #  container_name: redis-exporter
+  #  depends_on:
+  #    - redis
+  #  ports: ["9121:9121"]
+  #  networks:
+  #    - trancendence
+  #  restart: always
+  
+  #cadvisor:
+  #  image: gcr.io/cadvisor/cadvisor
+  #  container_name: cadvisor
+  #  depends_on:
+  #    - redis
+  #  ports: ["8080:8080"] ??????????????????????
+  #  networks:
+  #    - trancendence
+  #  restart: always
 
 volumes:
   esdata:
