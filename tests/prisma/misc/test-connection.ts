@@ -1,4 +1,4 @@
-import { prisma } from "../../backend/prisma/prisma";
+import { prisma } from "../../../backend/prisma/prisma";
 
 async function main() {
   const userCount = await prisma.users.count();

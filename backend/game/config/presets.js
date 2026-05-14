@@ -1,6 +1,6 @@
 /* Game Presets */
 
-const DEFAULT = require('./defaultConfig');
+const { solo, base } = require('./defaultConfig');
 
 function clone(obj) {
     return JSON.parse(JSON.stringify(obj));
