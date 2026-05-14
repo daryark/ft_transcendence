@@ -1,7 +1,6 @@
-import type { Config } from "../../../config/config.types.";
+import type Config from "../../../config/config.types";
 
 export const soloBase: Config = {
-    mode: "solo",
 
     roomConfig: {
         maxPlayers: 1,
@@ -11,6 +10,7 @@ export const soloBase: Config = {
     },
 
     gameConfig: {
+        mode: "solo",
 
         general: {
             bagType: "7-bag", //* "14-bag", "7+1-bag", "7+2-bag", "7+X-bag", "pairs", "classic", "total_mahyhem"
@@ -51,8 +51,6 @@ export const soloBase: Config = {
             stock: 2 // amount of extra lives, 0 - infinite IF allowRetry is true. clears field, except garbage
 
             //displayObjectiveOnBoard: false //if true - shows objective on the backgound of the board
-        },
-
-        garbage?: never;
+        }
     }
 };
