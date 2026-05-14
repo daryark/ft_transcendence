@@ -1,4 +1,4 @@
-import type { Config } from "../../../config/config.types.";
+import type Config from "../../../config/config.types";
 
 export const customMultiBase: Config = {
 
@@ -19,6 +19,7 @@ export const customMultiBase: Config = {
     },
 
     gameConfig: {
+        mode: "custom",
 
         general: {
             bagType: "7-bag",

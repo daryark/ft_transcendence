@@ -1,5 +1,3 @@
-const { configBase } = require('../../config/presets');
-
 //* join →
 //*   push player to queue →
 //*   try match →
@@ -19,7 +17,7 @@ const { configBase } = require('../../config/presets');
 //#           end →
 //#             back to lobby / exit
 
-function join(socket, roomService, payload) {
+export default function join(socket, roomService, payload) {
     const mode = 'league';
 roomService.enqueue(socket);
 

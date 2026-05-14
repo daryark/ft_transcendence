@@ -1,4 +1,4 @@
-import type { Config } from "../../../config/config.types.";
+import type Config from "../../../config/config.types";
 
 export const leagueBase: Config = {
 
@@ -15,6 +15,7 @@ export const leagueBase: Config = {
     },
 
     gameConfig: {
+        mode: "league",
 
         general: {
             bagType: "7-bag",

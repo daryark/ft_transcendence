@@ -11,7 +11,7 @@ app.use(express.json());
 
 // All routes here are under /api/... (matches nginx proxy_pass to this app)
 const api = express.Router();
-const { registerUser, loginUser} = require('./prisma/auth.ts');
+const { registerUser, loginUser} = require('./prisma/auth');
 
 api.post('/auth/register', async (req, res) => {
   try{

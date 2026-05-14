@@ -1,5 +1,5 @@
-import { PrismaClient } from '../generated/prisma/client';
-import type { gamemode } from '../generated/prisma/enums';
+import { prisma } from './prisma';
+import type { gamemode } from '@prisma/client';
 
 const prisma = new PrismaClient();
 

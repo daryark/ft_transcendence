@@ -15,6 +15,25 @@ export interface GameState {
   lines: number;
 }
 
+export type BoardWidth = number & { __brand: "BoardWidth" };
+export type BoardHeight = number & { __brand: "BoardHeight" };
+
+
+
+function createBoardWidth(value: number): BoardWidth {
+  if (value < 4 || value > 20)
+    throw new Error("Invalid board width");
+
+  return value as BoardWidth;
+}
+
+function createBoardHeight(value: number): BoardHeight {
+  if (value < 4 || value > 40)
+    throw new Error("Invalid board height");
+
+  return value as BoardHeight;
+}
+
 export function createFigure(type: FigureType, cols: number): Figure {
   const shape = figures[type][0];
 
@@ -26,11 +45,12 @@ export function createFigure(type: FigureType, cols: number): Figure {
   };
 }
 
-export function createEmptyBoard(rows: number, cols: number) {
-  return Array.from({ length: rows }, () => Array(cols).fill(0));
+export function createEmptyBoard(rows: number, cols: number): number[][] {
+  return Array.from({ length: createBoardHeight(rows) },
+    () => Array(createBoardWidth(cols)).fill(0));
 }
 
-export function initGame(rows: number, cols: number): GameState {
+export function initGame(rows: BoardHeight, cols: BoardWidth): GameState {
   const bag = createBag();
   const nextTypes = [...bag, ...createBag()];
   const next = nextTypes.map((t) => createFigure(t, cols));

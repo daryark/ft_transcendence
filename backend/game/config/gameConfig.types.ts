@@ -8,50 +8,27 @@ export type BagType =
     | "classic"
     | "total_mayhem";
 
-
 export type QuickplayModifier =
     | "double-hole"
     | "no-hold"
     | "messier-garbage"
     | "faster-gravity";
 
-export type Ranks = "D" | "D+" | "C-" | "C" | "C+" | "B-" | "B" | "B+" | "A-" | "A" | "A+" | "S-" | "S" | "S+" | "SS" | "U" | "X";
-
 export type ObjectiveType = "score" | "lines" | "time" | "none";
 
+export type MultiplayerMode = "quickplay" | "league" | "custom";
+
+export type GameMode = MultiplayerMode | "solo";
 
 
-export interface Config {
-    roomConfig: RoomConfig;
-    matchConfig: MatchConfig;
-    gameConfig: MultiplayerConfig | SoloConfig;
-};
-
-export interface RoomConfig {
-    roomName?: string;
-    maxPlayers: number;
-    public: boolean;
-    anonymousAllowed: boolean;
-    unrankedAllowed: boolean;
-    levelLimit?: number; // for league mode
-    rankLimit?: string; // {D, D+, C, C+, B, B+, A, A+} or null for no limit
-}
-
-export interface MatchConfig {
-    roundsToWin?: number;
-    winByRounds?: number; // in seconds, 0 for no limit
-    goldenPoint?: number; // in seconds, 0 for no limit
-    stock?: number; // amount of extra lives
-}
-
-export interface BaseGameConfig {
+interface BaseGameConfig {
     general: GameGeneralConfig;
     controls: GameControlsConfig;
     gravity: GameGravityConfig;
 }
 
-interface MultiplayerConfig extends BaseGameConfig {
-    mode: "quickplay" | "league" | "custom";
+export interface MultiplayerConfig extends BaseGameConfig {
+    mode: MultiplayerMode;
 
     garbage: GameGarbageConfig;
 
@@ -59,7 +36,7 @@ interface MultiplayerConfig extends BaseGameConfig {
     objective?: never;
 }
 
-interface SoloConfig extends BaseGameConfig {
+export interface SoloConfig extends BaseGameConfig {
     mode: "solo";
 
     survival: GameSurvivalConfig;
@@ -68,20 +45,20 @@ interface SoloConfig extends BaseGameConfig {
     garbage?: never;
 }
 
-export interface GameGeneralConfig {
+interface GameGeneralConfig {
     bagType: BagType;
     boardWidth: number; //4-20
     boardHeight: number; //4-40
     modifiers?: QuickplayModifier[]; // for quickplay mode modifiers like "double-hole", "no-hold", "messier-garbage", "faster-gravity"
 }
 
-export interface GameControlsConfig {
+interface GameControlsConfig {
     hold: boolean;
     nextPieces: number; //0-10
     showShadowPiece: boolean;
 }
 
-export interface GameGravityConfig {
+interface GameGravityConfig {
     lockDelay: number; // in ms
     gravity: number; // how fast pieces fall (0-1, where 1 is instant)
     useLeveling?: boolean; //overrides gravity
@@ -89,7 +66,7 @@ export interface GameGravityConfig {
     gravitMarginTime: number; // how long player has to survive before gravity starts increasing, in ms
 }
 
-export interface GameGarbageConfig {
+interface GameGarbageConfig {
     garbageMult: number;
     garbageCap: number; //max amnt of garbage to enter the board at once, the rest will be nullified
     garbageMaxCap: number; //max amnt of garbage pending queue can hold, the rest will be nullified
@@ -99,7 +76,7 @@ export interface GameGarbageConfig {
     garbageDelayOnClear: number; //delay in ms on each clear(per clear, not per line)
 }
 
-export interface GameSurvivalConfig {
+interface GameSurvivalConfig {
     mode: "layer" | "timer" | "none"; // "layer", "timer" - garbage has stable layer or comes once in a "time"
     garbageMessiness: number; // 0 to 1, how messy the garbage is (holes in diff columns)
     stickyLayer: boolean; // if true, garbage layer will not rase while in a combos cleaning
@@ -107,7 +84,7 @@ export interface GameSurvivalConfig {
     timerInterval: number; // in seconds, how often new garbage layer appears in timer mode
 }
 
-export interface GameObjectiveConfig {
+interface GameObjectiveConfig {
     winCondition: ObjectiveType; // "score", "lines", "time", "none" - infinite
     scoreToWin?: number;
     linesToClear?: number;

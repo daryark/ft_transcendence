@@ -1,6 +1,6 @@
 import {
   moveFigure,
-  rotate
+  rotate,
   collision,
   clearLines,
   createBag
@@ -22,7 +22,7 @@ type RoomService = {
 };
 
 //!inputs in GameState or where?
-type Input =
+export type Input =
   | { type: "left" }
   | { type: "right" }
   | { type: "down" } //speed up soft drop
@@ -33,7 +33,7 @@ type Input =
   | { type: "hold" };
 
 export default function createEngine(room: Room, roomService: RoomService) {
-  const TICK = 100; // 100–200ms нормально для початку
+  const TICK = 100; // 100–200ms ok for most players
   const inputs: Input[] = [];
 
   function pushInput(input: Input) {
