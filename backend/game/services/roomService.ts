@@ -1,7 +1,7 @@
 import Room, { RoomId } from "../domain/room";
 // import Player from "../domain/player";
-import Config from "../config/config.types.";
-import { Server, Socket } from "socket.io";
+import Config from "../config/config.types";
+import { Server } from "socket.io";
 import { ServerToClientEvents } from "../../sockets/gameHandlers";
 
 export type RoomServiceRoomState = Pick<Room, "id" | "status" | "players">;
@@ -11,12 +11,12 @@ export interface RoomServiceApi {
   generateRoomId(): RoomId;
   getRoom(roomId: RoomId): Room | undefined;
   deleteRoom(roomId: RoomId): void;
-  addPlayer(roomId: RoomId, player: Socket): void;
-  addSpectator(roomId: RoomId, spectator: Socket): void;
-  removePlayer(roomId: RoomId, player: Socket): void;
-  removeSpectator(roomId: RoomId, spectator: Socket): void;
-  enqueue(socket: Socket): void;
-  dequeue(socketId: string): Socket[];
+  addPlayer(roomId: RoomId, player: string): void;
+  addSpectator(roomId: RoomId, spectator: string): void;
+  removePlayer(roomId: RoomId, player: string): void;
+  removeSpectator(roomId: RoomId, spectator: string): void;
+  enqueue(playerId: string): void;
+  dequeue(socketId: string): string[];
   broadcast(roomId: RoomId, event: string, data: any): void;
   clearRooms(): void;
   getRoomState(roomId: RoomId): RoomServiceRoomState | null;
@@ -24,7 +24,7 @@ export interface RoomServiceApi {
 
 export default class RoomService implements RoomServiceApi {
   private rooms: Map<RoomId, Room>;
-  private queue: Socket[];
+  private queue: string[];
   private io: Server;
 
   constructor(io: Server) {
@@ -40,7 +40,6 @@ export default class RoomService implements RoomServiceApi {
       players: [],
       state: null,
       engine: null,
-
       ...config
     };
 
@@ -72,7 +71,7 @@ export default class RoomService implements RoomServiceApi {
   }
 
 
-  addPlayer(roomId: RoomId, player: Socket.id): void {
+  addPlayer(roomId: RoomId, player: string): void {
     const room = this.rooms.get(roomId);
     if (!room) return;
 
@@ -81,7 +80,7 @@ export default class RoomService implements RoomServiceApi {
     }
   }
 
-  addSpectator(roomId: RoomId, spectator: Socket): void {
+  addSpectator(roomId: RoomId, spectator: string): void {
     const room = this.rooms.get(roomId);
     if (!room) return;
     if (!Array.isArray(room.spectators)) return; //throw err ?
@@ -91,30 +90,30 @@ export default class RoomService implements RoomServiceApi {
     }
   }
 
-  removePlayer(roomId: RoomId, player: Socket): void {
+  removePlayer(roomId: RoomId, player: string): void {
     const room = this.rooms.get(roomId);
     if (!room) return;
 
-    room.players = room.players.filter((p: Socket) => p !== player);
+    room.players = room.players.filter((p: string) => p !== player);
     if (room.players.length === 0) {
       this.deleteRoom(roomId);
     }
   }
 
-  removeSpectator(roomId: RoomId, spectator: Socket): void {
+  removeSpectator(roomId: RoomId, spectator: string): void {
     const room = this.rooms.get(roomId);
     if (!room) return;
     if (!Array.isArray(room.spectators)) return;
 
-    room.spectators = room.spectators.filter((s: Socket) => s !== spectator);
+    room.spectators = room.spectators.filter((s: string) => s !== spectator);
   }
 
-  enqueue(socket: Socket): void { //socket or player? (playerId (tockent/uuid))
-    this.queue.push(socket);
+  enqueue(playerId: string): void { //socket.id or player? (playerId (tockent/uuid))
+    this.queue.push(playerId);
   }
 
-  dequeue(socketId: string): Socket[] {
-    return this.queue = this.queue.filter(p => p.id !== socketId);
+  dequeue(socketId: string): string[] {
+    return this.queue = this.queue.filter(p => p !== socketId);
   }
 
   broadcast(roomId: RoomId, event: ServerToClientEvents, data: any): void {

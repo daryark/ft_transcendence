@@ -33,7 +33,7 @@ export type Input =
   | { type: "hold" };
 
 export default function createEngine(room: Room, roomService: RoomService) {
-  const TICK = 100; // 100–200ms нормально для початку
+  const TICK = 100; // 100–200ms ok for most players
   const inputs: Input[] = [];
 
   function pushInput(input: Input) {

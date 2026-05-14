@@ -1,4 +1,4 @@
-import type Config from "../../../config/config.types.";
+import type Config from "../../../config/config.types";
 
 export const leagueBase: Config = {
 

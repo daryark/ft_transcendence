@@ -7,7 +7,7 @@ import { leagueBase } from "../domain/mode/league/config";
 import { quickplayBase } from "../domain/mode/quickplay/config";
 import { customMultiBase } from "../domain/mode/custom/config";
 
-import type Config from "./config.types.";
+import type Config from "./config.types";
 import type { GameMode } from "./gameConfig.types";
 
 
@@ -55,4 +55,4 @@ export function configBase(
 
 export function createConfig(mode: GameMode): Config {
     return structuredClone(frozenConfigs[mode]);
-}
+} 

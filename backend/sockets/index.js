@@ -1,19 +1,18 @@
-const chatHandlers = require('./chatHandlers');
-const gameHandlers = require('./gameHandlers');
+import chatHandlers from "./chatHandlers";
+import gameHandlers from "./gameHandlers";
 
-const RoomService = require('../game/services/roomService');
-const createModeService = require('../game/services/modeService');
-const PlayerService = require('../game/services/playerService');
+import RoomService from '../game/services/roomService';
+import createModeService from '../game/services/modeService';
+import PlayerService from '../game/services/playerService';
 
-const resolveIdentity = require('../auth/resolveIdentity');
+import resolveIdentity from '../auth/resolveIdentity';
 
-import configBase from '../game/config/configBase';
-const mode = require('../game/domain/mode');
+import { configBase } from '../game/config/presets';
+import modes from '../game/domain/mode';
 
-
-module.exports = function socketSetup(io) {
+export default function socketSetup(io) {
     const roomService = new RoomService(io);
-    const modeService = createModeService({ mode, roomService });
+    const modeService = createModeService({ modes, roomService });
     const playerService = new PlayerService();
 
     io.on("connection", (socket) => {
@@ -26,7 +25,7 @@ module.exports = function socketSetup(io) {
         socket.emit('game:config', { ...configBase(identity.type) });
     });
 
-    gameHandlers(socket, modeService);
+    gameHandlers(socket, { modeService, roomService });
     // chatHandlers(socket);
 
     socket.on('disconnect', () => {

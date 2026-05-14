@@ -1,10 +1,8 @@
 import { createCipheriv } from 'node:crypto';
-import { createConfig } from '../../../config/configBase';
+import { createConfig, applyModifiers } from '../../../config/presets';
+import { startGame } from '../match/startGame';
 
-const { configBase, applyModifiers } = require('../../config/presets');
-const { startGame } = require('../match/startGame');
-
-function join(socket, roomService, payload = {}) {
+export default function join(socket, roomService, payload = {}) {
     //     validateModifiers(payload.gameConfig?.modifiers || {});
 
     let room = roomService.getRoom(mode);

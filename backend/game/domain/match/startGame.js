@@ -1,6 +1,6 @@
 import { initGame } from "../engine/state";
 
-module.exports = function startGame(room, roomService) {
+export default function startGame(room, roomService) {
   if (room.status === "playing") return;
 
   room.status = 'playing';
