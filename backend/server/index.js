@@ -12,7 +12,7 @@ const io = new Server(server, {
     }  //# todo - restrict origin in real env
 });
 
-setupSockets(io);
+socketSetup(io);
 
 server.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);

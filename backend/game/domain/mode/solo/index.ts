@@ -1,6 +1,6 @@
 import { Socket } from "socket.io";
 import { createConfig } from "../../../config/configBase";
-import { RoomServiceApi, RoomServiceRoomState } from "../../../services/roomService";
+import RoomService, { RoomServiceRoomState } from "../../../services/roomService";
 import startGame from "../../match/startGame";
 
 import type Room from "../../../domain/room";
@@ -8,7 +8,7 @@ import type Config from "../../../config/config.types";
 
 export default function join(
     socket: Socket,
-    roomService: RoomServiceApi,
+    roomService: RoomService,
     payload: Partial<Config> = {}
 ): RoomServiceRoomState | null {
 

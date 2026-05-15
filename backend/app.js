@@ -4,7 +4,7 @@ const cors = require('cors');
 // const authRoutes = require('./routes/auth.routes');
 
 const app = express();
-const { authenticateToken } = require('./middleware/auth');
+const { authenticateToken } = require('./middleware/httpAuth');
 
 app.use(cors()); //#2
 app.use(express.json());
