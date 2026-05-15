@@ -1,5 +1,7 @@
+import jwt from "jsonwebtoken";
 import { randomUUID } from "crypto";
-// import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET!;
 
 export type Identity =
     | {
@@ -11,20 +13,28 @@ export type Identity =
         type: "anonymous";
     };
 
+type HandshakeAuth = {
+    token?: string;
+};
 
-export function resolveIdentity(auth: string | null): Identity {
-    // const token = auth?.token;
+export function resolveIdentity(auth?: HandshakeAuth): Identity {
+    const token = auth?.token;
 
-    if (auth) {
-        return {
-            id: "123",
-            type: "registered"
-        };
+    if (token) {
+        try {
+            const { userId } = jwt.verify(token, JWT_SECRET) as { userId: string };
+
+            return {
+                id: userId,
+                type: "registered",
+            };
+        } catch {
+            // invalid token -> continue as anonymous
+        }
     }
 
-    const anonymousId = randomUUID();
     return {
-        id: anonymousId,
+        id: randomUUID(),
         type: "anonymous",
     };
 }

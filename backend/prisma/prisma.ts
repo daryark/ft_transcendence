@@ -1,6 +1,6 @@
 import { config as loadEnv } from "dotenv";
 import { expand } from "dotenv-expand";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";

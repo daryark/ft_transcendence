@@ -5,7 +5,7 @@ import { expand } from "dotenv-expand";
 import { defineConfig } from "prisma/config";
 
 // Allow DATABASE_URL to use ${VAR} references from .env.
-expand(loadEnv());
+expand(loadEnv({ path: [".env", "../.env"], override: false }));
 
 const databaseUrl = process.env["DATABASE_URL"];
 if (!databaseUrl) {
