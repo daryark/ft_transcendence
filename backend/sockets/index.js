@@ -18,25 +18,19 @@ export default function socketSetup(io) {
     io.on("connection", (socket) => {
         console.log('New client connected:', socket.id);
 
-        /**
-         * @Changes - Resolve the socket identity once per connection so downstream services
-         * can use a stable player id instead of the transient socket id.
-         */
         const identity = resolveIdentity(socket.handshake.auth);
-        const player = playerService.getOrCreate(identity.id, socket.id);
+        const player = playerService.getOrCreate(identity.userId, socket.id);
         socket.data.player = player;
-        socket.data.playerId = identity.id;
 
         socket.emit('game:config', { ...configBase(identity.type) });
+    });
 
-        gameHandlers(socket, { modeService, roomService });
-        // chatHandlers(socket);
+    gameHandlers(socket, { modeService, roomService });
+    // chatHandlers(socket);
 
-        socket.on('disconnect', () => {
-            console.log('Client disconnected:', socket.id);
-            delete socket.data.player;
-            delete socket.data.playerId;
-        });
+    socket.on('disconnect', () => {
+        console.log('Client disconnected:', socket.id);
+        delete socket.data.player;
     });
 };
 
