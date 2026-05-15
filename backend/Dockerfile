@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY backend/package.json ./
 RUN npm install --omit=dev
-RUN npm install tsx bcrypt zod prisma @prisma/client dotenv dotenv-expand @prisma/adapter-pg pg
+RUN npm install tsx prom-client bcrypt zod prisma @prisma/client dotenv dotenv-expand @prisma/adapter-pg pg
 COPY backend ./
 RUN npx prisma generate
 
