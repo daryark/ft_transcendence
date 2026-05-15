@@ -5,7 +5,7 @@ import RoomService from '../game/services/roomService';
 import createModeService from '../game/services/modeService';
 import PlayerService from '../game/services/playerService';
 
-import resolveIdentity from '../auth/resolveIdentity';
+const { resolveIdentity } = require('../middleware/auth');
 
 import { configBase } from '../game/config/presets';
 import modes from '../game/domain/mode';
