@@ -1,4 +1,6 @@
-module.exports = function chatHandlers(io, socket) {
+import { Server, Socket } from "socket.io";
+
+export default function chatHandlers(io: Server, socket: Socket) {
 
     socket.on('chat:message', (data) => {
         const { roomId } = socket.data;

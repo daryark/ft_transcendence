@@ -1,7 +1,10 @@
-import { initGame } from "../engine/state";
 import createEngine from "../engine/tetrisEngline";
+import { initGame } from "../engine/state";
 
-export default function startGame(room, roomService) {
+import RoomService from "../../services/roomService";
+import Room from "../room";
+
+export default function startGame(room: Room, roomService: RoomService) {
   if (room.status === "playing") return;
 
   room.status = 'playing';

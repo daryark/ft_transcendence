@@ -10,7 +10,7 @@ import disconnectHandlers from "./disconnectHandler";
 
 import modes from '../game/domain/mode';
 import { socketAuth } from "../middleware/socketAuth";
-import { configBase } from '../game/config/presets';
+import { configBase } from "../game/config/configBase";
 
 import type { RoomId } from "../game/domain/room";
 import type { Identity } from "../auth/identity";

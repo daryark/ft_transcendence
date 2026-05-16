@@ -1,3 +1,4 @@
+import { create } from "node:domain";
 import { figures } from "./figures";
 import type { Figure, FigureType } from "./figures";
 import { createBag } from "./logic";
@@ -45,18 +46,18 @@ export function createFigure(type: FigureType, cols: number): Figure {
   };
 }
 
-export function createEmptyBoard(rows: number, cols: number): number[][] {
-  return Array.from({ length: createBoardHeight(rows) },
-    () => Array(createBoardWidth(cols)).fill(0));
+export function createEmptyBoard(rows: BoardHeight, cols: BoardWidth): number[][] {
+  return Array.from({ length: rows }, () => Array(cols).fill(0));
 }
 
-export function initGame(rows: BoardHeight, cols: BoardWidth): GameState {
+export function initGame(rows: number, cols: number): GameState {
+  const board = createEmptyBoard(createBoardHeight(rows), createBoardWidth(cols));
   const bag = createBag();
   const nextTypes = [...bag, ...createBag()];
   const next = nextTypes.map((t) => createFigure(t, cols));
 
   return {
-    board: createEmptyBoard(rows, cols),
+    board,
     current: next.shift()!,
     next,
     hold: null,
@@ -65,7 +66,7 @@ export function initGame(rows: BoardHeight, cols: BoardWidth): GameState {
     cols,
     gameOver: false,
     score: 0,
-    lines: 0,
+    lines: 0
   };
 }
 

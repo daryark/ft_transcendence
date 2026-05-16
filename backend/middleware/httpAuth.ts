@@ -1,10 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import { getJwtSecret } from "../auth/jwt";
 import jwt from "jsonwebtoken";
+import type { ApiRequest } from "../app";
 
-type AuthRequest = Request & { user?: any };//! consider defining a proper type for user
-
-export function authenticateToken(req: AuthRequest, res: Response, next: NextFunction) {
+export function authenticateToken(req: ApiRequest, res: Response, next: NextFunction) {
     const authHeader = req.headers.authorization;
     const token = typeof authHeader === "string" && authHeader.startsWith("Bearer ")
         ? authHeader.slice(7)
