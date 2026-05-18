@@ -104,8 +104,8 @@ services:
       - nginx
       - logstash
     volumes:
-      - ./infra/elk/kibana/basic_dash.ndjson:/tmp/dashboard.ndjson:ro
-      - ./infra/elk/kibana/setup-kibana.sh:/tmp/setup-kibana.sh:ro
+      - nginx-logs:/var/log/nginx:ro
+      - ./infra/elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
     entrypoint: ["sh", "/tmp/setup-kibana.sh"]
     networks:
       - trancendence
@@ -116,8 +116,9 @@ services:
     container_name: kibana
     depends_on: [elasticsearch]
     volumes:
-      - nginx-logs:/var/log/nginx:ro
-      - ./infra/elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+      - ./infra/elk/kibana/basic_dash.ndjson:/tmp/dashboard.ndjson:ro
+      - ./infra/elk/kibana/setup-kibana.sh:/tmp/setup-kibana.sh:ro
+      
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports: ["5601:5601"]
@@ -131,6 +132,9 @@ services:
     depends_on:
       - nginx
     ports: ["9090:9090"]
+    volumes:
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
     networks:
       - trancendence
     restart: always
@@ -145,15 +149,30 @@ services:
   #    - trancendence
   #  restart: always
   
-  nginx-exporter:
-    image: nginx/nginx-prometheus-exporter
-    container_name: nginx-exporter
-    depends_on:
-      - nginx
-    ports: ["9113:9113"]
-    networks:
-      - trancendence
-    restart: always
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - 9100:9100
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points="^/(sys|proc|dev|host|etc)($$|/)"'
+
+
+  #nginx-exporter:
+  #  image: nginx/nginx-prometheus-exporter
+  #  container_name: nginx-exporter
+  #  depends_on:
+  #    - nginx
+  #  ports: ["9113:9113"]
+  #  networks:
+  #    - trancendence
+  #  restart: always
   
   #postgres-exporter:
   #  image: prometheuscommunity/postgres-exporter
@@ -175,19 +194,21 @@ services:
   #    - trancendence
   #  restart: always
   
-  #cadvisor:
-  #  image: gcr.io/cadvisor/cadvisor
-  #  container_name: cadvisor
-  #  depends_on:
-  #    - redis
-  #  ports: ["8080:8080"] ??????????????????????
-  #  networks:
-  #    - trancendence
-  #  restart: always
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    ports:
+      - 8080:8080
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
 
 volumes:
   esdata:
   nginx-logs:
+  prometheus_data: {}
 
 networks:
   trancendence:
