@@ -1,4 +1,5 @@
-const RoomService = require('../../game/services/roomService');
+const _RoomService = require('../../game/services/roomService');
+const RoomService = _RoomService.default || _RoomService;
 
 describe('RoomService', () => {
     let roomService;

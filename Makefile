@@ -1,4 +1,4 @@
-COMPOSE ?= docker compose
+COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || (command -v docker-compose >/dev/null 2>&1 && echo docker-compose || echo "docker compose"))
 
 prep:
 	@docker --version

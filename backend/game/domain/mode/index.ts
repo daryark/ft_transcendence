@@ -4,9 +4,9 @@ import custom from "./custom";
 import solo from "./solo";
 
 import { GameMode } from "../../config/gameConfig.types";
-import { ModeHandler } from "../../services/modeService";
+import { ModeJoinHandler } from "../../services/modeService";
 
-const modes: Record<GameMode, ModeHandler["join"]> = {
+const modes: Record<GameMode, ModeJoinHandler> = {
   quickplay,
   league,
   solo,

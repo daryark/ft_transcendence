@@ -6,23 +6,23 @@ import { ServerToClientEvents } from "../../sockets/gameHandlers";
 
 export type RoomServiceRoomState = Pick<Room, "id" | "status" | "players">;
 
-export interface RoomServiceApi {
-  createRoom(config: Config): Room;
-  generateRoomId(): RoomId;
-  getRoom(roomId: RoomId): Room | undefined;
-  deleteRoom(roomId: RoomId): void;
-  addPlayer(roomId: RoomId, player: string): void;
-  addSpectator(roomId: RoomId, spectator: string): void;
-  removePlayer(roomId: RoomId, player: string): void;
-  removeSpectator(roomId: RoomId, spectator: string): void;
-  enqueue(playerId: string): void;
-  dequeue(socketId: string): string[];
-  broadcast(roomId: RoomId, event: string, data: any): void;
-  clearRooms(): void;
-  getRoomState(roomId: RoomId): RoomServiceRoomState | null;
-}
+// export interface RoomServiceApi {
+//   createRoom(config: Config): Room;
+//   generateRoomId(): RoomId;
+//   getRoom(roomId: RoomId): Room | undefined;
+//   deleteRoom(roomId: RoomId): void;
+//   addPlayer(roomId: RoomId, player: string): void;
+//   addSpectator(roomId: RoomId, spectator: string): void;
+//   removePlayer(roomId: RoomId, player: string): void;
+//   removeSpectator(roomId: RoomId, spectator: string): void;
+//   enqueue(playerId: string): void;
+//   dequeue(socketId: string): string[];
+//   broadcast(roomId: RoomId, event: string, data: any): void;
+//   clearRooms(): void;
+//   getRoomState(roomId: RoomId): RoomServiceRoomState | null;
+// }
 
-export default class RoomService implements RoomServiceApi {
+export default class RoomService {
   private rooms: Map<RoomId, Room>;
   private queue: string[];
   private io: Server;
