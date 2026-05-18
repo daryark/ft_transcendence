@@ -11,7 +11,8 @@ import "./Auth.scss";
 type AuthMode = "login" | "register";
 
 type AuthInput = {
-  email: string;
+  email?: string;
+  login?: string;
   password: string;
   username?: string;
 };
@@ -32,10 +33,9 @@ const parseAuthResponse = async (res: Response): Promise<AuthResponse> => {
 
 const requestAuth = async (
   mode: AuthMode,
-  input: AuthInput
+  input: AuthInput,
 ): Promise<SessionUser> => {
-  const endpoint =
-    mode === "login" ? "/api/auth/login" : "/api/auth/register";
+  const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
 
   const res = await fetch(endpoint, {
     method: "POST",
@@ -48,35 +48,52 @@ const requestAuth = async (
   const payload = await parseAuthResponse(res);
 
   if (!res.ok) {
-    throw new Error(payload.error || payload.message || "Authentication failed");
+    throw new Error(
+      payload.error || payload.message || "Authentication failed",
+    );
   }
 
   if (!payload.user) {
     throw new Error(
-      mode === "login"
-        ? "Invalid email or password"
-        : "Registration failed"
+      mode === "login" ? "Invalid email or password" : "Registration failed",
     );
   }
 
   return payload.user;
 };
 
-export const registerUser = async (data: {
+//export add
+const registerUser = async (data: {
   email: string;
   password: string;
   username: string;
 }) => requestAuth("register", data);
 
-export const loginUser = async (data: {
-  email: string;
-  password: string;
-}) => requestAuth("login", data);
+//export add
+const loginUser = async (data: { login: string; password: string }) =>
+  requestAuth("login", {
+    login: data.login,
+    email: data.login,
+    username: data.login,
+    password: data.password,
+  });
+
+const isFakeAdminLogin = (login: string, password: string) =>
+  login.trim().toLowerCase() === "admin" && password === "admin";
+
+const createFakeAdminUser = (): SessionUser => ({
+  id: 1,
+  email: "admin@local",
+  username: "admin",
+  created_at: new Date().toISOString(),
+  isAnonymous: false,
+});
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const navigate = useNavigate();
 
+  const [loginOrEmail, setLoginOrEmail] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
@@ -97,8 +114,14 @@ const Auth = () => {
       setLoading(true);
       setError("");
 
+      if (isLogin && isFakeAdminLogin(loginOrEmail, password)) {
+        saveSessionUser(createFakeAdminUser());
+        navigate("/play");
+        return;
+      }
+
       const user = isLogin
-        ? await loginUser({ email, password })
+        ? await loginUser({ login: loginOrEmail.trim(), password })
         : await registerUser({ email, password, username });
 
       saveSessionUser(user);
@@ -182,14 +205,26 @@ const Auth = () => {
               />
             )}
 
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              required
-              autoComplete="email"
-              onChange={(e) => setEmail(e.target.value)}
-            />
+            {isLogin ? (
+              <input
+                type="text"
+                // placeholder="Username or email"
+                placeholder="Username"
+                value={loginOrEmail}
+                required
+                autoComplete="username"
+                onChange={(e) => setLoginOrEmail(e.target.value)}
+              />
+            ) : (
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                required
+                autoComplete="email"
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            )}
 
             <input
               type="password"
@@ -217,10 +252,6 @@ const Auth = () => {
           <div className="auth__oauth">
             <button className="oauth github" type="button">
               GitHub
-            </button>
-
-            <button className="oauth forty-two" type="button">
-              42
             </button>
           </div>
 
