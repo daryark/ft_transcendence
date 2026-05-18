@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["jest", "node"]
+  },
+  "include": [
+    "tests/**/*",
+    "auth/**/*",
+    "game/**/*",
+    "sockets/**/*",
+    "server/**/*"
+  ],
+  "exclude": ["node_modules", "dist"]
+}

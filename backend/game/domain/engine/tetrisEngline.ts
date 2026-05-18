@@ -5,20 +5,14 @@ import {
   clearLines,
   createBag
 } from "./logic";
-import { createFigure } from "./state";
+import { createFigure } from "./state"
+import Room from "../room";
+import type { RoomId } from "../room";
 import type { GameState } from "./state";
+import type { ServerToClientEvents } from "../../../sockets/gameHandlers";
 
-//!create Room type in room/
-type Room = {
-  id: string;
-  state: GameState;
-  status: "lobby" | "playing";
-  engine?: any;
-  players: string[]; // or Player[]
-};
-//!
 type RoomService = {
-  broadcast: (roomId: string, event: string, payload: any) => void;
+  broadcast: (roomId: RoomId, event: ServerToClientEvents, payload: any) => void;
 };
 
 //!inputs in GameState or where?
@@ -112,6 +106,7 @@ export default function createEngine(room: Room, roomService: RoomService) {
 
   function tick() {
     const state = room.state;
+    if (!state) return; // Guard: state should not be null during active game
 
     applyInputs(state, inputs.shift()!); //!inputs.shift()! - means that no undefined will be, for TS. or add a check for undefined
     applyGravity(state);

@@ -11,7 +11,7 @@ export default interface Room {
     spectators?: string[]; // or Player[]
 
     state: GameState | null; //createEngine returns state...
-    engine?: any; // TODO: function createEngine type;
+    engine: any; // TODO: function createEngine type; createEngine | null;
 
     roomConfig: Config["roomConfig"];
     gameConfig: Config["gameConfig"];
