@@ -106,7 +106,6 @@ services:
     volumes:
       - nginx-logs:/var/log/nginx:ro
       - ./infra/elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
-    entrypoint: ["sh", "/tmp/setup-kibana.sh"]
     networks:
       - trancendence
     restart: always
@@ -118,10 +117,10 @@ services:
     volumes:
       - ./infra/elk/kibana/basic_dash.ndjson:/tmp/dashboard.ndjson:ro
       - ./infra/elk/kibana/setup-kibana.sh:/tmp/setup-kibana.sh:ro
-      
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports: ["5601:5601"]
+    entrypoint: ["sh", "/tmp/setup-kibana.sh"]
     networks:
       - trancendence
     restart: always
