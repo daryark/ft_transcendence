@@ -120,7 +120,6 @@ services:
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
     ports: ["5601:5601"]
-    entrypoint: ["sh", "/tmp/setup-kibana.sh"]
     networks:
       - trancendence
     restart: always

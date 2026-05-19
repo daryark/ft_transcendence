@@ -7,6 +7,13 @@ prep:
 
 build:
 	@$(COMPOSE) up -d --build
+	@echo "Waiting for Kibana..."
+ 	@until curl -s -o /dev/null http://localhost:5601/api/status; do sleep 5; done
+ 	@echo "Kibana is ready. Importing dashboard..."
+ 	@curl -X POST "http://localhost:5601/api/saved_objects/_import?overwrite=true" \
+		-H "kbn-xsrf: true" \
+		--form file=@infra/elk/kibana/dashboard.ndjson
+ 	@echo "\nDashboard imported."
 
 up:
 	@$(COMPOSE) up -d
@@ -18,7 +25,7 @@ clean: down
 	@docker system prune -a
 
 fclean:
-	-@docker stop $$(docker ps -qa)
+	@docker stop $$(docker ps -qa)
 	@docker system prune --all --force --volumes
 	@docker network prune --force
 	@docker volume prune --force
