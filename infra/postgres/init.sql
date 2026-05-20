@@ -7,6 +7,22 @@ CREATE TABLE IF NOT EXISTS users (
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- OAUTH ACCOUNTS
+CREATE TABLE IF NOT EXISTS oauth_accounts (
+	id SERIAL PRIMARY KEY,
+	user_id INT NOT NULL,
+	provider VARCHAR(50) NOT NULL,
+	provider_user_id VARCHAR(255) NOT NULL,
+	provider_data JSONB,
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+	CONSTRAINT fk_oauth_user
+		FOREIGN KEY (user_id) REFERENCES users(id)
+		ON DELETE CASCADE,
+
+	CONSTRAINT unique_provider_user UNIQUE (provider, provider_user_id)
+);
+
 -- FRIENDS
 CREATE TYPE friend_status AS ENUM('pending', 'accepted', 'blocked');
 
@@ -30,12 +46,12 @@ CREATE TABLE IF NOT EXISTS friends (
 
 -- MATCHES
 CREATE TYPE match_status AS ENUM('active', 'finished');
-CREATE TYPE gamemode AS ENUM('classic', 'blitz', 'rush');
+CREATE TYPE gamemode AS ENUM('quickPlay', 'tetraLeague', 'fortyLines', 'blitz', 'zen', 'customGame');
 
 CREATE TABLE IF NOT EXISTS matches (
 	id SERIAL PRIMARY KEY,
 	status match_status DEFAULT 'active',
-	gamemode gamemode DEFAULT 'classic',
+	gamemode gamemode DEFAULT 'quickPlay',
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

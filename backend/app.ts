@@ -16,6 +16,10 @@ export type ApiRequest = Request & { user?: any };//! consider defining a proper
 // All routes here are under /api/... (matches nginx proxy_pass to this app)
 const api = express.Router();
 const { registerUser, loginUser} = require('./prisma/auth');
+const oauthController = require('./auth/oauthController');
+// lightweight helpers
+const { prisma } = require('./prisma/prisma');
+const { getLeaderboard } = require('./prisma/leaderboard');
 
 api.post('/auth/register', async (req: ApiRequest, res: Response) => {
   try{
@@ -42,6 +46,10 @@ api.post('/auth/login', async (req: ApiRequest, res: Response) => {
   }
 });
 
+// OAuth routes (GitHub)
+api.get('/auth/github', oauthController.redirectToGitHub);
+api.get('/auth/github/callback', oauthController.githubCallback);
+
 api.get('/auth/me', authenticateToken, (req: ApiRequest, res: Response) => {
   res.json({ user: req.user });
 });
@@ -62,6 +70,103 @@ api.get('/auth/me', authenticateToken, (req: ApiRequest, res: Response) => {
 // GET /api/users/42  → param "id"
 api.get('/users/:id', (req: ApiRequest, res: Response) => {
   res.json({ userId: req.params.id });
+});
+
+// GET /api/leaderboards?mode=${mode}&scope=${scope}
+api.get('/leaderboards', async (req: ApiRequest, res: Response) => {
+  try {
+    const mode = (req.query.mode as any) || undefined;
+    const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 100;
+
+    const leaderboard = await getLeaderboard({ mode, limit });
+
+    const result = await Promise.all(
+      leaderboard.map(async (entry: any) => {
+        const user = await prisma.users.findUnique({ where: { username: entry.nickname }, select: { id: true } });
+        return {
+          id: user?.id ?? null,
+          name: entry.nickname,
+          score: entry.score,
+          country: null,
+        };
+      })
+    );
+
+    res.json(result);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to load leaderboard', error: error instanceof Error ? error.message : String(error) });
+  }
+});
+
+// GET /api/users/:username/profile
+api.get('/users/:username/profile', async (req: ApiRequest, res: Response) => {
+  try {
+    const username = req.params.username;
+    const user = await prisma.users.findUnique({ where: { username }, select: { id: true, username: true, created_at: true } });
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    const matchPlayers = await prisma.match_players.findMany({
+      where: { user_id: user.id },
+      include: { matches: { select: { gamemode: true, created_at: true } } },
+    });
+
+    const wins = await prisma.match_players.count({ where: { user_id: user.id, result: 'win' } });
+    const onlineGames = matchPlayers.length;
+
+    // aggregate per-mode best score and achievedAgo
+    const modesMap: Record<string, { value: number | string; achievedAgo?: string } | null> = {};
+    const now = new Date();
+
+    for (const mp of matchPlayers) {
+      const gm = mp.matches?.gamemode as string | undefined;
+      if (!gm) continue;
+
+      // map schema gamemode to public keys
+      let key = gm;
+      if (gm === 'tetraLeague') key = 'league';
+      if (gm === 'customGame') continue; // skip custom
+
+      const score = typeof mp.score === 'number' ? mp.score : 0;
+      const existing = modesMap[key];
+      if (!existing || (typeof existing.value === 'number' && score > (existing.value as number))) {
+        const created = mp.matches?.created_at as Date | null;
+        let achievedAgo: string | undefined;
+        if (created) {
+          const diffMs = now.getTime() - new Date(created).getTime();
+          const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+          achievedAgo = days > 0 ? `${days} days ago` : 'recently';
+        }
+
+        modesMap[key] = { value: score, achievedAgo };
+      }
+    }
+
+    // build response matching spec in backend/api.txt
+    const response = {
+      id: user.id,
+      username: user.username,
+      country: null,
+      avatarId: 0,
+      created_at: user.created_at ?? null,
+      level: 1,
+      xp: 0,
+      nextLevelXp: 100,
+      playTimeHours: 0,
+      onlineGames,
+      wins,
+      modes: {
+        league: modesMap['league'] ?? null,
+        quickPlay: modesMap['quickPlay'] ?? null,
+        fortyLines: modesMap['fortyLines'] ?? null,
+        blitz: modesMap['blitz'] ?? null,
+        zen: modesMap['zen'] ?? null,
+      },
+    };
+
+    res.json(response);
+  } catch (error) {
+    res.status(500).json({ message: 'Failed to load profile', error: error instanceof Error ? error.message : String(error) });
+  }
 });
 
 // POST /api/items  (example)
