@@ -14,9 +14,10 @@ const Play = () => {
 
   return (
     <>
-      {showBackButton && <BackButton />}
+      
 
       <div className="play">
+        {showBackButton && <BackButton />}
         {gameModes.map((mode) => (
           <Button key={mode.id} {...mode} />
         ))}
