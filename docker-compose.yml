@@ -139,15 +139,19 @@ services:
       - trancendence
     restart: always
   
-  #grafana:
-  #  image: grafana/grafana
-  #  container_name: grafana
-  #  depends_on:
-  #    - prometheus
-  #  ports: ["3001:3001"]
-  #  networks:
-  #    - trancendence
-  #  restart: always
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    depends_on:
+      - prometheus
+    ports: ["3001:3000"]
+    volumes:
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - trancendence
+    restart: always
   
   node-exporter:
     image: prom/node-exporter:latest
@@ -209,6 +213,7 @@ volumes:
   esdata:
   nginx-logs:
   prometheus_data: {}
+  grafana_data: {}
 
 networks:
   trancendence:
