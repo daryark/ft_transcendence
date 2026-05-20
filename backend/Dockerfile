@@ -14,4 +14,4 @@ RUN npx prisma generate
 
 EXPOSE 3000
 
-CMD ["npx", "tsx"]
+CMD ["npx", "tsx", "server/index.js"]

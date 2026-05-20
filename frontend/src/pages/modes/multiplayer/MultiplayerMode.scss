@@ -1,0 +1,511 @@
+.mp-page {
+  --mp-accent: #f49b6f;
+  --mp-accent-soft: rgba(244, 155, 111, 0.24);
+  --mp-panel: rgba(83, 28, 18, 0.88);
+  --mp-panel-dark: rgba(42, 15, 20, 0.9);
+  --mp-border: rgba(255, 134, 85, 0.55);
+  --mp-text: #ffd0b5;
+  --mp-muted: rgba(255, 208, 181, 0.68);
+
+  min-height: calc(100vh - 69px);
+  position: relative;
+  overflow: hidden;
+  color: var(--mp-text);
+  font-family: "Arial Narrow", "Segoe UI", Arial, sans-serif;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background:
+    linear-gradient(rgba(35, 10, 10, 0.35), rgba(35, 10, 10, 0.58)),
+    radial-gradient(circle at 20% 20%, rgba(185, 71, 43, 0.35), transparent 24rem),
+    radial-gradient(circle at 78% 30%, rgba(255, 121, 54, 0.2), transparent 26rem),
+    linear-gradient(135deg, #19171a 0%, #302022 46%, #100f12 100%);
+
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.035) 0 1px, transparent 1px 7.5rem),
+      repeating-linear-gradient(0deg, transparent 0 5.5rem, rgba(255, 107, 59, 0.12) 5.5rem 5.65rem),
+      linear-gradient(rgba(255, 255, 255, 0.04) 50%, rgba(0, 0, 0, 0.12) 50%);
+    background-size: auto, auto, 100% 4px;
+    mix-blend-mode: screen;
+    opacity: 0.5;
+  }
+
+  &--league,
+  &--rooms {
+    --mp-accent: #e8a0d8;
+    --mp-accent-soft: rgba(232, 160, 216, 0.2);
+    --mp-panel: rgba(91, 28, 32, 0.9);
+    --mp-panel-dark: rgba(35, 21, 30, 0.92);
+    --mp-border: rgba(232, 160, 216, 0.42);
+    --mp-text: #ffc6ee;
+    --mp-muted: rgba(255, 198, 238, 0.62);
+    background:
+      linear-gradient(rgba(10, 14, 16, 0.55), rgba(8, 9, 11, 0.75)),
+      radial-gradient(circle at 18% 40%, rgba(105, 146, 148, 0.23), transparent 28rem),
+      radial-gradient(circle at 82% 20%, rgba(85, 61, 86, 0.5), transparent 31rem),
+      linear-gradient(135deg, #101416 0%, #2a3030 47%, #111115 100%);
+  }
+}
+
+.mp-titlebar,
+.mp-statusbar {
+  position: relative;
+  z-index: 2;
+  min-height: 3.35rem;
+  display: flex;
+  align-items: center;
+  padding: 0 0.9rem;
+  border-bottom: 2px solid rgba(255, 97, 45, 0.45);
+  background: linear-gradient(90deg, rgba(78, 20, 10, 0.98), rgba(54, 13, 9, 0.98));
+  color: var(--mp-text);
+  font-size: clamp(1.2rem, 2vw, 1.9rem);
+  font-weight: 800;
+}
+
+.mp-page--league .mp-titlebar,
+.mp-page--rooms .mp-titlebar,
+.mp-page--rooms .mp-statusbar {
+  border-color: rgba(232, 160, 216, 0.3);
+  background: linear-gradient(90deg, rgba(44, 22, 35, 0.98), rgba(25, 16, 28, 0.98));
+}
+
+.mp-back {
+  position: relative;
+  z-index: 3;
+  width: 6.75rem;
+  height: 2.9rem;
+  margin-top: 0.75rem;
+  background: rgba(23, 22, 23, 0.94);
+  color: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0.18rem 0 rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.45rem;
+  font-weight: 800;
+}
+
+.mp-back:hover {
+  color: #fff;
+  border-color: var(--mp-border);
+}
+
+.mp-statusbar {
+  position: absolute;
+  inset: auto 0 0;
+  min-height: 2.65rem;
+  border-top: 1px solid var(--mp-border);
+  border-bottom: 0;
+  font-size: 1.1rem;
+}
+
+.mp-center {
+  position: relative;
+  z-index: 1;
+  width: min(39.5rem, calc(100% - 2rem));
+  margin: 5rem auto 5rem;
+}
+
+.mp-card,
+.mp-start,
+.mp-mods,
+.mp-help,
+.mp-room-hero,
+.mp-room-row,
+.mp-create-card {
+  border: 1px solid var(--mp-border);
+  background: var(--mp-panel);
+  box-shadow: 0 0.25rem 0 rgba(0, 0, 0, 0.58), 0 0 1.4rem rgba(0, 0, 0, 0.24);
+}
+
+.mp-card {
+  padding: 1rem;
+}
+
+.mp-card__kicker {
+  display: block;
+  color: var(--mp-accent);
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.mp-card h1,
+.mp-card h2 {
+  margin: 0.35rem 0 0.35rem;
+  color: var(--mp-accent);
+  font-size: clamp(1.8rem, 4vw, 2.35rem);
+  line-height: 1;
+}
+
+.mp-card p {
+  margin: 0;
+  color: var(--mp-text);
+  font-size: 0.82rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.mp-best {
+  margin-top: 1rem;
+  color: var(--mp-accent);
+  font-weight: 800;
+}
+
+.mp-best strong {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--mp-accent);
+  font-size: 1.55rem;
+}
+
+.mp-start {
+  width: 100%;
+  min-height: 8.5rem;
+  margin-top: 0.85rem;
+  color: #ffac7b;
+  cursor: pointer;
+  font: inherit;
+  font-size: clamp(2.6rem, 8vw, 4rem);
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.mp-start:hover {
+  filter: brightness(1.16);
+}
+
+.mp-mods {
+  margin-top: 0.85rem;
+  padding: 1.2rem 0.8rem 0.75rem;
+}
+
+.mp-mod-stack {
+  display: flex;
+  justify-content: center;
+  min-height: 7.4rem;
+}
+
+.mp-mod-card {
+  width: 3.8rem;
+  height: 6.65rem;
+  margin-left: -0.45rem;
+  display: grid;
+  place-items: center;
+  border: 2px solid rgba(255, 242, 220, 0.75);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.28), transparent 38%),
+    repeating-linear-gradient(45deg, rgba(77, 74, 118, 0.18) 0 5px, transparent 5px 10px),
+    #efe2cc;
+  color: #27202a;
+  font-size: 1.7rem;
+  font-weight: 900;
+  transform: skewY(-2deg);
+}
+
+.mp-mod-card:first-child {
+  margin-left: 0;
+  color: #ffd85c;
+  background: linear-gradient(135deg, #332a70, #16142e);
+}
+
+.mp-mod-card:nth-child(n + 7) {
+  background:
+    repeating-linear-gradient(45deg, rgba(120, 154, 210, 0.23) 0 5px, transparent 5px 10px),
+    #dce9fb;
+}
+
+.mp-mod-footer {
+  margin-top: 0.8rem;
+  padding-top: 0.65rem;
+  border-top: 2px solid rgba(255, 97, 45, 0.65);
+  text-align: center;
+  color: var(--mp-accent);
+  font-size: 1.35rem;
+  font-weight: 900;
+}
+
+.mp-league-rank {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  width: min(75rem, calc(100% - 2rem));
+  margin: 1.4rem auto 0;
+}
+
+.mp-tr {
+  color: #fff;
+  font-size: clamp(4rem, 8vw, 6.25rem);
+  font-weight: 900;
+  text-shadow: 0 0 0.45rem #fff;
+}
+
+.mp-tr small {
+  font-size: 2.1rem;
+}
+
+.mp-rank-mark {
+  display: flex;
+  align-items: center;
+  gap: 1.7rem;
+  color: #b483c9;
+  font-size: clamp(2rem, 5vw, 4.5rem);
+  font-weight: 900;
+}
+
+.mp-league-stats {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.mp-queue {
+  position: relative;
+  z-index: 1;
+  margin: 2.7rem auto 1.7rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.95);
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  font-weight: 900;
+}
+
+.mp-queue span {
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 1.1rem;
+}
+
+.mp-queue small {
+  display: block;
+  margin-top: 0.45rem;
+  color: rgba(255, 198, 198, 0.78);
+  font-size: 0.9rem;
+}
+
+.mp-league-action {
+  position: relative;
+  z-index: 1;
+  width: min(73rem, calc(100% - 2rem));
+  min-height: 8.8rem;
+  margin: 0 auto;
+  color: #ffc6c6;
+  background: #772121;
+  border: 1px solid #b53a3a;
+  box-shadow: 0 0.25rem 0 rgba(0, 0, 0, 0.62);
+  cursor: pointer;
+  font: inherit;
+  font-size: clamp(2rem, 4vw, 3.8rem);
+  font-weight: 900;
+}
+
+.mp-league-action span {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1rem;
+  color: rgba(255, 198, 198, 0.72);
+}
+
+.mp-help {
+  position: relative;
+  z-index: 1;
+  width: min(73rem, calc(100% - 2rem));
+  margin: 0.65rem auto 5rem;
+  padding: 0.8rem;
+  background: #5a191c;
+}
+
+.mp-help h2 {
+  margin: 0 0 0.35rem;
+  color: #d9878e;
+  font-size: 1.8rem;
+}
+
+.mp-help p {
+  margin: 0;
+  color: #ffc8c8;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.mp-rooms-wrap {
+  position: relative;
+  z-index: 1;
+  width: min(86rem, calc(100% - 2rem));
+  margin: 4rem auto 5rem;
+}
+
+.mp-refresh {
+  display: block;
+  margin-left: auto;
+  margin-bottom: 0.35rem;
+  padding: 0.2rem 0.5rem;
+  color: var(--mp-text);
+  background: rgba(60, 33, 52, 0.9);
+  border: 1px solid var(--mp-border);
+  font: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.mp-room-hero {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.65rem 1rem;
+  background: rgba(61, 46, 64, 0.94);
+}
+
+.mp-room-logo {
+  color: #b780d6;
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  font-weight: 900;
+  line-height: 0.8;
+}
+
+.mp-room-hero h1 {
+  margin: 0;
+  color: #ffd2f1;
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+}
+
+.mp-room-hero p {
+  margin: 0;
+  color: var(--mp-muted);
+  font-weight: 800;
+  font-size: 0.78rem;
+}
+
+.mp-room-count {
+  padding: 0.35rem 0.75rem;
+  background: rgba(20, 14, 22, 0.35);
+  color: #fff;
+  font-size: 2rem;
+  font-weight: 900;
+}
+
+.mp-room-list {
+  margin-top: 0.65rem;
+}
+
+.mp-room-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1rem;
+  align-items: center;
+  min-height: 3rem;
+  margin-bottom: 0.45rem;
+  padding: 0.35rem 0.6rem;
+  background: rgba(39, 24, 35, 0.92);
+}
+
+.mp-room-row h2 {
+  margin: 0;
+  color: #ffc0ef;
+  font-size: clamp(1.1rem, 2.2vw, 1.75rem);
+  line-height: 1;
+}
+
+.mp-room-row p {
+  margin: 0.2rem 0 0;
+  color: rgba(255, 198, 238, 0.42);
+  font-size: 0.63rem;
+  font-weight: 800;
+}
+
+.mp-room-players {
+  color: #ffc6ef;
+  font-size: 1.65rem;
+  font-weight: 900;
+}
+
+.mp-create-card {
+  position: relative;
+  z-index: 1;
+  width: min(44rem, calc(100% - 2rem));
+  margin: 5rem auto;
+  padding: 1.2rem;
+}
+
+.mp-create-card h1 {
+  margin: 0 0 1rem;
+  color: var(--mp-accent);
+  font-size: clamp(2rem, 5vw, 3rem);
+}
+
+.mp-create-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.mp-create-row {
+  display: grid;
+  grid-template-columns: 12rem 1fr;
+  align-items: center;
+  gap: 1rem;
+  color: var(--mp-muted);
+  font-weight: 800;
+}
+
+.mp-create-row input,
+.mp-create-row select {
+  min-width: 0;
+  padding: 0.7rem;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.28);
+  border: 1px solid var(--mp-border);
+  font: inherit;
+  text-transform: uppercase;
+}
+
+.mp-create-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.mp-create-actions button {
+  flex: 1;
+  min-height: 3.5rem;
+  color: #ffd3c1;
+  background: var(--mp-panel);
+  border: 1px solid var(--mp-border);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+@media (max-width: 760px) {
+  .mp-center,
+  .mp-rooms-wrap,
+  .mp-create-card {
+    margin-top: 2rem;
+  }
+
+  .mp-league-rank,
+  .mp-room-hero,
+  .mp-create-row {
+    grid-template-columns: 1fr;
+  }
+
+  .mp-rank-mark {
+    justify-content: space-between;
+  }
+
+  .mp-mod-card {
+    width: 2.55rem;
+    height: 5rem;
+    font-size: 1.15rem;
+  }
+
+  .mp-room-count {
+    width: fit-content;
+  }
+}

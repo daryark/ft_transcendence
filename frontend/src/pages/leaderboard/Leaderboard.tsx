@@ -1,10 +1,16 @@
-
-
-
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 
 import "./Leaderboard.scss";
+
+
+//git stash 
+//git stash pop
+
+// api.get("/leaderboards/40-lines/global", (req, res) => {
+//   res.status(400).json({ message: "Accepted leaderboards" });
+//   // res.json({ user: req.user });
+// });
 
 type Player = {
   id: number;

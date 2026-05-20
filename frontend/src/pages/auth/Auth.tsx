@@ -1,54 +1,105 @@
-import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  createAnonymousSession,
+  getSessionUser,
+  saveSession,
+  type SessionData,
+  type SessionUser,
+} from "../../auth/session";
 import "./Auth.scss";
 
-type AuthResponse = {
-  token: string;
+type AuthMode = "login" | "register";
+
+type AuthInput = {
+  email?: string;
+  login?: string;
+  password: string;
+  username?: string;
 };
 
-export const registerUser = async (data: {
+type AuthResponse = {
+  message?: string;
+  error?: string;
+  user?: SessionUser | null;
+  token?: string;
+};
+
+const parseAuthResponse = async (res: Response): Promise<AuthResponse> => {
+  try {
+    return (await res.json()) as AuthResponse;
+  } catch {
+    return {};
+  }
+};
+
+const requestAuth = async (
+  mode: AuthMode,
+  input: AuthInput,
+): Promise<SessionData> => {
+  const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
+
+  const res = await fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+
+  const payload = await parseAuthResponse(res);
+
+  if (!res.ok) {
+    throw new Error(
+      payload.error || payload.message || "Authentication failed",
+    );
+  }
+
+  if (!payload.user) {
+    throw new Error(
+      mode === "login" ? "Invalid email or password" : "Registration failed",
+    );
+  }
+
+  return {
+    user: payload.user,
+    token: payload.token,
+  };
+};
+
+//export add
+const registerUser = async (data: {
   email: string;
   password: string;
   username: string;
-}): Promise<AuthResponse> => {
-  const res = await fetch("/api/auth/register", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
+}) => requestAuth("register", data);
+
+//export add
+const loginUser = async (data: { login: string; password: string }) =>
+  requestAuth("login", {
+    login: data.login,
+    email: data.login,
+    username: data.login,
+    password: data.password,
   });
 
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Registration failed");
-  }
+// const isFakeAdminLogin = (login: string, password: string) =>
+//   login.trim().toLowerCase() === "admin" && password === "admin";
 
-  return res.json();
-};
-
-export const loginUser = async (data: {
-  email: string;
-  password: string;
-}): Promise<AuthResponse> => {
-  const res = await fetch("/api/auth/login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(data),
-  });
-
-  if (!res.ok) {
-    const error = await res.json();
-    throw new Error(error.message || "Login failed");
-  }
-
-  return res.json();
-};
+// const createFakeAdminUser = (): SessionUser => ({
+//   id: 1,
+//   email: "admin@local",
+//   username: "admin",
+//   created_at: new Date().toISOString(),
+//   isAnonymous: false,
+//   avatarId: 1,
+// });
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
+  const navigate = useNavigate();
 
+  const [loginOrEmail, setLoginOrEmail] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
@@ -56,35 +107,42 @@ const Auth = () => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: FormEvent) => {
+  useEffect(() => {
+    if (getSessionUser()) {
+      navigate("/play", { replace: true });
+    }
+  }, [navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
       setLoading(true);
       setError("");
 
-      const data = isLogin
-        ? await loginUser({ email, password })
-        : await registerUser({
-            email,
-            password,
-            username,
-          });
+      // if (isLogin && isFakeAdminLogin(loginOrEmail, password)) {
+      //   saveSessionUser(createFakeAdminUser());
+      //   navigate("/play");
+      //   return;
+      // }
 
-      // save token ? update when will you and create 
-      localStorage.setItem("token", data.token);
+      const session = isLogin
+        ? await loginUser({ login: loginOrEmail.trim(), password })
+        : await registerUser({ email, password, username });
 
-      window.location.href = "/play";
-    } catch (err: any) {
-      setError(err.message);
+      saveSession(session);
+
+      navigate("/play");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Authentication failed");
     } finally {
       setLoading(false);
     }
   };
 
   const handleAnonymous = () => {
-    //tmp
-    console.log("Continue as Anonymous");
+    saveSession(createAnonymousSession());
+    navigate("/play");
   };
 
   return (
@@ -116,15 +174,23 @@ const Auth = () => {
           {/* switch parts login/registration */}
           <div className="auth__tabs">
             <button
+              type="button"
               className={isLogin ? "active" : ""}
-              onClick={() => setIsLogin(true)}
+              onClick={() => {
+                setIsLogin(true);
+                setError("");
+              }}
             >
               Login
             </button>
 
             <button
+              type="button"
               className={!isLogin ? "active" : ""}
-              onClick={() => setIsLogin(false)}
+              onClick={() => {
+                setIsLogin(false);
+                setError("");
+              }}
             >
               Register
             </button>
@@ -137,25 +203,47 @@ const Auth = () => {
                 type="text"
                 placeholder="Username"
                 value={username}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+                minLength={3}
+                maxLength={100}
+                required={!isLogin}
+                autoComplete="username"
+                onChange={(e) => setUsername(e.target.value)}
               />
             )}
 
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-            />
+            {isLogin ? (
+              <input
+                type="text"
+                // placeholder="Username or email"
+                placeholder="Username"
+                value={loginOrEmail}
+                required
+                autoComplete="username"
+                onChange={(e) => setLoginOrEmail(e.target.value)}
+              />
+            ) : (
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                required
+                autoComplete="email"
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            )}
 
             <input
               type="password"
               placeholder="Password"
               value={password}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+              minLength={isLogin ? 1 : 8}
+              maxLength={128}
+              required
+              autoComplete={isLogin ? "current-password" : "new-password"}
+              onChange={(e) => setPassword(e.target.value)}
             />
 
-            <button className="auth__submit" disabled={loading}>
+            <button className="auth__submit" type="submit" disabled={loading}>
               {loading ? "Loading..." : isLogin ? "Login" : "Create account"}
             </button>
 
@@ -168,13 +256,17 @@ const Auth = () => {
 
           {/* Oauth buttons */}
           <div className="auth__oauth">
-            <button className="oauth github">GitHub</button>
-
-            <button className="oauth forty-two">42</button>
+            <button className="oauth github" type="button">
+              GitHub
+            </button>
           </div>
 
           {/* anonymous */}
-          <button className="auth__anonymous" onClick={handleAnonymous}>
+          <button
+            className="auth__anonymous"
+            type="button"
+            onClick={handleAnonymous}
+          >
             Play as anonymous
           </button>
         </div>
