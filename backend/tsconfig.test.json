@@ -6,7 +6,10 @@
   "include": [
     "tests/**/*",
     "auth/**/*",
+    "config/**/*",
     "game/**/*",
+    "middleware/**/*",
+    "prisma/**/*",
     "sockets/**/*",
     "server/**/*"
   ],

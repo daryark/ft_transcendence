@@ -19,7 +19,10 @@
   },
   "include": [
     "auth/**/*",
+    "config/**/*",
     "game/**/*",
+    "middleware/**/*",
+    "prisma/**/*",
     "sockets/**/*",
     "server/**/*",
     "app.js"
