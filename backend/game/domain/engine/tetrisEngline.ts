@@ -1,11 +1,6 @@
-import {
-  moveFigure,
-  rotate,
-  collision,
-  clearLines,
-  createBag
-} from "./logic";
-import { createFigure } from "./state"
+import { moveFigure, rotate, collision, clearLines, createBag } from "./logic";
+import { createFigure } from "./figures";
+import type { Input, InputType } from "./input";
 import Room from "../room";
 import type { RoomId } from "../room";
 import type { GameState } from "./state";
@@ -15,16 +10,7 @@ type RoomService = {
   broadcast: (roomId: RoomId, event: ServerToClientEvents, payload: any) => void;
 };
 
-//!inputs in GameState or where?
-export type Input =
-  | { type: "left" }
-  | { type: "right" }
-  | { type: "down" } //speed up soft drop
-  | { type: "rotate" }
-  | { type: "rotateCCW" } //!add later
-  | { type: "rotate180" } //!add later
-  | { type: "drop" }
-  | { type: "hold" };
+type InputHandler = (state: GameState) => void;
 
 export default function createEngine(room: Room, roomService: RoomService) {
   const TICK = 100; // 100–200ms ok for most players
@@ -60,21 +46,35 @@ export default function createEngine(room: Room, roomService: RoomService) {
     };
   }
 
-  function applyInputs(state: GameState, input: Input) {
-    while (inputs.length) {
-      let piece = state.current;
+  function moveCurrent(state: GameState, dx: number, dy: number) {
+    state.current = moveFigure(state.current, dx, dy);
+  }
 
-      if (input.type === "left") piece = moveFigure(piece, -1, 0);
-      if (input.type === "right") piece = moveFigure(piece, 1, 0);
-      if (input.type === "down") piece = moveFigure(piece, 0, 1);
-      if (input.type === "down") piece = moveFigure(piece, 0, 1); //speed up soft drop
+  function rotateCurrent(state: GameState) {
+    const rotated = rotate(state.current.shape);
+    const test = { ...state.current, shape: rotated };
 
-      if (input.type === "rotate") {
-        const rotated = rotate(piece.shape);
-        const test = { ...piece, shape: rotated };
-        if (!collision(state.board, test)) piece = test;
-      }
-      // rotate / drop додаси пізніше
+    if (!collision(state.board, test)) {
+      state.current = test;
+    }
+  }
+
+  const inputHandlers: Record<InputType, InputHandler> = {
+    left: (state) => moveCurrent(state, -1, 0),
+    right: (state) => moveCurrent(state, 1, 0),
+    down: (state) => moveCurrent(state, 0, 1),
+    rotate: rotateCurrent,
+    rotateCCW: () => {},
+    rotate180: () => {},
+    drop: () => {},
+    hold: () => {},
+  };
+
+  function applyInputs(state: GameState) {
+    let input: Input | undefined;
+
+    while ((input = inputs.shift())) {
+      inputHandlers[input.type](state);
     }
   }
 
@@ -108,7 +108,7 @@ export default function createEngine(room: Room, roomService: RoomService) {
     const state = room.state;
     if (!state) return; // Guard: state should not be null during active game
 
-    applyInputs(state, inputs.shift()!); //!inputs.shift()! - means that no undefined will be, for TS. or add a check for undefined
+    applyInputs(state);
     applyGravity(state);
 
     roomService.broadcast(room.id, "game:update", state);

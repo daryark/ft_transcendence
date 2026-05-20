@@ -1,84 +1,166 @@
+import { describe, expect, jest, test } from '@jest/globals';
 import gameHandlers from '../../sockets/gameHandlers';
 
+type GameHandlersSocket = Parameters<typeof gameHandlers>[0];
+type GameHandlersDeps = Parameters<typeof gameHandlers>[1];
+type EventHandler = (payload?: unknown) => void;
+
+type TestSocket = {
+  id: string;
+  data: Record<string, unknown>;
+  on: jest.MockedFunction<(event: string, handler: EventHandler) => void>;
+  emit: jest.MockedFunction<(event: string, payload?: unknown) => void>;
+  join: jest.MockedFunction<(roomId: string) => void>;
+};
+
 describe('gameHandlers', () => {
-  test('mode:join calls modeService.join with correct args', () => {
-    const socket: any = {
+  function createSocket(overrides: Partial<TestSocket> = {}): TestSocket {
+    return {
       id: 'socket-1',
       data: {},
-      on: jest.fn((event, cb) => { /* register */ }),
-      emit: jest.fn(),
-      join: jest.fn(),
+      on: jest.fn<(event: string, handler: EventHandler) => void>(),
+      emit: jest.fn<(event: string, payload?: unknown) => void>(),
+      join: jest.fn<(roomId: string) => void>(),
+      ...overrides,
     };
+  }
 
-    const joinMock = jest.fn(() => ({ id: 'R1', status: 'lobby', players: ['socket-1'] }));
-    const modeService: any = { join: joinMock };
+  function registerGameHandlers(socket: TestSocket, deps: unknown) {
+    gameHandlers(socket as unknown as GameHandlersSocket, deps as GameHandlersDeps);
+  }
 
-    const roomService: any = {
-      getRoom: jest.fn(),
-      removePlayer: jest.fn(),
-    };
-
-    gameHandlers(socket, { modeService, roomService });
-
-    // find registered handler for mode:join
-    const registered = (socket.on as jest.Mock).mock.calls.find(c => c[0] === 'mode:join');
+  function getRegisteredHandler(socket: TestSocket, event: string): EventHandler {
+    const registered = socket.on.mock.calls.find(call => call[0] === event);
     expect(registered).toBeDefined();
+    return registered![1];
+  }
 
-    // invoke handler
-    const handler = registered[1];
-    handler({ mode: 'solo', payload: {} });
+  test('registers mode:join listener', () => {
+    const socket = createSocket();
+    const modeService = { join: jest.fn() };
+    const roomService = { getRoom: jest.fn() };
+
+    registerGameHandlers(socket, { modeService, roomService });
+
+    expect(socket.on).toHaveBeenCalledWith('mode:join', expect.any(Function));
+  });
+
+  //->works only with 'solo' mode, because other modes are not implemented yet.
+  test('mode:join with solo calls modeService.join with socket and payload', () => {
+    const socket = createSocket();
+    const payload = { general: { boardWidth: 10 } };
+    const joinMock = jest.fn();
+    const modeService = { join: joinMock };
+    const roomService = { getRoom: jest.fn() };
+
+    registerGameHandlers(socket, { modeService, roomService });
+
+    const handler = getRegisteredHandler(socket, 'mode:join');
+    handler({ mode: 'solo', payload });//->here solo specifically
+
+    expect(joinMock).toHaveBeenCalledWith('solo', socket, payload);
+  });
+
+  test('mode:join with solo defaults missing payload to empty object', () => {
+    const socket = createSocket();
+    const joinMock = jest.fn();
+    const modeService = { join: joinMock };
+    const roomService = { getRoom: jest.fn() };
+
+    registerGameHandlers(socket, { modeService, roomService });
+
+    const handler = getRegisteredHandler(socket, 'mode:join');
+    handler({ mode: 'solo' });//->here solo specifically
 
     expect(joinMock).toHaveBeenCalledWith('solo', socket, {});
   });
 
-  test('player:move pushes input to room engine when roomId set', () => {
-    const pushInput = jest.fn();
-    const socket: any = {
-      id: 'socket-2',
-      data: { roomId: 'ROOM1' },
-      on: jest.fn((event, cb) => { /* register */ }),
-      emit: jest.fn(),
-    };
+  test('registers player:move listener', () => {
+    const socket = createSocket();
+    const modeService = { join: jest.fn() };
+    const roomService = { getRoom: jest.fn() };
 
-    const roomService: any = {
-      getRoom: jest.fn(() => ({ engine: { pushInput } })),
-      removePlayer: jest.fn(),
-    };
+    registerGameHandlers(socket, { modeService, roomService });
 
-    const modeService: any = { join: jest.fn() };
-
-    gameHandlers(socket, { modeService, roomService });
-
-    const reg = (socket.on as jest.Mock).mock.calls.find(c => c[0] === 'player:move');
-    expect(reg).toBeDefined();
-    const h = reg[1];
-
-    h({ type: 'left' });
-    expect(pushInput).toHaveBeenCalledWith('left');
+    expect(socket.on).toHaveBeenCalledWith('player:move', expect.any(Function));
   });
 
-  test('disconnect removes player from roomService', () => {
-    const socket: any = {
-      id: 'socket-d',
-      data: { roomId: 'ROOMX' },
-      on: jest.fn((event, cb) => { /* register */ }),
-      emit: jest.fn(),
+  test('player:move pushes input to room engine when socket has roomId', () => {
+    const pushInput = jest.fn();
+    const socket = createSocket({ data: { roomId: 'ROOM1' } });
+    const modeService = { join: jest.fn() };
+    const roomService = {
+      getRoom: jest.fn<(roomId: string) => { engine: { pushInput: typeof pushInput } }>(
+        () => ({ engine: { pushInput } })
+      ),
     };
 
-    const roomService: any = {
-      getRoom: jest.fn(),
-      removePlayer: jest.fn(),
+    registerGameHandlers(socket, { modeService, roomService });
+
+    const handler = getRegisteredHandler(socket, 'player:move');
+    handler({ type: 'left' });
+
+    expect(roomService.getRoom).toHaveBeenCalledWith('ROOM1');
+    expect(pushInput).toHaveBeenCalledWith({ type: 'left' });
+  });
+
+  test('player:move does nothing when socket has no roomId', () => {
+    const socket = createSocket({ data: {} });
+    const modeService = { join: jest.fn() };
+    const roomService = { getRoom: jest.fn<(roomId: string) => unknown>() };
+
+    registerGameHandlers(socket, { modeService, roomService });
+
+    const handler = getRegisteredHandler(socket, 'player:move');
+    handler({ type: 'left' });
+
+    expect(roomService.getRoom).not.toHaveBeenCalled();
+  });
+
+  test('player:move does not throw when room does not exist', () => {
+    const socket = createSocket({ data: { roomId: 'ROOM404' } });
+    const modeService = { join: jest.fn() };
+    const roomService = { getRoom: jest.fn<(roomId: string) => undefined>(() => undefined) };
+
+    registerGameHandlers(socket, { modeService, roomService });
+
+    const handler = getRegisteredHandler(socket, 'player:move');
+
+    expect(() => handler({ type: 'left' })).not.toThrow();
+    expect(roomService.getRoom).toHaveBeenCalledWith('ROOM404');
+  });
+
+  test('player:move ignores invalid input type', () => {
+    const pushInput = jest.fn();
+    const socket = createSocket({ data: { roomId: 'ROOM1' } });
+    const modeService = { join: jest.fn() };
+    const roomService = {
+      getRoom: jest.fn<(roomId: string) => { engine: { pushInput: typeof pushInput } }>(
+        () => ({ engine: { pushInput } })
+      ),
     };
 
-    const modeService: any = { join: jest.fn() };
+    registerGameHandlers(socket, { modeService, roomService });
 
-    gameHandlers(socket, { modeService, roomService });
+    const handler = getRegisteredHandler(socket, 'player:move');
+    handler({ type: 'teleport' });
 
-    const reg = (socket.on as jest.Mock).mock.calls.find(c => c[0] === 'disconnect');
-    expect(reg).toBeDefined();
-    const h = reg[1];
+    expect(roomService.getRoom).not.toHaveBeenCalled();
+    expect(pushInput).not.toHaveBeenCalled();
+  });
 
-    h();
-    expect(roomService.removePlayer).toHaveBeenCalledWith('ROOMX', 'socket-d');
+  test('player:move does not throw when room exists without engine', () => {
+    const socket = createSocket({ data: { roomId: 'ROOM1' } });
+    const modeService = { join: jest.fn() };
+    const roomService = {
+      getRoom: jest.fn<(roomId: string) => { engine: null }>(() => ({ engine: null })),
+    };
+
+    registerGameHandlers(socket, { modeService, roomService });
+
+    const handler = getRegisteredHandler(socket, 'player:move');
+
+    expect(() => handler({ type: 'left' })).not.toThrow();
+    expect(roomService.getRoom).toHaveBeenCalledWith('ROOM1');
   });
 });

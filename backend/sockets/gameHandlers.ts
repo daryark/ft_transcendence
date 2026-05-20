@@ -1,14 +1,15 @@
 import { Socket } from "socket.io";
-import { Input } from "../game/domain/engine/tetrisEngline";
+import { SocketData } from ".";
+import { isInput } from "../game/domain/engine/input";
 import { ModeService } from "../game/services/modeService";
 import { GameMode } from "../game/config/gameConfig.types";
-import { SocketData } from ".";
 import RoomService from "../game/services/roomService";
 import Config from "../game/config/config.types";
 
 export type ClientToServerEvents = "mode:join" | "mode:leave" | "room:start" | "player:move";
 
 export type ServerToClientEvents = "game:start" | "game:update" | "game:end" | "room:update" | "room:error";
+
 
 export default function gameHandlers(
     socket: Socket, {  modeService, roomService }:
@@ -19,11 +20,13 @@ export default function gameHandlers(
         modeService.join(mode, socket, payload);
     });
 
-    socket.on("player:move", ({ type }: Input) => {
+    socket.on("player:move", (input: unknown) => {
+        if (!isInput(input)) return;
+
         const { roomId } = socket.data as SocketData;
         if (roomId) {
             const room = roomService.getRoom(roomId);
-            room?.engine.pushInput(type);
+            room?.engine?.pushInput(input);
         }
     });
 };
