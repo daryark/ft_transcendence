@@ -10,14 +10,8 @@ export type ClientToServerEvents = "mode:join" | "mode:leave" | "room:start" | "
 
 export type ServerToClientEvents = "game:start" | "game:update" | "game:end" | "room:update" | "room:error";
 
-
-
-//!move to separate file?
-
-
 export default function gameHandlers(
-    socket: Socket,
-    {  modeService, roomService }:
+    socket: Socket, {  modeService, roomService }:
     { modeService: ModeService; roomService: RoomService }) {
 
     socket.on("mode:join", ({ mode, payload = {} }:

@@ -1,7 +1,5 @@
 import { prisma } from './prisma';
-import type { gamemode } from '../generated/prisma/enums';
-
-const prisma = new PrismaClient();
+import type { gamemode } from '@prisma/client';
 
 /**
  * Leaderboard entry with user stats

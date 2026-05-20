@@ -5,7 +5,7 @@ import type { Request, Response } from 'express';
 
 
 const app = express();
-module.exports = app;
+export default app;
 
 app.use(cors()); //#2
 app.use(express.json());

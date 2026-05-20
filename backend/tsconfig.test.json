@@ -1,14 +1,19 @@
 {
   "extends": "./tsconfig.json",
   "compilerOptions": {
+    "isolatedModules": true,
     "types": ["jest", "node"]
   },
   "include": [
-    "tests/**/*",
+    "app.ts",
     "auth/**/*",
+    "config/**/*",
     "game/**/*",
+    "middleware/**/*",
+    "prisma/**/*",
     "sockets/**/*",
-    "server/**/*"
+    "server/**/*",
+    "tests/**/*"
   ],
   "exclude": ["node_modules", "dist"]
 }

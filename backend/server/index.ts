@@ -1,13 +1,8 @@
 import http from 'http';
-import express from 'express';
-import cors from 'cors';
-import { Server as IOServer } from 'socket.io';
 import socketSetup from '../sockets';
+import { Server as IOServer } from 'socket.io';
 import PORT from '../config/env';
-
-const app = express();
-app.use(cors());
-app.use(express.json());
+import app from '../app';
 
 const server = http.createServer(app);
 const io = new IOServer(server, {
