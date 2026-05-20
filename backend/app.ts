@@ -1,7 +1,7 @@
-import express from "express";
-import cors from "cors";
-import { authenticateToken } from "./middleware/httpAuth";
-import type { Request, Response } from "express";
+import express from 'express';
+import cors from 'cors';
+import { authenticateToken } from './middleware/httpAuth';
+import type { Request, Response } from 'express';
 
 const app = express();
 export default app;
@@ -13,40 +13,40 @@ export type ApiRequest = Request & { user?: any }; //! consider defining a prope
 
 // All routes here are under /api/... (matches nginx proxy_pass to this app)
 const api = express.Router();
-const { registerUser, loginUser} = require('./prisma/auth');
+const { registerUser, loginUser } = require('./prisma/auth');
 const oauthController = require('./auth/oauthController');
 // lightweight helpers
 const { prisma } = require('./prisma/prisma');
 const { getLeaderboard } = require('./prisma/leaderboard');
 
-api.post("/auth/register", async (req: ApiRequest, res: Response) => {
+api.post('/auth/register', async (req: ApiRequest, res: Response) => {
   try {
     const auth = await registerUser(req.body);
-    res.status(201).json({ message: "User registered!", ...auth });
+    res.status(201).json({ message: 'User registered!', ...auth });
   } catch (error) {
     res
       .status(400)
       .json({
-        message: "Failed to register user",
+        message: 'Failed to register user',
         error: error instanceof Error ? error.message : String(error),
       });
   }
 });
 
-api.post("/auth/login", async (req: ApiRequest, res: Response) => {
+api.post('/auth/login', async (req: ApiRequest, res: Response) => {
   try {
     const auth = await loginUser(req.body);
 
     if (!auth) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(401).json({ message: 'Invalid email or password' });
     }
 
-    res.status(200).json({ message: "User is logged in!", ...auth });
+    res.status(200).json({ message: 'User is logged in!', ...auth });
   } catch (error) {
     res
       .status(400)
       .json({
-        message: "Failed to log in!",
+        message: 'Failed to log in!',
         error: error instanceof Error ? error.message : String(error),
       });
   }
@@ -60,7 +60,7 @@ api.get('/auth/github/callback', oauthController.githubCallback);
 api.get('/auth/github', oauthController.redirectToGitHub);
 api.get('/auth/github/callback', oauthController.githubCallback);
 
-api.get("/auth/me", authenticateToken, (req: ApiRequest, res: Response) => {
+api.get('/auth/me', authenticateToken, (req: ApiRequest, res: Response) => {
   res.json({ user: req.user });
 });
 
@@ -78,7 +78,7 @@ api.get("/auth/me", authenticateToken, (req: ApiRequest, res: Response) => {
 //});
 
 // GET /api/users/42  → param "id"
-api.get("/users/:id", (req: ApiRequest, res: Response) => {
+api.get('/users/:id', (req: ApiRequest, res: Response) => {
   res.json({ userId: req.params.id });
 });
 
@@ -186,8 +186,8 @@ api.get('/users/:username/profile', async (req: ApiRequest, res: Response) => {
 
 app.use("/api", api);
 
-app.get("/health", (req: ApiRequest, res: Response) => {
-  res.json({ status: "OK" });
+app.get('/health', (req: ApiRequest, res: Response) => {
+  res.json({ status: 'OK' });
 }); //#3
 
 // app.use('/api/auth', authRoutes); //#1
