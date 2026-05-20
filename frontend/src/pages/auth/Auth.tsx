@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  createAnonymousUser,
+  createAnonymousSession,
   getSessionUser,
-  saveSessionUser,
+  saveSession,
+  type SessionData,
   type SessionUser,
 } from "../../auth/session";
 import "./Auth.scss";
@@ -21,6 +22,7 @@ type AuthResponse = {
   message?: string;
   error?: string;
   user?: SessionUser | null;
+  token?: string;
 };
 
 const parseAuthResponse = async (res: Response): Promise<AuthResponse> => {
@@ -34,7 +36,7 @@ const parseAuthResponse = async (res: Response): Promise<AuthResponse> => {
 const requestAuth = async (
   mode: AuthMode,
   input: AuthInput,
-): Promise<SessionUser> => {
+): Promise<SessionData> => {
   const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
 
   const res = await fetch(endpoint, {
@@ -59,7 +61,10 @@ const requestAuth = async (
     );
   }
 
-  return payload.user;
+  return {
+    user: payload.user,
+    token: payload.token,
+  };
 };
 
 //export add
@@ -78,16 +83,17 @@ const loginUser = async (data: { login: string; password: string }) =>
     password: data.password,
   });
 
-const isFakeAdminLogin = (login: string, password: string) =>
-  login.trim().toLowerCase() === "admin" && password === "admin";
+// const isFakeAdminLogin = (login: string, password: string) =>
+//   login.trim().toLowerCase() === "admin" && password === "admin";
 
-const createFakeAdminUser = (): SessionUser => ({
-  id: 1,
-  email: "admin@local",
-  username: "admin",
-  created_at: new Date().toISOString(),
-  isAnonymous: false,
-});
+// const createFakeAdminUser = (): SessionUser => ({
+//   id: 1,
+//   email: "admin@local",
+//   username: "admin",
+//   created_at: new Date().toISOString(),
+//   isAnonymous: false,
+//   avatarId: 1,
+// });
 
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -114,17 +120,17 @@ const Auth = () => {
       setLoading(true);
       setError("");
 
-      if (isLogin && isFakeAdminLogin(loginOrEmail, password)) {
-        saveSessionUser(createFakeAdminUser());
-        navigate("/play");
-        return;
-      }
+      // if (isLogin && isFakeAdminLogin(loginOrEmail, password)) {
+      //   saveSessionUser(createFakeAdminUser());
+      //   navigate("/play");
+      //   return;
+      // }
 
-      const user = isLogin
+      const session = isLogin
         ? await loginUser({ login: loginOrEmail.trim(), password })
         : await registerUser({ email, password, username });
 
-      saveSessionUser(user);
+      saveSession(session);
 
       navigate("/play");
     } catch (err: unknown) {
@@ -135,7 +141,7 @@ const Auth = () => {
   };
 
   const handleAnonymous = () => {
-    saveSessionUser(createAnonymousUser());
+    saveSession(createAnonymousSession());
     navigate("/play");
   };
 

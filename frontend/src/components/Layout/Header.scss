@@ -215,8 +215,8 @@
   justify-self: end;
   color: #111;
   background:
-    linear-gradient(90deg, transparent 0 20%, #d6cc1e 20% 80%, transparent 80%),
-    linear-gradient(#d6cc1e 0 36%, transparent 36% 58%, #d6cc1e 58% 100%);
+    linear-gradient(90deg, transparent 0 20%, var(--avatar-color, #d6cc1e) 20% 80%, transparent 80%),
+    linear-gradient(var(--avatar-color, #d6cc1e) 0 36%, transparent 36% 58%, var(--avatar-color, #d6cc1e) 58% 100%);
   border: 1px solid rgba(0, 0, 0, 0.65);
   font-size: 2.2rem;
   font-weight: 900;
@@ -285,8 +285,8 @@
   flex: 0 0 auto;
   color: #111;
   background:
-    linear-gradient(90deg, transparent 0 20%, #d6cc1e 20% 80%, transparent 80%),
-    linear-gradient(#d6cc1e 0 36%, transparent 36% 58%, #d6cc1e 58% 100%);
+    linear-gradient(90deg, transparent 0 20%, var(--avatar-color, #d6cc1e) 20% 80%, transparent 80%),
+    linear-gradient(var(--avatar-color, #d6cc1e) 0 36%, transparent 36% 58%, var(--avatar-color, #d6cc1e) 58% 100%);
   border: 1px solid rgba(0, 0, 0, 0.65);
   box-shadow: 0 0.2rem 0 rgba(0, 0, 0, 0.55);
   font-size: 3.1rem;
@@ -349,6 +349,7 @@
 }
 
 .fullProfile {
+  display: block;
   width: 100%;
   margin-top: 0.85rem;
   padding: 0.75rem;
@@ -359,6 +360,8 @@
   font: inherit;
   font-size: 1.65rem;
   letter-spacing: 0.1em;
+  text-align: center;
+  text-decoration: none;
 }
 
 .fullProfile:hover {

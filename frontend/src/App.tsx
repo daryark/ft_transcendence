@@ -12,12 +12,15 @@ import League from "./pages/modes/multiplayer/League";
 import Rooms from "./pages/modes/multiplayer/Rooms";
 import Custom from "./pages/modes/multiplayer/Custom";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
+import Profile from "./pages/profile/Profile";
+import SocketConfigSync from "./socket/SocketConfigSync";
 
 import "./styles/globals.scss";
 
 export default function App() {
   return (
     <BrowserRouter>
+      <SocketConfigSync />
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Auth />} />
@@ -82,6 +85,7 @@ export default function App() {
             element={<Leaderboard />}
           />
           <Route path="about" element={<About />} />
+          <Route path="profile/:username" element={<Profile />} />
           <Route path="auth" element={<Auth />} />
           <Route path="*" element={<NotFound />} />
         </Route>

@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { Link, useLocation } from "react-router-dom";
-import UserIcon from "../Icons/UserIcon";
 import SocialPanels from "../SocialPanels/SocialPanels";
 
 import {
@@ -22,6 +21,38 @@ const titles: Record<string, string> = {
   leaderboards: "LEADERBOARDS",
   about: "ABOUT",
   auth: "AUTH",
+};
+
+const avatarColors = [
+  "#d6cc1e",
+  "#8ed053",
+  "#6ec6ff",
+  "#ff7f50",
+  "#c986ff",
+  "#ffcc66",
+  "#6ee7b7",
+  "#ef6f8f",
+  "#a7f3d0",
+  "#f97316",
+  "#93c5fd",
+  "#f0abfc",
+  "#fde047",
+  "#34d399",
+  "#fb7185",
+  "#60a5fa",
+  "#c4b5fd",
+  "#facc15",
+  "#5eead4",
+  "#e879f9",
+];
+
+const getAvatarStyle = (avatarId?: number) => {
+  const index =
+    avatarId && avatarId >= 1 && avatarId <= avatarColors.length
+      ? avatarId - 1
+      : 0;
+
+  return { "--avatar-color": avatarColors[index] } as CSSProperties;
 };
 
 const getPageTitle = (pathname: string) => {
@@ -84,7 +115,7 @@ const Header = () => {
           <div className="content">
             <div className="left">
               {isLoggedIn ? (
-                <div className={pageTitle}>{pageTitle}</div>
+                <div className="pageTitle">{pageTitle}</div>
               ) : (
                 <nav className="nav">
                   <Link
@@ -147,7 +178,10 @@ const Header = () => {
                       )}
                     </span>
 
-                    <span className="playerAvatar">
+                    <span
+                      className="playerAvatar"
+                      style={getAvatarStyle(user.avatarId)}
+                    >
                       {user.isAnonymous ? "?" : ""}
                     </span>
                   </button>
@@ -188,7 +222,12 @@ const Header = () => {
             </button>
 
             <div className="profileHeader">
-              <div className="profileAvatar">{user.isAnonymous ? "?" : ""}</div>
+              <div
+                className="profileAvatar"
+                style={getAvatarStyle(user.avatarId)}
+              >
+                {user.isAnonymous ? "?" : ""}
+              </div>
               <div>
                 <h2>{user.username}</h2>
                 {!user.isAnonymous && <p>{getJoinedText(user)} - HEARTS 0</p>}
@@ -222,9 +261,13 @@ const Header = () => {
                       <small>NO RECORD</small>
                     </article>
                   </div>
-                  <button className="fullProfile" type="button">
+                  <Link
+                    className="fullProfile"
+                    to={`/profile/${encodeURIComponent(user.username)}`}
+                    onClick={() => setIsProfileOpen(false)}
+                  >
                     VIEW FULL PROFILE
-                  </button>
+                  </Link>
                 </>
               ))}
           </section>
