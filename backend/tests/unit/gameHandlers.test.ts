@@ -48,7 +48,7 @@ describe('gameHandlers', () => {
   //->works only with 'solo' mode, because other modes are not implemented yet.
   test('mode:join with solo calls modeService.join with socket and payload', () => {
     const socket = createSocket();
-    const payload = { general: { boardWidth: 10 } };
+    const payload = { gameConfig: { general: { boardWidth: 10 } } };
     const joinMock = jest.fn();
     const modeService = { join: joinMock };
     const roomService = { getRoom: jest.fn() };
@@ -59,6 +59,21 @@ describe('gameHandlers', () => {
     handler({ mode: 'solo', payload });//->here solo specifically
 
     expect(joinMock).toHaveBeenCalledWith('solo', socket, payload);
+  });
+
+  test('mode:join emits server:error and does not join when payload is invalid', () => {
+    const socket = createSocket();
+    const joinMock = jest.fn();
+    const modeService = { join: joinMock };
+    const roomService = { getRoom: jest.fn() };
+
+    registerGameHandlers(socket, { modeService, roomService });
+
+    const handler = getRegisteredHandler(socket, 'mode:join');
+    handler({ mode: 'solo', payload: { gameConfig: { general: { boardWidth: 99 } } } });
+
+    expect(joinMock).not.toHaveBeenCalled();
+    expect(socket.emit).toHaveBeenCalledWith('server:error', { reason: 'INVALID_CONFIG' });
   });
 
   test('mode:join with solo defaults missing payload to empty object', () => {
@@ -83,6 +98,54 @@ describe('gameHandlers', () => {
     registerGameHandlers(socket, { modeService, roomService });
 
     expect(socket.on).toHaveBeenCalledWith('player:move', expect.any(Function));
+  });
+
+  test('mode:leave removes player from room when socket role is player', () => {
+    const socket = createSocket({
+      data: {
+        identity: { id: 'user-1', type: 'anonymous' },
+        roomId: 'ROOM1',
+        role: 'player',
+      },
+    });
+    const modeService = { join: jest.fn() };
+    const roomService = {
+      getRoom: jest.fn(),
+      removePlayer: jest.fn(),
+      removeSpectator: jest.fn(),
+    };
+
+    registerGameHandlers(socket, { modeService, roomService });
+
+    const handler = getRegisteredHandler(socket, 'mode:leave');
+    handler();
+
+    expect(roomService.removePlayer).toHaveBeenCalledWith('ROOM1', 'user-1');
+    expect(roomService.removeSpectator).not.toHaveBeenCalled();
+  });
+
+  test('mode:leave removes spectator from room when socket role is spectator', () => {
+    const socket = createSocket({
+      data: {
+        identity: { id: 'user-1', type: 'anonymous' },
+        roomId: 'ROOM1',
+        role: 'spectator',
+      },
+    });
+    const modeService = { join: jest.fn() };
+    const roomService = {
+      getRoom: jest.fn(),
+      removePlayer: jest.fn(),
+      removeSpectator: jest.fn(),
+    };
+
+    registerGameHandlers(socket, { modeService, roomService });
+
+    const handler = getRegisteredHandler(socket, 'mode:leave');
+    handler();
+
+    expect(roomService.removeSpectator).toHaveBeenCalledWith('ROOM1', 'user-1');
+    expect(roomService.removePlayer).not.toHaveBeenCalled();
   });
 
   test('player:move pushes input to room engine when socket has roomId', () => {

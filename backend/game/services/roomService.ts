@@ -1,30 +1,15 @@
 import Room, { RoomId } from "../domain/room";
-// import Player from "../domain/player";
 import Config from "../config/config.types";
 import { Server } from "socket.io";
 import { ServerToClientEvents } from "../../sockets/gameHandlers";
+import Player from "../domain/player";
+import { UserId } from "../../auth/identity";
 
 export type RoomServiceRoomState = Pick<Room, "id" | "status" | "players">;
 
-// export interface RoomServiceApi {
-//   createRoom(config: Config): Room;
-//   generateRoomId(): RoomId;
-//   getRoom(roomId: RoomId): Room | undefined;
-//   deleteRoom(roomId: RoomId): void;
-//   addPlayer(roomId: RoomId, player: string): void;
-//   addSpectator(roomId: RoomId, spectator: string): void;
-//   removePlayer(roomId: RoomId, player: string): void;
-//   removeSpectator(roomId: RoomId, spectator: string): void;
-//   enqueue(playerId: string): void;
-//   dequeue(socketId: string): string[];
-//   broadcast(roomId: RoomId, event: string, data: any): void;
-//   clearRooms(): void;
-//   getRoomState(roomId: RoomId): RoomServiceRoomState | null;
-// }
-
 export default class RoomService {
   private rooms: Map<RoomId, Room>;
-  private queue: string[];
+  private queue: UserId[];
   private io: Server;
 
   constructor(io: Server) {
@@ -37,17 +22,18 @@ export default class RoomService {
     let room: Room = {
       id: this.generateRoomId() as RoomId,
       status: 'lobby',
-      players: [],
+      players: new Map(),
       state: null,
       engine: null,
       ...config
     };
 
-    if (config.roomConfig.public) room.spectators = [];
+    if (config.roomConfig.public) room.spectators = new Map();
 
     while (this.rooms.has(room.id)) {
       room.id = this.generateRoomId();
     }
+    console.log('Creating room with ID:', room.id);//*tmp log
 
     this.rooms.set(room.id, room);
     return room;
@@ -67,53 +53,75 @@ export default class RoomService {
   }
 
   deleteRoom(roomId: RoomId): void {
+    const room = this.rooms.get(roomId);
+    room?.engine?.stop();
     this.rooms.delete(roomId);
   }
 
 
-  addPlayer(roomId: RoomId, player: string): void {
+  addPlayer(roomId: RoomId, player: Player): void {
     const room = this.rooms.get(roomId);
     if (!room) return;
 
-    if (!room.players.includes(player)) {
-      room.players.push(player);
+    if (!room.players.has(player.id)) {
+      player.roomId = roomId;
+      player.role = "player";
+      room.players.set(player.id, player);
     }
   }
 
-  addSpectator(roomId: RoomId, spectator: string): void {
+  addSpectator(roomId: RoomId, spectator: Player): void {
     const room = this.rooms.get(roomId);
     if (!room) return;
-    if (!Array.isArray(room.spectators)) return; //throw err ?
+    if (!room.spectators) return;
 
-    if (!room.spectators.includes(spectator)) {
-      room.spectators.push(spectator);
+    if (!room.spectators.has(spectator.id)) {
+      spectator.roomId = roomId;
+      spectator.role = "spectator";
+      room.spectators.set(spectator.id, spectator);
     }
   }
 
-  removePlayer(roomId: RoomId, player: string): void {
+  removePlayer(roomId: RoomId, playerId: Player["id"]): void {
     const room = this.rooms.get(roomId);
     if (!room) return;
 
-    room.players = room.players.filter((p: string) => p !== player);
-    if (room.players.length === 0) {
+    const player = room.players.get(playerId);
+    if (player) {
+      player.roomId = undefined; // Clear player's room association
+      room.players.delete(playerId);
+    }
+
+    if (room.players.size === 0) {
+      if (room.spectators) {
+        for (const spectator of room.spectators.values()) {
+          this.io.to(spectator.socketId)
+          .emit("server:error", { reason: "EMPTY_ROOM" });
+        }
+        this.clearRoomSpectators(roomId);
+      }
+
       this.deleteRoom(roomId);
     }
   }
 
-  removeSpectator(roomId: RoomId, spectator: string): void {
-    const room = this.rooms.get(roomId);
+  removeSpectator(roomId: RoomId, spectatorId: Player["id"]): void {
+       const room = this.rooms.get(roomId);
     if (!room) return;
-    if (!Array.isArray(room.spectators)) return;
 
-    room.spectators = room.spectators.filter((s: string) => s !== spectator);
+    const spectator = room.spectators?.get(spectatorId);
+    if (spectator) {
+      spectator.roomId = undefined; // Clear spectator's room association
+      room.spectators?.delete(spectatorId);
+    }
   }
 
-  enqueue(playerId: string): void { //socket.id or player? (playerId (tockent/uuid))
+  enqueue(playerId: UserId): void { //socket.id or player? (playerId (tockent/uuid))
     this.queue.push(playerId);
   }
 
-  dequeue(socketId: string): string[] {
-    return this.queue = this.queue.filter(p => p !== socketId);
+  dequeue(playerId: UserId): UserId[] {
+    return this.queue = this.queue.filter(p => p !== playerId);
   }
 
   broadcast(roomId: RoomId, event: ServerToClientEvents, data: any): void {
@@ -121,6 +129,30 @@ export default class RoomService {
     if (!room) return;
 
     this.io.to(roomId).emit(event, data);
+  }
+
+  clearRoom(roomId: RoomId): void {
+    const room = this.rooms.get(roomId);
+    if (!room) return;
+
+    for (const player of room.players.values()) {
+      player.roomId = undefined;
+      player.role = undefined;
+    }
+    room.players.clear();
+
+    this.clearRoomSpectators(roomId);
+  }
+
+  private clearRoomSpectators(roomId: RoomId): void {
+    const room = this.rooms.get(roomId);
+    if (!room || !room.spectators) return;
+
+    for (const spectator of room.spectators.values()) {
+      spectator.roomId = undefined;
+      spectator.role = undefined;
+    }
+    room.spectators.clear();
   }
 
   clearRooms(): void {

@@ -13,9 +13,11 @@ export interface GameState {
   gameOver: boolean;
   score: number;
   lines: number;
+  round: number;
+  startedAt: number;
 }
 
-export function initGame(rows: number, cols: number): GameState {
+export function initGame(rows: number, cols: number, round = 1): GameState {
   const board = createEmptyBoard(createBoardHeight(rows), createBoardWidth(cols));
   const bag = createBag();
   const nextTypes = [...bag, ...createBag()];
@@ -31,6 +33,37 @@ export function initGame(rows: number, cols: number): GameState {
     cols,
     gameOver: false,
     score: 0,
-    lines: 0
+    lines: 0,
+    round,
+    startedAt: Date.now()
   };
 }
+
+
+// One room
+//  ├── one engine
+//  └── one shared match state
+//        ├── player1 board
+//        ├── player2 board
+//        ├── garbage queue
+//        └── match metadata
+
+// GameState {
+//   players: {
+//     [playerId]: PlayerGameState
+//   };
+
+//   startedAt: number;
+// }
+
+// Each player has:
+
+// own board,
+// own piece,
+// own score.
+
+// But:
+
+// same match,
+// same tick timing,
+// same engine loop.

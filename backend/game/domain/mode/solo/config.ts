@@ -42,11 +42,11 @@ export const soloBase: Config = {
 
         //instead of matchConfig - objective to win the game
         objective: {
-            winCondition: "score", // "score", "lines", "time", "none" - infinite
-            scoreToWin: 1000,
-            linesToClear: 0,
-            timeLimit: 0, // in seconds
-            key: "score", // "time", "lines" - what displayed at the end of the game
+            winCondition: "lines", // "score", "lines", "time", "none" - infinite
+            scoreToWin: 10000,
+            linesToClear: 40,
+            timeLimit: 120, // in seconds
+            key: "time", // "score", "time", "lines" - what displayed at the end of the game
             allowRetry: false,
             stock: 2 // amount of extra lives, 0 - infinite IF allowRetry is true. clears field, except garbage
 

@@ -1,6 +1,7 @@
 import { Socket } from "socket.io";
 import { applyConfigPatch, createConfig } from "../../../config/configBase";
 import RoomService, { RoomServiceRoomState } from "../../../services/roomService";
+import PlayerService from "../../../services/playerService";
 import startGame from "../../match/startGame";
 
 import type Config from "../../../config/config.types";
@@ -9,7 +10,7 @@ import type { ConfigPatch } from "../../../config/config.schema";
 
 export default function join(
     socket: Socket,
-    roomService: RoomService,
+    { roomService, playerService }: { roomService: RoomService; playerService: PlayerService },
     payload: ConfigPatch = {}
 ): RoomServiceRoomState | null {
     //     validateModifiers(payload.gameConfig?.modifiers || {});
@@ -25,7 +26,10 @@ export default function join(
     //!but in both prev cases => passive spectator! (from lobby seeing players ratings changes and chat)
     //start
     //of the identical part in join(s)
-    roomService.addPlayer(room.id, socket.id);
+    const player = playerService.get(socket.data.identity.id);
+    if (!player) return null;
+
+    roomService.addPlayer(room.id, player);
     socket.join(room.id);
     socket.data.roomId = room.id;
     socket.data.role = 'player';
@@ -34,7 +38,7 @@ export default function join(
     console.log('ROOM STATE:', roomService.getRoom(room.id));
     //end
 
-    if (room.players.length === 2) {
+    if (room.players.size === 2) {
         startGame(room, roomService);
     }
 
