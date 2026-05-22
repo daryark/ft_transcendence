@@ -7,6 +7,7 @@ import { leagueBase } from "../domain/mode/league/config";
 import { quickplayBase } from "../domain/mode/quickplay/config";
 import { customMultiBase } from "../domain/mode/custom/config";
 
+import type { ConfigPatch } from "./config.schema";
 import type Config from "./config.types";
 import type { GameMode } from "./gameConfig.types";
 
@@ -56,3 +57,29 @@ export function configBase(
 export function createConfig(mode: GameMode): Config {
     return structuredClone(frozenConfigs[mode]);
 } 
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+    return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+function mergeConfigValue(baseValue: unknown, patchValue: unknown): unknown {
+    if (Array.isArray(patchValue)) {
+        return [...patchValue];
+    }
+
+    if (isPlainObject(baseValue) && isPlainObject(patchValue)) {
+        const mergedValue: Record<string, unknown> = { ...baseValue };
+
+        for (const [key, nestedPatchValue] of Object.entries(patchValue)) {
+            mergedValue[key] = mergeConfigValue(baseValue[key], nestedPatchValue);
+        }
+
+        return mergedValue;
+    }
+
+    return patchValue;
+}
+
+export function applyConfigPatch(baseConfig: Config, patch: ConfigPatch): Config {
+    return mergeConfigValue(baseConfig, patch) as Config;
+}

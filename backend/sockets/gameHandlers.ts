@@ -4,7 +4,7 @@ import { isInput } from "../game/domain/engine/input";
 import { ModeService } from "../game/services/modeService";
 import { GameMode } from "../game/config/gameConfig.types";
 import RoomService from "../game/services/roomService";
-import Config from "../game/config/config.types";
+import { ConfigPatch, ConfigPatchSchema } from "../game/config/config.schema";
 
 export type ClientToServerEvents = "mode:join" | "mode:leave" | "room:start" | "player:move";
 
@@ -16,8 +16,15 @@ export default function gameHandlers(
     { modeService: ModeService; roomService: RoomService }) {
 
     socket.on("mode:join", ({ mode, payload = {} }:
-        { mode: GameMode; payload?: Partial<Config> }) => {
-        modeService.join(mode, socket, payload);
+        { mode: GameMode; payload?: ConfigPatch }) => {
+        const parsedPayload = ConfigPatchSchema.safeParse(payload);
+
+        if (!parsedPayload.success) {
+            socket.emit("mode_error", { reason: "INVALID_CONFIG" });
+            return;
+        }
+
+        modeService.join(mode, socket, parsedPayload.data);
     });
 
     socket.on("player:move", (input: unknown) => {

@@ -1,5 +1,5 @@
 import { prisma } from './prisma';
-import type { gamemode } from '@prisma/client';
+import type { GameMode } from './matches';
 
 /**
  * Leaderboard entry with user stats
@@ -15,7 +15,7 @@ export interface LeaderboardEntry {
  */
 export interface LeaderboardOptions {
   // Use the generated enum type for stronger typing and to satisfy Prisma's input types
-  mode?: gamemode; // Game mode filter (e.g., 'classic', 'blitz', 'rush')
+  mode?: GameMode; // Game mode filter (e.g., 'classic', 'blitz', 'rush')
   limit?: number; // Number of top players to return (default: 100)
 }
 
@@ -103,7 +103,7 @@ export async function getLeaderboard(
  * @returns Promise<LeaderboardEntry[]>
  */
 export async function getLeaderboardByMode(
-  mode: gamemode,
+  mode: GameMode,
   limit: number = 100
 ): Promise<LeaderboardEntry[]> {
   return getLeaderboard({ mode, limit });
@@ -118,7 +118,7 @@ export async function getLeaderboardByMode(
  */
 export async function getUserLeaderboardStats(
   userId: number,
-  mode?: gamemode
+  mode?: GameMode
 ): Promise<{
   nickname: string;
   rank: number;

@@ -1,21 +1,19 @@
 import { Socket } from "socket.io";
-import { createConfig } from "../../../config/configBase";
+import { applyConfigPatch, createConfig } from "../../../config/configBase";
 import RoomService, { RoomServiceRoomState } from "../../../services/roomService";
 import startGame from "../../match/startGame";
 
 import type Room from "../../../domain/room";
 import type Config from "../../../config/config.types";
+import type { ConfigPatch } from "../../../config/config.schema";
 
 export default function join(
     socket: Socket,
     roomService: RoomService,
-    payload: Partial<Config> = {}
+    payload: ConfigPatch = {}
 ): RoomServiceRoomState | null {
 
-    const config: Config = {
-        ...createConfig('solo'),
-        ...payload
-    };
+    const config: Config = applyConfigPatch(createConfig('solo'), payload);
 
     const room: Room = roomService.createRoom(config);
 

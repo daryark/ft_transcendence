@@ -10,7 +10,7 @@ COPY backend/package.json backend/package-lock.json ./
 RUN npm install
 COPY backend ./
 RUN npx prisma generate
-
+RUN npm run build
 RUN npm prune --omit=dev
 
 EXPOSE 3000
