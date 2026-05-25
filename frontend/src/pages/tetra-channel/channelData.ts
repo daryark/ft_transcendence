@@ -9,7 +9,7 @@ export const channelButtons = [
     id: "leaderboards",
     title: "Leaderboards",
     description: "Top players ranking",
-    route: "/channel/leaderboards/40-lines/global",
+    route: "/channel/leaderboards/fortyLines/global",
   },
   {
     id: "me",

@@ -41,7 +41,7 @@ export default function Leaderboard() {
 
   const navigate = useNavigate();
 
-  const currentMode = mode || "40-lines";
+  const currentMode = mode || "fortyLines";
   const currentScope = scope || "global";
 
   const [players, setPlayers] = useState<Player[]>([]);
@@ -76,7 +76,7 @@ export default function Leaderboard() {
         <button
           className={currentMode === "40-lines" ? "active" : ""}
           onClick={() =>
-            navigate(`/channel/leaderboards/40-lines/${currentScope}`)
+            navigate(`/channel/leaderboards/fortyLines/${currentScope}`)
           }
         >
           40 Lines

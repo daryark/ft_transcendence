@@ -1,56 +1,49 @@
-// import type { Figure } from "../../pages/game/figures";
-// import { figureColors } from "../../pages/game/figures";
+import type { CSSProperties } from "react";
+import type { Figure } from "../../pages/game/types";
+import { figureColors } from "../../pages/game/types";
+import "./MiniFigure.scss";
 
-// type Props = {
-//   figure: Figure;
-//   //change size
-//   size?: number;
-// };
+interface MiniFigureProps {
+  figure: Figure;
+  size?: number;
+}
 
 const GRID = 4;
 
-// export default function MiniFigure({  }: Props) {
-export default function MiniFigure() {
- return(
-  <>
-  <p>MiniFigure</p>
-  </>
+export default function MiniFigure({ figure, size = 18 }: MiniFigureProps) {
+  const grid = Array.from({ length: GRID }, () => Array(GRID).fill(0));
+  const offsetY = Math.max(0, Math.floor((GRID - figure.shape.length) / 2));
+  const offsetX = Math.max(0, Math.floor((GRID - figure.shape[0].length) / 2));
+
+  figure.shape.forEach((row, rowIndex) => {
+    row.forEach((cell, colIndex) => {
+      const y = rowIndex + offsetY;
+      const x = colIndex + offsetX;
+
+      if (cell && grid[y]?.[x] !== undefined) {
+        grid[y][x] = 1;
+      }
+    });
+  });
+
+  return (
+    <div className="mini-figure" aria-label={`${figure.type} piece preview`}>
+      {grid.map((row, rowIndex) => (
+        <div className="mini-figure__row" key={rowIndex}>
+          {row.map((cell, colIndex) => (
+            <span
+              className="mini-figure__cell"
+              key={`${rowIndex}-${colIndex}`}
+              style={{
+                "--cell-size": `${size}px`,
+                "--cell-color": cell
+                  ? figureColors[figure.type]
+                  : "transparent",
+              } as CSSProperties}
+            />
+          ))}
+        </div>
+      ))}
+    </div>
   );
 }
-//  const grid = Array.from({ length: GRID }, () => Array(GRID).fill(0));
-
-//   const offsetY = Math.floor((GRID - figure.shape.length) / 2);
-//   const offsetX = Math.floor((GRID - figure.shape[0].length) / 2);
-
-//   figure.shape.forEach((row, r) => {
-//     row.forEach((cell, c) => {
-//       if (cell) {
-//         const y = r + offsetY;
-//         const x = c + offsetX;
-//         if (grid[y] && grid[y][x] !== undefined) {
-//           grid[y][x] = 1;
-//         }
-//       }
-//     });
-//   });
-
-//   return (
-//     <div className="mini-wrapper">
-//       <div className="mini-figure">
-//         {grid.map((row, r) => (
-//           <div key={r} className="mini-row">
-//             {row.map((cell, c) => (
-//               <div
-//                 key={c}
-//                 style={{
-//                   width: size,
-//                   height: size,
-//                   background: cell ? figureColors[figure.type] : "transparent",
-//                   border: "1px solid rgba(255,255,255,0.05)",
-//                 }}
-//               />
-//             ))}
-//           </div>
-//         ))}
-//       </div>
-//     </div>

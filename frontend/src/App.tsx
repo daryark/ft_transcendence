@@ -15,6 +15,7 @@ import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import Profile from "./pages/profile/Profile";
 import SocketConfigSync from "./socket/SocketConfigSync";
 import OAuthSuccess from "./pages/auth/OAuthSuccess"
+import SoloGame from "./pages/game/SoloGame";
 
 import "./styles/globals.scss";
 
@@ -87,11 +88,19 @@ export default function App() {
           />
           <Route path="about" element={<About />} />
           <Route path="profile/:username" element={<Profile />} />
+          <Route
+            path="game/:gameId"
+            element={
+              <ProtectedRoute>
+                <SoloGame />
+              </ProtectedRoute>
+            }
+          />
           <Route path="auth" element={<Auth />} />
           <Route path="*" element={<NotFound />} />
         </Route>
 
-        <Route path="/oauth-success" element={<OAuthSuccess />} />
+         <Route path="auth/callback" element={<OAuthSuccess />} />
       </Routes>
     </BrowserRouter>
   );

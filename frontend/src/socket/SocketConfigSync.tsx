@@ -7,16 +7,16 @@ import {
 } from "../auth/session";
 import { saveGameConfig, type GameConfig } from "./gameConfigStorage";
 
-const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? "http://localhost:3000";
-
+export const SOCKET_URL =
+  import.meta.env.VITE_SOCKET_URL ?? "http://localhost:3000";
 
 let socket: Socket | null = null;
 
-
-export const connectSocket = (token: string) => {
+export const connectSocket = (token?: string) => {
   if (!socket) {
     socket = io(SOCKET_URL, {
-      auth: { token },
+      auth: token ? { token } : {},
+      transports: ["websocket", "polling"],
     });
   }
 
@@ -46,12 +46,7 @@ export default function SocketConfigSync() {
       return undefined;
     }
 
-    const socket = io(SOCKET_URL, {
-      auth: {
-        token: session.token,
-      },
-      transports: ["websocket", "polling"],
-    });
+    const socket = connectSocket(session.token);
 
     socket.on("game:config", (config: GameConfig) => {
       saveGameConfig(config);
@@ -62,7 +57,8 @@ export default function SocketConfigSync() {
     });
 
     return () => {
-      socket.disconnect();
+      socket.off("game:config");
+      socket.off("connect_error");
     };
   }, [session?.token]);
 

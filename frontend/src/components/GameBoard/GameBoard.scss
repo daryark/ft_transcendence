@@ -1,0 +1,8 @@
+.game-board {
+  display: block;
+  width: min(70vw, 300px);
+  height: auto;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: #08090f;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.32);
+}
