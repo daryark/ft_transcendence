@@ -75,26 +75,29 @@ const registerUser = async (data: {
 }) => requestAuth("register", data);
 
 //export add
-const loginUser = async (data: { login: string; password: string }) =>
-  requestAuth("login", {
-    login: data.login,
-    email: data.login,
-    username: data.login,
+// const loginUser = async (data: { login: string; password: string }) =>
+//   requestAuth("login", {
+//     // login: data.login,
+//     // email: data.login,
+//     username: data.login,
+//     password: data.password,
+//   });
+
+
+const loginUser = async (data: { login: string; password: string }) => {
+  const isEmail = data.login.includes("@");
+
+  return requestAuth("login", {
+    ...(isEmail
+      ? { email: data.login.trim() }
+      : { username: data.login.trim() }),
+
     password: data.password,
   });
+};
 
-// const isFakeAdminLogin = (login: string, password: string) =>
-//   login.trim().toLowerCase() === "admin" && password === "admin";
 
-// const createFakeAdminUser = (): SessionUser => ({
-//   id: 1,
-//   email: "admin@local",
-//   username: "admin",
-//   created_at: new Date().toISOString(),
-//   isAnonymous: false,
-//   avatarId: 1,
-// });
-
+//////////////////////////////
 const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const navigate = useNavigate();
@@ -119,12 +122,6 @@ const Auth = () => {
     try {
       setLoading(true);
       setError("");
-
-      // if (isLogin && isFakeAdminLogin(loginOrEmail, password)) {
-      //   saveSessionUser(createFakeAdminUser());
-      //   navigate("/play");
-      //   return;
-      // }
 
       const session = isLogin
         ? await loginUser({ login: loginOrEmail.trim(), password })
@@ -214,8 +211,8 @@ const Auth = () => {
             {isLogin ? (
               <input
                 type="text"
-                // placeholder="Username or email"
-                placeholder="Username"
+                placeholder="Username or email"
+                // placeholder="Username"
                 value={loginOrEmail}
                 required
                 autoComplete="username"
@@ -236,7 +233,7 @@ const Auth = () => {
               type="password"
               placeholder="Password"
               value={password}
-              minLength={isLogin ? 1 : 8}
+              minLength={isLogin ? 1 : 3}
               maxLength={128}
               required
               autoComplete={isLogin ? "current-password" : "new-password"}

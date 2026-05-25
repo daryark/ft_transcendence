@@ -1,11 +1,13 @@
 import { useParams } from "react-router-dom";
 import { ModeLayout } from "../../../components/ModeLayout/ModeLayout";
-import { ModeOptions } from "../../../components/ModeOptions/ModeOptions";
-import { AdvancedSection } from "../../../components/AdvancedSection/AdvancedSection";
+// import { ModeOptions } from "../../../components/ModeOptions/ModeOptions";
+// import { AdvancedSection } from "../../../components/AdvancedSection/AdvancedSection";
 import { MODES_CONFIG } from "./config/modes.config";
 // import { useGameStart } from '../../../hooks/useGameStart';
 import NotFound from "../../notFound/NotFound";
 import { useNavigate } from "react-router-dom";
+
+import {getStoredGameConfig} from "../../../socket/gameConfigStorage"
 
 export default function ModePage() {
   const { modeId } = useParams<{ modeId: string }>();
@@ -16,6 +18,8 @@ export default function ModePage() {
   if (!config) return <NotFound />;
 
   const handleStart = async () => {
+    const config = getStoredGameConfig();
+    
     try {
       // имитация ответа сервера
       const data = {
@@ -36,10 +40,10 @@ export default function ModePage() {
       personalBest={config.personalBest}
       showMusic={config.showMusic}
       onStart={handleStart}
-      options={config.showOptions && <ModeOptions items={config.options} />}
-      advanced={config.showAdvanced && <AdvancedSection />}
+      // options={config.showOptions && <ModeOptions items={config.options} />}
+      // advanced={config.showAdvanced && <AdvancedSection />}
       //   && <ResetButton />
-      headerExtra={config.headerExtra === "reset"}
+      // headerExtra={config.headerExtra === "reset"}
       isLoading={handleStart}
     />
   );
