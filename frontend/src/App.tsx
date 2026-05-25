@@ -14,6 +14,7 @@ import Custom from "./pages/modes/multiplayer/Custom";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import Profile from "./pages/profile/Profile";
 import SocketConfigSync from "./socket/SocketConfigSync";
+import OAuthSuccess from "./pages/auth/OAuthSuccess"
 
 import "./styles/globals.scss";
 
@@ -89,6 +90,8 @@ export default function App() {
           <Route path="auth" element={<Auth />} />
           <Route path="*" element={<NotFound />} />
         </Route>
+
+        <Route path="/oauth-success" element={<OAuthSuccess />} />
       </Routes>
     </BrowserRouter>
   );

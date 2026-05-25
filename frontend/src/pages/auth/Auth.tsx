@@ -83,7 +83,6 @@ const registerUser = async (data: {
 //     password: data.password,
 //   });
 
-
 const loginUser = async (data: { login: string; password: string }) => {
   const isEmail = data.login.includes("@");
 
@@ -95,7 +94,6 @@ const loginUser = async (data: { login: string; password: string }) => {
     password: data.password,
   });
 };
-
 
 //////////////////////////////
 const Auth = () => {
@@ -140,6 +138,10 @@ const Auth = () => {
   const handleAnonymous = () => {
     saveSession(createAnonymousSession());
     navigate("/play");
+  };
+
+  const handleGitHubLogin = () => {
+    window.location.href = "/api/auth/github";
   };
 
   return (
@@ -253,7 +255,11 @@ const Auth = () => {
 
           {/* Oauth buttons */}
           <div className="auth__oauth">
-            <button className="oauth github" type="button">
+            <button
+              className="oauth github"
+              type="button"
+              onClick={handleGitHubLogin}
+            >
               GitHub
             </button>
           </div>
