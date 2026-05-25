@@ -22,7 +22,7 @@ export type ProfileModeStats = {
 export type ProfileResponse = {
 	id: number;
 	username: string;
-	country: string | null;
+	country: string;
 	avatarId: number;
 	created_at: Date | null;
 	level: number;
@@ -42,16 +42,10 @@ export type ProfileResponse = {
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 
-function assertPositiveInteger(value: number, label: string) {
-	if (!Number.isInteger(value) || value <= 0) {
-		throw new Error(`${label} must be a positive integer`);
-	}
-}
-
-function toProfileResponse(user: {
+type ProfileUserRecord = {
 	id: number;
 	username: string;
-	country: string | null;
+	country?: string | null;
 	avatar_id: number | null;
 	created_at: Date | null;
 	level: number | null;
@@ -59,15 +53,26 @@ function toProfileResponse(user: {
 	next_level_xp: number | null;
 	play_time_seconds: number | null;
 	wins: number | null;
-}, stats: {
+};
+
+function assertPositiveInteger(value: number, label: string) {
+	if (!Number.isInteger(value) || value <= 0) {
+		throw new Error(`${label} must be a positive integer`);
+	}
+}
+
+function toProfileResponse(
+	user: ProfileUserRecord,
+	stats: {
 	onlineGames: number;
 	wins: number;
 	modeStats: Record<string, ProfileModeStats>;
-}): ProfileResponse {
+},
+): ProfileResponse {
 	return {
 		id: user.id,
 		username: user.username,
-		country: user.country ?? null,
+		country: user.country ?? "Undefined",
 		avatarId: user.avatar_id ?? 0,
 		created_at: user.created_at ?? null,
 		level: user.level ?? 1,
@@ -111,27 +116,93 @@ function modeKeyFromDbMode(mode: string | null | undefined): string | null {
 	}
 }
 
+async function findProfileUserByUsername(username: string) {
+	try {
+		return await prisma.users.findUnique({
+			where: { username },
+			select: {
+				id: true,
+				username: true,
+				country: true,
+				avatar_id: true,
+				created_at: true,
+				level: true,
+				xp: true,
+				next_level_xp: true,
+				play_time_seconds: true,
+				wins: true,
+			},
+		});
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		if (!message.includes("Unknown field `country`")) {
+			throw error;
+		}
+
+		return await prisma.users.findUnique({
+			where: { username },
+			select: {
+				id: true,
+				username: true,
+				avatar_id: true,
+				created_at: true,
+				level: true,
+				xp: true,
+				next_level_xp: true,
+				play_time_seconds: true,
+				wins: true,
+			},
+		});
+	}
+}
+
+async function findProfileUserById(userId: number) {
+	try {
+		return await prisma.users.findUnique({
+			where: { id: userId },
+			select: {
+				id: true,
+				username: true,
+				country: true,
+				avatar_id: true,
+				created_at: true,
+				level: true,
+				xp: true,
+				next_level_xp: true,
+				play_time_seconds: true,
+				wins: true,
+			},
+		});
+	} catch (error) {
+		const message = error instanceof Error ? error.message : String(error);
+		if (!message.includes("Unknown field `country`")) {
+			throw error;
+		}
+
+		return await prisma.users.findUnique({
+			where: { id: userId },
+			select: {
+				id: true,
+				username: true,
+				avatar_id: true,
+				created_at: true,
+				level: true,
+				xp: true,
+				next_level_xp: true,
+				play_time_seconds: true,
+				wins: true,
+			},
+		});
+	}
+}
+
 /**
  * Fetch a user's public profile and game stats by username.
  */
 export async function getProfileByUsername(username: string): Promise<ProfileResponse> {
 	const normalizedUsername = z.string().trim().min(1).max(100).parse(username);
 
-	const user = await prisma.users.findUnique({
-		where: { username: normalizedUsername },
-		select: {
-			id: true,
-			username: true,
-			country: true,
-			avatar_id: true,
-			created_at: true,
-			level: true,
-			xp: true,
-			next_level_xp: true,
-			play_time_seconds: true,
-			wins: true,
-		},
-	});
+	const user = await findProfileUserByUsername(normalizedUsername);
 
 	if (!user) {
 		throw new Error("User not found");
@@ -204,24 +275,17 @@ export async function updateMyProfile(userId: number, rawInput: unknown): Promis
 
 	const updated = await prisma.users.update({
 		where: { id: userId },
-		select: {
-			id: true,
-			username: true,
-			country: true,
-			avatar_id: true,
-			created_at: true,
-			level: true,
-			xp: true,
-			next_level_xp: true,
-			play_time_seconds: true,
-			wins: true,
-		},
 		data,
 	});
 
-	return toProfileResponse(updated, {
+	const refreshed = await findProfileUserById(updated.id);
+	if (!refreshed) {
+		throw new Error("User not found");
+	}
+
+	return toProfileResponse(refreshed, {
 		onlineGames: 0,
-		wins: updated.wins ?? 0,
+		wins: refreshed.wins ?? 0,
 		modeStats: {},
 	});
 }
