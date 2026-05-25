@@ -82,6 +82,8 @@ services:
       - "9200:9200"
     volumes:
       - esdata:/usr/share/elasticsearch/data
+      - ./infra/elk/elastic/setup-elastic.sh:/setup:ro
+    entrypoint: ["sh", "setup/setup-elasticsearch.sh"]
     networks:
       - trancendence
     restart: always

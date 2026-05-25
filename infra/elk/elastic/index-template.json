@@ -1,0 +1,10 @@
+PUT _index_template/nginx-logs-template
+{
+  "index_patterns": ["nginx-logs-*"],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "index.lifecycle.name": "nginx-logs-policy"
+    }
+  }
+}
