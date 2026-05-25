@@ -123,9 +123,18 @@ export async function registerUser(rawInput: RegisterInput): Promise<AuthResult>
  */
 export async function loginUser(rawInput: LoginInput): Promise<AuthResult | null> {
   const input = loginSchema.parse(rawInput);
+  const loginData = input.email
+    ? { email: input.email }
+    : input.username
+      ? { username: input.username }
+      : null;
+
+  if (!loginData) {
+    return null;
+  }
 
   const user = await prisma.users.findUnique({
-    where: { email: input.email },
+    where: loginData,
     select: {
       id: true,
       email: true,
