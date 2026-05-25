@@ -37,6 +37,11 @@ export type AuthResult = {
   token: string;
 };
 
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8).max(128),
+});
+
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
 
@@ -150,6 +155,35 @@ export async function loginUser(rawInput: LoginInput): Promise<AuthResult | null
     user: publicUser,
     token: createAuthToken(publicUser),
   };
+}
+
+export async function changeUserPassword(userId: number, rawInput: unknown): Promise<void> {
+  if (!Number.isInteger(userId) || userId <= 0) {
+    throw new Error("userId must be a positive integer");
+  }
+
+  const input = changePasswordSchema.parse(rawInput);
+
+  const user = await prisma.users.findUnique({
+    where: { id: userId },
+    select: { password_hash: true },
+  });
+
+  if (!user) {
+    throw new Error("User not found");
+  }
+
+  const ok = await bcrypt.compare(input.currentPassword, user.password_hash);
+  if (!ok) {
+    throw new Error("Current password is incorrect");
+  }
+
+  const password_hash = await bcrypt.hash(input.newPassword, 10);
+
+  await prisma.users.update({
+    where: { id: userId },
+    data: { password_hash },
+  });
 }
 
 /**
