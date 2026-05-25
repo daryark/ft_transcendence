@@ -1,5 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { authFetch } from "../../auth/authFetch";
 
 import "./Leaderboard.scss";
 
@@ -21,7 +22,7 @@ type Player = {
 
 //  api?
 const fetchLeaderboard = async (mode: string, scope: string) => {
-  const res = await fetch(
+  const res = await authFetch(
     `/api/leaderboards?mode=${mode}&scope=${scope}`
   );
 

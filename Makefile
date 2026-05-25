@@ -1,4 +1,6 @@
 COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || (command -v docker-compose >/dev/null 2>&1 && echo docker-compose || echo "docker compose"))
+NGINX_HTTP_PORT ?= 8080
+NGINX_HTTPS_PORT ?= 443
 
 prep:
 	@docker --version
@@ -6,13 +8,13 @@ prep:
 
 
 build:
-	@$(COMPOSE) up -d --build
+	@NGINX_HTTPS_PORT=$(NGINX_HTTPS_PORT) $(COMPOSE) up -d --build
 
 dev-build:
-	@$(COMPOSE) -f docker-compose.dev.yml up -d --build
+	@NGINX_HTTP_PORT=$(NGINX_HTTP_PORT) $(COMPOSE) -f docker-compose.dev.yml up -d --build
 
 up:
-	@$(COMPOSE) up -d
+	@NGINX_HTTPS_PORT=$(NGINX_HTTPS_PORT) $(COMPOSE) up -d
 
 down:
 	@$(COMPOSE) down -v
@@ -27,7 +29,7 @@ fclean:
 	@docker volume prune --force
 
 re: down
-	@$(COMPOSE) up -d --build
+	@NGINX_HTTPS_PORT=$(NGINX_HTTPS_PORT) $(COMPOSE) up -d --build
 
 check:
 	echo "Checking API..."
