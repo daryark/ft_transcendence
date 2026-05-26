@@ -5,101 +5,184 @@ import type { Input, InputType } from "./input";
 import Room from "../room";
 import type { RoomId } from "../room";
 import type { GameState } from "./state";
+import type { Figure } from "./figures";
 import type { ServerToClientEvents } from "../../../sockets/gameHandlers";
 
 type RoomService = {
   broadcast: (roomId: RoomId, event: ServerToClientEvents, payload: any) => void;
 };
 
-type InputHandler = (state: GameState) => void;
+type InputHandler = (state: GameState) => boolean | void;
 
 export type Engine = ReturnType<typeof createEngine>;
 
+const TICK_MS = 100;
+const MAX_INPUTS_PER_TICK = 30;
+const ROTATION_KICKS = [0, -1, 1, -2, 2];
 
 //!should i have separate methods to handle end of the game for each solo mode ?
 //!as i will also have different end conditions for other multiplayer and custom modes!!!!
 export default function createEngine(room: Room, roomService: RoomService) {
-  const TICK = 100; // 100–200ms ok for most players
   const inputs: Input[] = [];
   let interval: ReturnType<typeof setInterval>;
 
   function pushInput(input: Input) {
+    if (room.status !== "playing") return;
     inputs.push(input);
   }
 
-  function spawnPiece(state: GameState): GameState {
-    let next = [...state.next];
-
-    if (next.length < 5) {
-      next.push(...createBag().map((t) => createFigure(t, state.cols)));
+  function ensureNextQueue(state: GameState) {
+    while (state.next.length < 7) {
+      state.next.push(...createBag().map((t) => createFigure(t, state.cols)));
     }
+  }
 
-    let current = next.shift()!;
-
-    current = {
-      ...current,
-      x: Math.floor((state.cols - current.shape[0].length) / 2),
+  function resetPiecePosition(piece: Figure, cols: number): Figure {
+    return {
+      ...piece,
+      x: Math.floor((cols - piece.shape[0].length) / 2),
       y: -2,
     };
-
-    const isGameOver = collision(state.board, { ...current, y: 0 });
-
-    return {
-      ...state,
-      current,
-      next,
-      canHold: true,
-      gameOver: isGameOver,
-    };
   }
 
-  function moveCurrent(state: GameState, dx: number, dy: number) {
-    state.current = moveFigure(state.current, dx, dy);
-  }
+  function spawnPiece(state: GameState) {
+    ensureNextQueue(state);
 
-  function rotateCurrent(state: GameState) {
-    const rotated = rotate(state.current.shape);
-    const test = { ...state.current, shape: rotated };
-
-    if (!collision(state.board, test)) {
-      state.current = test;
+    const nextPiece = state.next.shift();
+    if (!nextPiece) {
+      state.gameOver = true;
+      return;
     }
+
+    const current = resetPiecePosition(nextPiece, state.cols);
+
+    state.current = current;
+    state.canHold = true;
+    state.gameOver = collision(state.board, { ...current, y: 0 });
+  }
+
+  function trySetCurrent(state: GameState, piece: Figure) {
+    if (collision(state.board, piece)) return false;
+
+    state.current = piece;
+    return true;
+  }
+
+  function tryMoveCurrent(state: GameState, dx: number, dy: number) {
+    return trySetCurrent(state, moveFigure(state.current, dx, dy));
+  }
+
+  function rotateMatrix(matrix: number[][], turns: 1 | 2 | 3) {
+    let rotated = matrix;
+
+    for (let i = 0; i < turns; i += 1) {
+      rotated = rotate(rotated);
+    }
+
+    return rotated;
+  }
+
+  function tryRotateCurrent(state: GameState, turns: 1 | 2 | 3) {
+    const rotated = rotateMatrix(state.current.shape, turns);
+
+    return ROTATION_KICKS.some((kickX) =>
+      trySetCurrent(state, {
+        ...state.current,
+        shape: rotated,
+        x: state.current.x + kickX,
+      }),
+    );
+  }
+
+  function lockCurrent(state: GameState) {
+    const current = state.current;
+
+    current.shape.forEach((row, dy) => {
+      row.forEach((cell, dx) => {
+        if (!cell) return;
+
+        const x = current.x + dx;
+        const y = current.y + dy;
+
+        if (y >= 0 && y < state.rows && x >= 0 && x < state.cols) {
+          state.board[y][x] = 1;
+        }
+      });
+    });
+
+    const { newBoard, cleared, scoreAdd } = clearLines(state.board);
+    state.board = newBoard;
+    state.lines += cleared;
+    state.score += scoreAdd;
+    spawnPiece(state);
+  }
+
+  function softDrop(state: GameState) {
+    if (!tryMoveCurrent(state, 0, 1)) {
+      lockCurrent(state);
+      return true;
+    }
+
+    return false;
+  }
+
+  function hardDrop(state: GameState) {
+    while (tryMoveCurrent(state, 0, 1)) {
+      state.score += 2;
+    }
+
+    lockCurrent(state);
+    return true;
+  }
+
+  function holdCurrent(state: GameState) {
+    if (!room.gameConfig.controls.hold || !state.canHold) return;
+
+    const held = state.hold;
+    state.hold = resetPiecePosition(state.current, state.cols);
+    state.canHold = false;
+
+    if (held) {
+      state.current = resetPiecePosition(held, state.cols);
+    } else {
+      spawnPiece(state);
+    }
+
+    state.canHold = false;
+    state.gameOver =
+      state.gameOver || collision(state.board, { ...state.current, y: 0 });
   }
 
   const inputHandlers: Record<InputType, InputHandler> = {
-    left: (state) => moveCurrent(state, -1, 0),
-    right: (state) => moveCurrent(state, 1, 0),
-    down: (state) => moveCurrent(state, 0, 1),
-    rotate: rotateCurrent,
-    rotateCCW: () => {},
-    rotate180: () => {},
-    drop: () => {},
-    hold: () => {},
+    left: (state) => tryMoveCurrent(state, -1, 0),
+    right: (state) => tryMoveCurrent(state, 1, 0),
+    down: softDrop,
+    rotate: (state) => tryRotateCurrent(state, 1),
+    rotateCCW: (state) => tryRotateCurrent(state, 3),
+    rotate180: (state) => tryRotateCurrent(state, 2),
+    drop: hardDrop,
+    hold: holdCurrent,
   };
 
   function applyInputs(state: GameState) {
     let input: Input | undefined;
+    let processed = 0;
+    let lockedThisTick = false;
 
-    while ((input = inputs.shift())) {
-      inputHandlers[input.type](state);
+    while (processed < MAX_INPUTS_PER_TICK && (input = inputs.shift())) {
+      if (state.gameOver) break;
+      lockedThisTick =
+        inputHandlers[input.type](state) === true || lockedThisTick;
+      processed += 1;
+
+      if (lockedThisTick) break;
     }
+
+    return lockedThisTick;
   }
 
   function applyGravity(state: GameState) {
-    const moved = moveFigure(state.current, 0, 1);
-
-    if (collision(state.board, moved)) {
-      lock(state);
-      const { newBoard, cleared, scoreAdd } = clearLines(state.board);
-      state.board = newBoard;
-      state.lines += cleared;
-      state.score += scoreAdd;
-
-      const nextState = spawnPiece(state);
-      Object.assign(state, nextState);
-    } else {
-      state.current = moved;
-    }
+    softDrop(state);
   }
 
   function shouldFinishByObjective(state: GameState): boolean {
@@ -136,6 +219,7 @@ export default function createEngine(room: Room, roomService: RoomService) {
   function finishGame(reason: "game_over" | "objective_complete") {
     room.status = "ended";
     clearInterval(interval);
+    roomService.broadcast(room.id, "game:update", room.state);
     roomService.broadcast(room.id, "game:end", {
       roomId: room.id,
       reason,
@@ -162,25 +246,17 @@ export default function createEngine(room: Room, roomService: RoomService) {
     return false;
   }
 
-  function lock(state: GameState) {
-    const curr = state.current!;
-    curr.shape.forEach((row, dy) => {
-      row.forEach((cell, dx) => {
-        if (cell) {
-          const x = curr.x + dx;
-          const y = curr.y + dy;
-          if (y >= 0) state.board[y][x] = 1;
-        }
-      });
-    });
-  }
-
   function tick() {
     const state = room.state;
     if (!state) return; // Guard: state should not be null during active game
+    if (room.status !== "playing") return;
 
-    applyInputs(state);
-    applyGravity(state);
+    if (handleEndConditions(state)) return;
+    const lockedByInput = applyInputs(state);
+    if (handleEndConditions(state)) return;
+    if (!lockedByInput) {
+      applyGravity(state);
+    }
     if (handleEndConditions(state)) return; //!should check end conditions before applying movements?
     //!or after broadcasting update, so clients receive final state before end state?
 
@@ -188,7 +264,7 @@ export default function createEngine(room: Room, roomService: RoomService) {
   }
 
 
-  interval = setInterval(tick, TICK); //name interval/loop
+  interval = setInterval(tick, TICK_MS); //name interval/loop
 
   return {
     pushInput,
