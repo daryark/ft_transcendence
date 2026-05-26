@@ -1,11 +1,12 @@
 import { prisma } from "./prisma";
+import type { gamemode } from "@prisma/client";
 
 /**
  * Helpers for both matches and match_players tables.
  */
 
 export type MatchStatus = "active" | "finished";
-export type GameMode = "classic" | "blitz" | "rush";
+export type GameMode = gamemode;
 export type PlayerResult = "win" | "lose" | "draw";
 
 export type MatchRecord = {

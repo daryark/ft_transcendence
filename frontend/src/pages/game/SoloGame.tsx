@@ -5,6 +5,7 @@ import { io, Socket } from "socket.io-client";
 import GameBoard from "../../components/GameBoard/GameBoard";
 import MiniFigure from "../../components/MiniFigure/MiniFigure";
 import type { GameState } from "../game/state";
+import { useConfigs } from "../../../shared/hooks/useConfigs";
 
 import "./SoloGame.scss";
 
@@ -14,22 +15,22 @@ export default function SoloGame() {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [gameState, setGameState] = useState<GameState | null>(null);
 
-  // 🔥 подключение к серверу
-  useEffect(() => {
-    const s = io("http://localhost:3000");
+  // // 🔥 подключение к серверу
+  // useEffect(() => {
+  //   const s = io("http://localhost:3000");
 
-    setSocket(s);
+  //   setSocket(s);
 
-    s.emit("join", { gameId });
+  //   s.emit("join", { gameId });
 
-    s.on("state", (state: GameState) => {
-      setGameState(state);
-    });
+  //   s.on("state", (state: GameState) => {
+  //     setGameState(state);
+  //   });
 
-    return () => {
-      s.disconnect();
-    };
-  }, [gameId]);
+  //   return () => {
+  //     s.disconnect();
+  //   };
+  // }, [gameId]);
 
   // 🔥 отправка input (клавиши)
   useEffect(() => {

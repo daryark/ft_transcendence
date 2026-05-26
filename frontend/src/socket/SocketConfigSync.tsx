@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { io } from "socket.io-client";
+import { io, Socket } from "socket.io-client";
 import {
   getSession,
   subscribeToSession,
@@ -8,6 +8,27 @@ import {
 import { saveGameConfig, type GameConfig } from "./gameConfigStorage";
 
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? "http://localhost:3000";
+
+
+let socket: Socket | null = null;
+
+
+export const connectSocket = (token: string) => {
+  if (!socket) {
+    socket = io(SOCKET_URL, {
+      auth: { token },
+    });
+  }
+
+  return socket;
+};
+
+export const getSocket = () => socket;
+
+export const disconnectSocket = () => {
+  socket?.disconnect();
+  socket = null;
+};
 
 export default function SocketConfigSync() {
   const [session, setSession] = useState<SessionData | null>(() =>

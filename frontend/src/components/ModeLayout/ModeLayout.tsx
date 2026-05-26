@@ -23,9 +23,9 @@ export const ModeLayout: React.FC<ModeLayoutProps> = ({
   personalBest,
   showMusic = true,
   onStart,
-  options,
-  advanced,
-  tabs,
+  // options,
+  // advanced,
+  // tabs,
   headerExtra,
 }) => {
   const navigate = useNavigate();
@@ -70,11 +70,11 @@ export const ModeLayout: React.FC<ModeLayoutProps> = ({
         </div>
 
         {/* only custom */}
-        {tabs}
+        {/* {tabs}
 
         {options}
 
-        {advanced}
+        {advanced} */}
       </div>
     </div>
   );
