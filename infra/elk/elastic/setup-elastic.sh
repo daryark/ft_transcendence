@@ -2,10 +2,14 @@
 
 set -e
 
-ES_URL="${ES_URL:-http://elasticsearch:9200}"
+ES_URL="http://localhost:9200"
+
+/usr/local/bin/docker-entrypoint.sh eswrapper &
+
+ES_PID=$!
 
 echo "Waiting for elasticsearch..."
-untill curl -sf "$ES_URL/_cluster/health" >/dev/null; do
+until curl -sf "$ES_URL/_cluster/health" >/dev/null; do
 	sleep 5
 done
 
@@ -20,3 +24,5 @@ curl -sf -X PUT "$ES_URL/_index_template/nginx-logs-template" \
 	-d @/setup/ilm-template.json
 
 echo "Elasticsearch setup is done."
+
+wait $ES_PID
