@@ -19,7 +19,11 @@ export default class PlayerService {
 
   create(rawPlayer: Player): Player {
     const player = PlayerSchema.parse(rawPlayer);
-    //!if should be return after validation, if not valid??
+    if (player === undefined) {
+      console.error("Invalid player data");
+      throw new Error("Invalid player data");//?! where do i throw it? to the client or just log it and return undefined?? if to the client, how do i emit it from here?? should i pass socket to this service?
+    }
+
     this.players.set(player.id, player);
     return player;
   }

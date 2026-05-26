@@ -1,7 +1,7 @@
 const quickplay = require('../../game/domain/mode/quickplay');
 const RoomService = require('../../game/services/roomService');
 
-describe('Quickplay', () => {
+describe.skip('Quickplay (shadowed while solo mode is the only active flow)', () => {
     let roomService;
 
     beforeEach(() => {

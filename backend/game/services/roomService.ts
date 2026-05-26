@@ -33,8 +33,6 @@ export default class RoomService {
     while (this.rooms.has(room.id)) {
       room.id = this.generateRoomId();
     }
-    console.log('Creating room with ID:', room.id);//*tmp log
-
     this.rooms.set(room.id, room);
     return room;
   }

@@ -5,8 +5,12 @@ import socketSetup from '../../sockets';
 describe('sockets/index connection', () => {
   test('on connection emits game:config and registers handlers', () => {
     const listeners: Record<string, Function> = {};
+    let middleware: Function | undefined;
 
     const io: any = {
+      use: jest.fn((cb: Function) => {
+        middleware = cb;
+      }),
       on: (event: string, cb: Function) => {
         listeners[event] = cb;
       },
@@ -28,6 +32,12 @@ describe('sockets/index connection', () => {
     // call setup
     socketSetup(io);
 
+    expect(io.use).toHaveBeenCalled();
+    expect(middleware).toBeDefined();
+    middleware!(socket, (error?: Error) => {
+      expect(error).toBeUndefined();
+    });
+
     // simulate connection
     expect(typeof listeners['connection']).toBe('function');
     listeners['connection'](socket);
@@ -39,11 +49,12 @@ describe('sockets/index connection', () => {
     );
     expect(calledWith).toBeDefined();
 
-    // should attach player to socket.data
-    expect(socket.data.player).toBeDefined();
+    // should attach identity/session data to socket.data
+    expect(socket.data.identity).toEqual(expect.objectContaining({ type: 'anonymous' }));
+    expect(socket.data.joinedAt).toEqual(expect.any(Number));
 
-    // should register handlers (gameHandlers registers at least 'mode:join' and 'player:move')
+    //? should register handlers (gameHandlers registers at least 'mode:join' and 'player:move')
     const registeredEvents = (socket.on as jest.Mock).mock.calls.map((c: any[]) => c[0]);
-    expect(registeredEvents).toEqual(expect.arrayContaining(['mode:join', 'player:move', 'disconnect']));
+    expect(registeredEvents).toEqual(expect.arrayContaining(['mode:join', 'player:move', 'mode:leave', 'disconnect']));
   });
 });
