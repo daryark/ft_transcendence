@@ -52,3 +52,14 @@ export const figures: Record<FigureType, number[][][]> = {
     [[1,1,0],[0,1,0],[0,1,0]]
   ]
 };
+
+export function createFigure(type: FigureType, cols: number): Figure {
+  const shape = figures[type][0];
+
+  return {
+    type,
+    shape,
+    x: Math.floor((cols - shape[0].length) / 2),
+    y: -2,
+  };
+}

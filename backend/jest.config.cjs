@@ -5,19 +5,18 @@ module.exports = {
   testMatch: ['**/*.test.ts', '**/*.test.js'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   transform: {
-    '^.+\\.ts$': 'ts-jest',
-    '^.+\\.js$': 'ts-jest',
+    '^.+\\.[tj]s$': [
+      'ts-jest',
+      {
+        useESM: true,
+        tsconfig: 'tsconfig.test.json',
+        esModuleInterop: true,
+        allowSyntheticDefaultImports: true,
+      },
+    ],
   },
   extensionsToTreatAsEsm: ['.ts'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
   },
-  globals: {
-    'ts-jest': {
-      useESM: true,
-      tsconfig: 'tsconfig.test.json',
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true,
-        },
-    },
 };

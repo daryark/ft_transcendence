@@ -106,6 +106,14 @@ Socket.IO event names are just strings, but you design them as:
 <domain>:<action>   ("quickplay:join"/"league:join"/"game:state"/"room:join"...)
 
 
+***TypeScript***
+compile time validation of the flow of each argument throught the code.
+
+
+**Zod***
+runtime! validation schemas (kinda TypeScript validation in runtime^_^)
+
+
 ***Jest***
 ->jest.fn()
 fake function that imitates something that doesnt' exist in test context, but need to be (to not fail).
@@ -126,3 +134,7 @@ Resources:
 4. Teris wiki - https://tetris.wiki/TETR.IO#Garbage_Travel_Speed:_.22Passthrough.22
 5. Jest docs -https://jestjs.io/docs/setup-teardown
 6. .ttr file format - https://docs.fileformat.com/game/ttr/
+
+
+-> check logs on back
+-> docker logs backend --tail 200 > backend/backend-container.log 2>&1

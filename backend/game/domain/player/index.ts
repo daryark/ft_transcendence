@@ -1,34 +1,34 @@
-export default class Player {
-  private id: string;        // stable identity
-  private socketId: string;  // current connection
-  private roomId?: string;
+import { z } from "zod";
+import { UserIdSchema } from "../../../auth/identity";
+import type { RoomId } from "../room";
 
-  constructor(id: string, socketId: string) {
-    this.id = id;
-    this.socketId = socketId;
-  }
+export const RolesSchema = z.enum(["player", "spectator"]);
+export type Roles = z.infer<typeof RolesSchema>;
 
-  attachSocket(socketId: string) {
-    this.socketId = socketId;
-  }
+export const PlayerProfileSchema = z.object({
+  nickname: z.string().min(1),
+  level: z.number().int().min(0),
+  xp: z.number().int().min(0),
+  rank: z.string().optional(),
+  rankXp: z.number().int().min(0).optional(),
+  rankWins: z.number().int().min(0).optional(),
+  rankLosses: z.number().int().min(0).optional(),
+});
 
-  //  getId() {
-  //    return this.id;
-  //  }
-  //
-  //  getSocketId() {
-  //    return this.socketId;
-  //  }
-  //
-  //  getRoomId() {
-  //    return this.roomId;
-  //  }
-  //
-  //  joinRoom(roomId: string) {
-  //    this.roomId = roomId;
-  //  }
-  //
-  //  leaveRoom() {
-  //    this.roomId = undefined;
-  //  }
-}
+export const PlayerSchema = z.object({
+  id: UserIdSchema,
+  socketId: z.string().min(1),
+  connected: z.boolean(),
+  joinedAt: z.number().int().nonnegative(),
+  disconnectedAt: z.number().int().nonnegative().optional(),
+  role: RolesSchema.optional(),
+  roomId: z.custom<RoomId>((value) => typeof value === "string").optional(),
+  profile: PlayerProfileSchema.optional(),
+});
+
+export const PlayerUpdateSchema = PlayerSchema.partial().strict();
+
+export type Player = z.infer<typeof PlayerSchema>;
+export type PlayerUpdate = z.infer<typeof PlayerUpdateSchema>;
+
+export type { Player as default };

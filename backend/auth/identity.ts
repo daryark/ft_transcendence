@@ -1,12 +1,18 @@
 import jwt, { JwtPayload } from "jsonwebtoken";
 import { randomUUID } from "crypto";
+import { z } from "zod";
 import { getJwtSecret, getToken } from "./jwt";
 import type { AuthPayload } from "./jwt";
 
-export type Identity = {
-        id: string;
-        type: "registered" | "anonymous";
-    };
+export const UserIdSchema = z.string().min(1).brand<"UserId">();
+export type UserId = z.infer<typeof UserIdSchema>;
+
+export const IdentitySchema = z.object({
+    id: UserIdSchema,
+    type: z.enum(["registered", "anonymous"]),
+});
+
+export type Identity = z.infer<typeof IdentitySchema>;
 
 function buildRegisteredIdentity(decoded: string | JwtPayload): Identity | null {
     if (typeof decoded === "string") {
@@ -20,7 +26,7 @@ function buildRegisteredIdentity(decoded: string | JwtPayload): Identity | null 
     }
 
     return {
-        id: String(rawUserId),
+        id: UserIdSchema.parse(String(rawUserId)),
         type: "registered",
     };
 }
@@ -30,7 +36,7 @@ export function resolveIdentity(auth: AuthPayload): Identity {
 
     if (!token) {
         return {
-            id: randomUUID(),
+            id: UserIdSchema.parse(randomUUID()),
             type: "anonymous",
         };
     }
@@ -44,4 +50,3 @@ export function resolveIdentity(auth: AuthPayload): Identity {
 
     return identity;
 }
-

@@ -18,14 +18,14 @@
     "skipLibCheck": true
   },
   "include": [
+    "app.ts",
     "auth/**/*",
     "config/**/*",
     "game/**/*",
     "middleware/**/*",
     "prisma/**/*",
     "sockets/**/*",
-    "server/**/*",
-    "app.js"
+    "server/**/*"
   ],
   "exclude": ["node_modules", "dist", "tests"],
   "ignoreDeprecations": "6.0"

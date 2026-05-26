@@ -1,5 +1,5 @@
 import { prisma } from './prisma';
-import type { gamemode } from '../generated/prisma/enums';
+import type { gamemode } from '@prisma/client';
 import { z } from 'zod';
 
 /**
@@ -16,6 +16,7 @@ export interface LeaderboardEntry {
  * Leaderboard options for filtering and sorting
  */
 export interface LeaderboardOptions {
+  // mode?: GameMode; // Game mode filter (e.g., 'classic', 'blitz', 'rush')
   // Accept frontend route values and Prisma enum values.
   mode?: string;
   scope?: 'global' | 'country' | 'friends';

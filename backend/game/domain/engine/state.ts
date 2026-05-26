@@ -1,7 +1,6 @@
-import { create } from "node:domain";
-import { figures } from "./figures";
-import type { Figure, FigureType } from "./figures";
+import { createFigure, Figure } from "./figures";
 import { createBag } from "./logic";
+import { createBoardHeight, createBoardWidth, createEmptyBoard } from "./board";
 
 export interface GameState {
   board: number[][];
@@ -14,43 +13,11 @@ export interface GameState {
   gameOver: boolean;
   score: number;
   lines: number;
+  round: number;
+  startedAt: number;
 }
 
-export type BoardWidth = number & { __brand: "BoardWidth" };
-export type BoardHeight = number & { __brand: "BoardHeight" };
-
-
-
-function createBoardWidth(value: number): BoardWidth {
-  if (value < 4 || value > 20)
-    throw new Error("Invalid board width");
-
-  return value as BoardWidth;
-}
-
-function createBoardHeight(value: number): BoardHeight {
-  if (value < 4 || value > 40)
-    throw new Error("Invalid board height");
-
-  return value as BoardHeight;
-}
-
-export function createFigure(type: FigureType, cols: number): Figure {
-  const shape = figures[type][0];
-
-  return {
-    type,
-    shape,
-    x: Math.floor((cols - shape[0].length) / 2),
-    y: -2,
-  };
-}
-
-export function createEmptyBoard(rows: BoardHeight, cols: BoardWidth): number[][] {
-  return Array.from({ length: rows }, () => Array(cols).fill(0));
-}
-
-export function initGame(rows: number, cols: number): GameState {
+export function initGame(rows: number, cols: number, round = 1): GameState {
   const board = createEmptyBoard(createBoardHeight(rows), createBoardWidth(cols));
   const bag = createBag();
   const nextTypes = [...bag, ...createBag()];
@@ -66,7 +33,37 @@ export function initGame(rows: number, cols: number): GameState {
     cols,
     gameOver: false,
     score: 0,
-    lines: 0
+    lines: 0,
+    round,
+    startedAt: Date.now()
   };
 }
 
+
+// One room
+//  ├── one engine
+//  └── one shared match state
+//        ├── player1 board
+//        ├── player2 board
+//        ├── garbage queue
+//        └── match metadata
+
+// GameState {
+//   players: {
+//     [playerId]: PlayerGameState
+//   };
+
+//   startedAt: number;
+// }
+
+// Each player has:
+
+// own board,
+// own piece,
+// own score.
+
+// But:
+
+// same match,
+// same tick timing,
+// same engine loop.

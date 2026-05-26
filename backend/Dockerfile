@@ -6,12 +6,13 @@ WORKDIR /app
 ARG DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
 ENV DATABASE_URL=${DATABASE_URL}
 
-COPY backend/package.json ./
-RUN npm install --omit=dev
-RUN npm install tsx bcrypt zod prisma@6.19.3 @prisma/client@6.19.3 dotenv dotenv-expand @prisma/adapter-pg@6.19.3 pg
+COPY backend/package.json backend/package-lock.json ./
+RUN npm install
 COPY backend ./
 RUN npx prisma generate
+RUN npm run build
+RUN npm prune --omit=dev
 
 EXPOSE 3000
 
-CMD ["npx", "tsx", "server/index.js"]
+CMD ["node", "dist/server/index.js"]

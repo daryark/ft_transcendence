@@ -3,7 +3,7 @@ import type Config from "../../../config/config.types";
 export const quickplayBase: Config = {
 
     roomConfig: {
-        maxPlayers: Infinity,
+        maxPlayers: Infinity, //define the limit, some big number, or implement queuing system in roomService when limit is reached
         public: true,
         anonymousAllowed: true,
         unrankedAllowed: true

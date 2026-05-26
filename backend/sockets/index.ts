@@ -14,29 +14,33 @@ import { configBase } from "../game/config/configBase";
 
 import type { RoomId } from "../game/domain/room";
 import type { Identity } from "../auth/identity";
+import { Roles } from "../game/domain/player";
 
 
 export type SocketData = {
     identity: Identity;
     roomId?: RoomId;
     joinedAt: number;
-    role?: 'player' | 'spectator';
+    role?: Roles | undefined;
 };
 
 export default function socketSetup(io: Server) {
     const roomService = new RoomService(io);
-    const modeService = createModeService({ modes, roomService });
     const playerService = new PlayerService();
+    const modeService = createModeService({ modes, roomService, playerService });
 
     io.use(socketAuth(playerService));
     io.on("connection", (socket) => {
         console.log('New client connected:', socket.id);
+        if (socket.data.roomId) {
+            socket.join(socket.data.roomId);
+        }
         socket.emit('game:config', { ...configBase(socket.data.identity.type) });
 
         gameHandlers(socket, { modeService, roomService });
         // chatHandlers(socket);
 
-        disconnectHandlers(socket, { roomService });
+        disconnectHandlers(socket, { roomService, playerService });
     });
 };
 

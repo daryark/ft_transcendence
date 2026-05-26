@@ -1,6 +1,7 @@
 import { Socket } from "socket.io";
 import RoomService from "../game/services/roomService";
 import { SocketData } from ".";
+import PlayerService from "../game/services/playerService";
 
 
 //!what else need to be cleaned up on disconnect?
@@ -8,14 +9,21 @@ import { SocketData } from ".";
 
 export default function disconnectHandlers(
     socket: Socket,
-    { roomService }: { roomService: RoomService;}) {
+    { roomService, playerService }: { roomService: RoomService; playerService: PlayerService;}) {
     socket.on("disconnect", () => {
-        const { roomId, identity } = socket.data as SocketData;
+        const { identity } = socket.data as SocketData;
+        if (!identity) return;
 
-        if (roomId) {
-            roomService.removePlayer(roomId, identity.id);
+        const player = playerService.markDisconnected(identity.id, (expiredPlayer) => {
+            if (!expiredPlayer.roomId || !expiredPlayer.role) return;
 
-            console.log(`Disconnected: ${identity.id} from room ${roomId}`);
-        }
+            if (expiredPlayer.role === "player") {
+                roomService.removePlayer(expiredPlayer.roomId, expiredPlayer.id);
+            } else {
+                roomService.removeSpectator(expiredPlayer.roomId, expiredPlayer.id);
+            }
+        });
+        
+        console.log(`Disconnected: ${identity.id}; waiting 30s for reconnect${player?.roomId ? ` in room ${player.roomId}` : ""}`);
     });
 }
