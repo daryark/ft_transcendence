@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ModeLayout } from "../../../components/ModeLayout/ModeLayout";
-import { getSession } from "../../../auth/session";
 import {
-  connectSocket,
   getSocket,
+  subscribeToSocket,
 } from "../../../socket/SocketConfigSync";
 import { getStoredGameConfig } from "../../../socket/gameConfigStorage";
 import NotFound from "../../notFound/NotFound";
@@ -23,56 +22,16 @@ type ConfigPreset = {
   };
 };
 
-const fallbackSoloPreset: Required<ConfigPreset> = {
-  roomConfig: {
-    maxPlayers: 1,
-    public: false,
-    anonymousAllowed: true,
-    unrankedAllowed: true,
-  },
-  gameConfig: {
-    mode: "solo",
-    general: {
-      bagType: "7-bag",
-      boardWidth: 10,
-      boardHeight: 20,
-    },
-    controls: {
-      hold: true,
-      nextPieces: 5,
-      showShadowPiece: true,
-    },
-    survival: {
-      mode: "none",
-      garbageMessiness: 0,
-      stickyLayer: true,
-      minimumLayerHight: 0,
-      timerInterval: 300,
-    },
-    gravity: {
-      lockDelay: 30,
-      gravity: 0.02,
-      useLeveling: false,
-      gravityIncrease: 0.0007,
-      gravitMarginTime: 10000,
-    },
-    objective: {
-      winCondition: "lines",
-      scoreToWin: 0,
-      linesToClear: 40,
-      timeLimit: 0,
-      key: "time",
-      allowRetry: false,
-      stock: 2,
-    },
-  },
-};
-
 function buildSoloPayload(modeId: string) {
   const storedConfig = getStoredGameConfig() as
     | { solo?: ConfigPreset }
     | null;
-  const preset = storedConfig?.solo ?? fallbackSoloPreset;
+
+  if (!storedConfig?.solo) {
+    throw new Error("Game config is not loaded yet");
+  }
+
+  const preset = storedConfig.solo;
 
   if (modeId !== "40lines") {
     return preset;
@@ -80,16 +39,10 @@ function buildSoloPayload(modeId: string) {
 
   return {
     ...preset,
-    roomConfig: {
-      ...fallbackSoloPreset.roomConfig,
-      ...preset.roomConfig,
-    },
     gameConfig: {
-      ...fallbackSoloPreset.gameConfig,
       ...preset.gameConfig,
       mode: "solo",
       objective: {
-        ...fallbackSoloPreset.gameConfig.objective,
         ...preset.gameConfig?.objective,
         winCondition: "lines",
         linesToClear: 40,
@@ -104,14 +57,32 @@ export default function SoloModePage() {
   const config = modeId ? MODES_CONFIG[modeId] : undefined;
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [socket, setSocket] = useState(() => getSocket());
+
+  useEffect(() => {
+    return subscribeToSocket(() => {
+      setSocket(getSocket());
+    });
+  }, []);
 
   if (!config || !modeId) return <NotFound />;
 
   const handleStart = () => {
-    const session = getSession();
-    const socket = getSocket() ?? connectSocket(session?.token);
+    if (!socket) {
+      console.error("Socket is not connected yet");
+      return;
+    }
 
     setIsLoading(true);
+
+    let payload: ConfigPreset;
+    try {
+      payload = buildSoloPayload(modeId);
+    } catch (error) {
+      setIsLoading(false);
+      console.error(error);
+      return;
+    }
 
     socket.once("game:start", (payload: GameStartPayload) => {
       window.sessionStorage.setItem(
@@ -129,7 +100,7 @@ export default function SoloModePage() {
 
     socket.emit("mode:join", {
       mode: "solo",
-      payload: buildSoloPayload(modeId),
+      payload,
     });
   };
 
