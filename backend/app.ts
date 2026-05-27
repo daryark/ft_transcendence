@@ -8,6 +8,7 @@ import { getJwtSecret } from "./auth/jwt";
 const app = express();
 export default app;
 
+app.set("trust proxy", true);
 app.use(cors()); //#2
 app.use(express.json());
 
@@ -45,7 +46,7 @@ function getOptionalBearerUserId(req: ApiRequest): number | null {
 
 api.post("/auth/register", async (req: ApiRequest, res: Response) => {
   try {
-    const auth = await registerUser(req.body);
+    const auth = await registerUser(req.body, req);
     res.status(201).json({ message: "User registered!", ...auth });
   } catch (error) {
     res
@@ -167,7 +168,7 @@ api.patch("/users/me/password", authenticateToken, async (req: ApiRequest, res: 
     return res.json({ message: "Password updated" });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const status = message === "User not found" ? 404 : message === "Current password is incorrect" ? 403 : 400;
+    const status = message === "User not found" ? 404 : 400;
     return res.status(status).json({ message: "Failed to update password", error: message });
   }
 });
