@@ -2,7 +2,7 @@
 
 set -e
 
-ES_URL="http://localhost:9200"
+ES_URL="http://127.0.0.1:9200"
 
 /usr/local/bin/docker-entrypoint.sh eswrapper &
 
