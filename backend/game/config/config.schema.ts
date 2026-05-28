@@ -84,7 +84,6 @@ const gameGeneralQuickplayPatchSchema = z
         bagType: bagTypeSchema,
         boardWidth: z.number().int().min(4).max(20),
         boardHeight: z.number().int().min(4).max(40),
-        modifiers: z.array(quickplayModifierSchema),
     })
     .partial()
     .strict();
@@ -162,6 +161,7 @@ const gameObjectivePatchSchema = z
 const soloGameConfigPatchSchema = z
     .object({
         mode: z.literal("solo"),
+        preset: z.enum(["zen", "40Lines", "blitz"]).optional(),
         general: gameGeneralPatchSchema,
         controls: gameControlsPatchSchema,
         gravity: gameGravityPatchSchema,
@@ -174,6 +174,7 @@ const soloGameConfigPatchSchema = z
 const quickplayGameConfigPatchSchema = z
     .object({
         mode: z.literal("quickplay"),
+        modifiers: z.array(quickplayModifierSchema).optional(),
         general: gameGeneralQuickplayPatchSchema,
         controls: gameControlsPatchSchema,
         gravity: gameGravityPatchSchema,

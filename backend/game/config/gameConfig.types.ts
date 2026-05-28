@@ -14,6 +14,11 @@ export type QuickplayModifier =
     | "messier-garbage"
     | "faster-gravity";
 
+export type soloPreset = 
+    | "zen"
+    | "40Lines"
+    | "blitz";
+
 export type ObjectiveType = "score" | "lines" | "time" | "none";
 
 export type MultiplayerMode = "quickplay" | "league" | "custom";
@@ -29,6 +34,7 @@ interface BaseGameConfig {
 
 export interface MultiplayerConfig extends BaseGameConfig {
     mode: MultiplayerMode;
+    modifiers?: QuickplayModifier[];
 
     garbage: GameGarbageConfig;
 
@@ -38,6 +44,7 @@ export interface MultiplayerConfig extends BaseGameConfig {
 
 export interface SoloConfig extends BaseGameConfig {
     mode: "solo";
+    preset?: soloPreset;
 
     survival: GameSurvivalConfig;
     objective: GameObjectiveConfig;
@@ -49,7 +56,6 @@ interface GameGeneralConfig {
     bagType: BagType;
     boardWidth: number; //4-20
     boardHeight: number; //4-40
-    modifiers?: QuickplayModifier[]; // for quickplay mode modifiers like "double-hole", "no-hold", "messier-garbage", "faster-gravity"
 }
 
 interface GameControlsConfig {

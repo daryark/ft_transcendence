@@ -1,5 +1,6 @@
 import type Config from "../../../config/config.types";
 
+
 export const quickplayBase: Config = {
 
     roomConfig: {
@@ -11,12 +12,12 @@ export const quickplayBase: Config = {
 
     gameConfig: {
         mode: "quickplay",
+        modifiers: [], //"double-whole", "no-hold", "messier-garbage", "faster-gravity", "double-garbage"
 
         general: {
             bagType: "7-bag",
             boardWidth: 10,
             boardHeight: 20,
-            modifiers: [] //"double-whole", "no-hold", "messier-garbage", "faster-gravity", "double-garbage"
         },
 
         controls: {

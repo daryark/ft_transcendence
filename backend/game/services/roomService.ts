@@ -33,6 +33,8 @@ export default class RoomService {
     while (this.rooms.has(room.id)) {
       room.id = this.generateRoomId();
     }
+    console.log('Creating room with ID:', room.id);//*tmp log
+
     this.rooms.set(room.id, room);
     return room;
   }
@@ -60,6 +62,7 @@ export default class RoomService {
   addPlayer(roomId: RoomId, player: Player): void {
     const room = this.rooms.get(roomId);
     if (!room) return;
+    //check in config.roomConfig if anonymousAllowed, if room is public, maxPlayers, unrankedAllowed, rankLimit and (levelLimit??)
 
     if (!room.players.has(player.id)) {
       player.roomId = roomId;
