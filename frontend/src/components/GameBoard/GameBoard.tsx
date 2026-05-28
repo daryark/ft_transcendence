@@ -11,6 +11,12 @@ interface GameBoardProps {
 const HIDDEN_ROWS = 2;
 
 function hasCollision(board: number[][], figure: Figure) {
+  const width = board[0]?.length ?? 0;
+
+  if (width === 0) {
+    return true;
+  }
+
   for (let rowIndex = 0; rowIndex < figure.shape.length; rowIndex += 1) {
     for (
       let colIndex = 0;
@@ -25,7 +31,7 @@ function hasCollision(board: number[][], figure: Figure) {
       if (y < 0) continue;
       if (
         x < 0 ||
-        x >= board[0].length ||
+        x >= width ||
         y >= board.length ||
         board[y]?.[x] !== 0
       ) {
@@ -76,6 +82,8 @@ export default function GameBoard({
 }: GameBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { rows, cols, board, current } = gameState;
+  const safeRows = Math.max(rows, board.length, 1);
+  const safeCols = Math.max(cols, board[0]?.length ?? 0, 1);
   const ghost = useMemo(() => getGhost(board, current), [board, current]);
 
   useEffect(() => {
@@ -85,16 +93,16 @@ export default function GameBoard({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    canvas.width = cols * cellSize;
-    canvas.height = (rows + HIDDEN_ROWS) * cellSize;
+    canvas.width = safeCols * cellSize;
+    canvas.height = (safeRows + HIDDEN_ROWS) * cellSize;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#08090f";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     ctx.strokeStyle = "rgba(255, 255, 255, 0.07)";
-    for (let row = HIDDEN_ROWS; row < rows + HIDDEN_ROWS; row += 1) {
-      for (let col = 0; col < cols; col += 1) {
+    for (let row = HIDDEN_ROWS; row < safeRows + HIDDEN_ROWS; row += 1) {
+      for (let col = 0; col < safeCols; col += 1) {
         ctx.strokeRect(col * cellSize, row * cellSize, cellSize, cellSize);
       }
     }
@@ -133,14 +141,14 @@ export default function GameBoard({
       ctx.textAlign = "center";
       ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
     }
-  }, [board, cellSize, cols, current, gameState.gameOver, ghost, rows]);
+  }, [board, cellSize, current, gameState.gameOver, ghost, safeCols, safeRows]);
 
   return (
     <canvas
       className="game-board"
       ref={canvasRef}
-      width={cols * cellSize}
-      height={(rows + HIDDEN_ROWS) * cellSize}
+      width={safeCols * cellSize}
+      height={(safeRows + HIDDEN_ROWS) * cellSize}
     />
   );
 }

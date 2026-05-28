@@ -5,7 +5,7 @@ import MiniFigure from "../../components/MiniFigure/MiniFigure";
 import {
   getSocket,
   subscribeToSocket,
-} from "../../socket/SocketConfigSync";
+} from "../../socket/socketClient";
 import type { GameStartPayload, GameState, PlayerMove } from "./types";
 import "./SoloGame.scss";
 
@@ -59,8 +59,10 @@ export default function SoloGame() {
   const [gameState, setGameState] = useState<GameState | null>(() =>
     getInitialState(location.state),
   );
-  const [connectionStatus, setConnectionStatus] = useState("CONNECTING");
   const [socket, setSocket] = useState(() => getSocket());
+  const [connectionStatus, setConnectionStatus] = useState(() =>
+    getSocket() ? "CONNECTING" : "OFFLINE",
+  );
   const lastInputAt = useRef<Partial<Record<PlayerMove, number>>>({});
   const horizontalRepeat = useRef<{
     key: "ArrowLeft" | "ArrowRight";
@@ -81,7 +83,6 @@ export default function SoloGame() {
 
   useEffect(() => {
     if (!socket) {
-      setConnectionStatus("OFFLINE");
       return undefined;
     }
 

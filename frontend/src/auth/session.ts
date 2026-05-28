@@ -13,29 +13,95 @@ export type SessionData = {
 };
 
 const SESSION_EVENT = "tetra-session-change";
+const SESSION_STORAGE_KEY = "tetra-session";
 let currentSession: SessionData | null = null;
 
 const emitSessionChange = () => {
   window.dispatchEvent(new Event(SESSION_EVENT));
 };
 
-const toBase64Url = (value: unknown) =>
-  window
-    .btoa(JSON.stringify(value))
-    .replaceAll("+", "-")
-    .replaceAll("/", "_")
-    .replaceAll("=", "");
+type JwtPayload = {
+  exp?: number;
+};
 
-export const getSession = (): SessionData | null => currentSession;
+const parseJwtPayload = (token: string): JwtPayload | null => {
+  try {
+    const payload = token.split(".")[1];
+
+    if (!payload) {
+      return null;
+    }
+
+    const base64 = payload.replaceAll("-", "+").replaceAll("_", "/");
+    const padded = base64.padEnd(
+      base64.length + ((4 - (base64.length % 4)) % 4),
+      "=",
+    );
+
+    return JSON.parse(window.atob(padded)) as JwtPayload;
+  } catch {
+    return null;
+  }
+};
+
+export const isSessionExpired = (session: SessionData | null) => {
+  if (!session?.token) {
+    return false;
+  }
+
+  const payload = parseJwtPayload(session.token);
+
+  return !!payload?.exp && Date.now() >= payload.exp * 1000;
+};
+
+const readStoredSession = (): SessionData | null => {
+  try {
+    const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
+    const session = raw ? (JSON.parse(raw) as SessionData) : null;
+
+    return isSessionExpired(session) ? null : session;
+  } catch {
+    return null;
+  }
+};
+
+const persistSession = (session: SessionData | null) => {
+  if (!session || session.user.isAnonymous) {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    return;
+  }
+
+  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+};
+
+export const initializeSession = () => {
+  currentSession = readStoredSession();
+  persistSession(currentSession);
+
+  return currentSession;
+};
+
+export const getSession = (): SessionData | null => {
+  if (!currentSession) {
+    initializeSession();
+  }
+
+  if (isSessionExpired(currentSession)) {
+    clearSession();
+  }
+
+  return currentSession;
+};
 
 export const getSessionUser = (): SessionUser | null =>
-  currentSession?.user ?? null;
+  getSession()?.user ?? null;
 
 export const getSessionToken = (): string | null =>
-  currentSession?.token ?? null;
+  getSession()?.token ?? null;
 
 export const saveSession = (session: SessionData) => {
   currentSession = session;
+  persistSession(session);
 
   emitSessionChange();
 };
@@ -46,6 +112,7 @@ export const saveSessionUser = (user: SessionUser, token?: string) => {
 
 export const clearSession = () => {
   currentSession = null;
+  persistSession(null);
   emitSessionChange();
 };
 
@@ -59,21 +126,8 @@ export const createAnonymousUser = (): SessionUser => ({
 
 export const createAnonymousSession = (): SessionData => {
   const user = createAnonymousUser();
-  const now = Math.floor(Date.now() / 1000);
-  const token = [
-    toBase64Url({ alg: "none", typ: "JWT" }),
-    toBase64Url({
-      sub: user.id,
-      email: user.email,
-      username: user.username,
-      type: "anonymous",
-      iat: now,
-      exp: now + 60 * 60,
-    }),
-    "frontend-anonymous",
-  ].join(".");
 
-  return { user, token };
+  return { user };
 };
 
 export const isAuthenticated = () => getSessionUser() !== null;

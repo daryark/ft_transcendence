@@ -368,6 +368,27 @@
   background: rgba(15, 48, 22, 0.36);
 }
 
+.logoutButton {
+  display: block;
+  width: 100%;
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  color: #ffd6d6;
+  background: rgba(80, 16, 20, 0.62);
+  border: 1px solid rgba(255, 120, 120, 0.22);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+
+.logoutButton:hover {
+  background: rgba(110, 22, 27, 0.78);
+  color: #ffffff;
+}
+
 .anonymousNotice {
   margin-top: 1rem;
   padding: 1.7rem;

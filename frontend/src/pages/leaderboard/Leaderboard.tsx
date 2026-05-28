@@ -4,14 +4,11 @@ import { authFetch } from "../../auth/authFetch";
 
 import "./Leaderboard.scss";
 
+const leaderboardModes = ["fortyLines", "quick", "blitz"] as const;
+const leaderboardScopes = ["global", "country", "friends"] as const;
 
-//git stash 
-//git stash pop
-
-// api.get("/leaderboards/40-lines/global", (req, res) => {
-//   res.status(400).json({ message: "Accepted leaderboards" });
-//   // res.json({ user: req.user });
-// });
+type LeaderboardMode = (typeof leaderboardModes)[number];
+type LeaderboardScope = (typeof leaderboardScopes)[number];
 
 type Player = {
   id: number;
@@ -20,10 +17,18 @@ type Player = {
   country: string;
 };
 
-//  api?
-const fetchLeaderboard = async (mode: string, scope: string) => {
+const isLeaderboardMode = (value?: string): value is LeaderboardMode =>
+  !!value && leaderboardModes.includes(value as LeaderboardMode);
+
+const isLeaderboardScope = (value?: string): value is LeaderboardScope =>
+  !!value && leaderboardScopes.includes(value as LeaderboardScope);
+
+const fetchLeaderboard = async (
+  mode: LeaderboardMode,
+  scope: LeaderboardScope,
+) => {
   const res = await authFetch(
-    `/api/leaderboards?mode=${mode}&scope=${scope}`
+    `/api/leaderboards?mode=${encodeURIComponent(mode)}&scope=${encodeURIComponent(scope)}`,
   );
 
   if (!res.ok) {
@@ -41,8 +46,8 @@ export default function Leaderboard() {
 
   const navigate = useNavigate();
 
-  const currentMode = mode || "fortyLines";
-  const currentScope = scope || "global";
+  const currentMode = isLeaderboardMode(mode) ? mode : "fortyLines";
+  const currentScope = isLeaderboardScope(scope) ? scope : "global";
 
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(false);
@@ -58,7 +63,7 @@ export default function Leaderboard() {
         const data = await fetchLeaderboard(currentMode, currentScope);
 
         setPlayers(data);
-      } catch (err) {
+      } catch {
         setError("Error loading leaderboard");
       } finally {
         setLoading(false);
@@ -74,7 +79,7 @@ export default function Leaderboard() {
       {/* MODE */}
       <div className="leaderboard__row">
         <button
-          className={currentMode === "40-lines" ? "active" : ""}
+          className={currentMode === "fortyLines" ? "active" : ""}
           onClick={() =>
             navigate(`/channel/leaderboards/fortyLines/${currentScope}`)
           }
@@ -162,103 +167,3 @@ export default function Leaderboard() {
     </div>
   );
 }
-
-
-// test 
-// import { useParams, useNavigate } from "react-router-dom";
-// import type {Player} from "./test";
-// import {basePlayers} from "./test"
-
-// import "./Leaderboard.scss";
-
-// export default function Leaderboard() {
-//   const { mode = "40-lines", scope = "global" } = useParams();
-//   const navigate = useNavigate();
-
-//   const getPlayersByMode = () => {
-//     switch (mode) {
-//       case "blitz":
-//         return basePlayers.map((p) => ({
-//           ...p,
-//           score: p.score + 2000,
-//         }));
-//       case "quick":
-//         return basePlayers.map((p) => ({
-//           ...p,
-//           score: p.score - 1500,
-//         }));
-//       default:
-//         return basePlayers;
-//     }
-//   };
-
-//   const getPlayersByScope = (players: Player[]) => {
-//     switch (scope) {
-//       case "country":
-//         return players.filter((p) => p.country === "DE");
-//       case "friends":
-//         return players.slice(0, 5);
-//       default:
-//         return players;
-//     }
-//   };
-
-//   const players = getPlayersByScope(getPlayersByMode());
-
-//   return (
-//     <div className="leaderboard">
-
-//       {/* GAME MODE */}
-//       <div className="leaderboard__row">
-//         <button onClick={() => navigate("/channel/leaderboards/40-lines/" + scope)}>
-//           40 Lines
-//         </button>
-
-//         <button onClick={() => navigate("/channel/leaderboards/quick/" + scope)}>
-//           Quick
-//         </button>
-
-//         <button onClick={() => navigate("/channel/leaderboards/blitz/" + scope)}>
-//           Blitz
-//         </button>
-//       </div>
-
-//       {/* SCOPE */}
-//       <div className="leaderboard__row">
-//         <button onClick={() => navigate("/channel/leaderboards/" + mode + "/global")}>
-//           World
-//         </button>
-
-//         <button onClick={() => navigate("/channel/leaderboards/" + mode + "/country")}>
-//           Country
-//         </button>
-
-//         <button onClick={() => navigate("/channel/leaderboards/" + mode + "/friends")}>
-//           Friends
-//         </button>
-//       </div>
-
-//       {/* TABLE */}
-//       <table className="leaderboard__table">
-//         <thead>
-//           <tr>
-//             <th>#</th>
-//             <th>Player</th>
-//             <th>Score</th>
-//           </tr>
-//         </thead>
-
-//         <tbody>
-//           {players.map((p, index) => (
-//             <tr key={p.id}>
-//               <td>{index + 1}</td>
-//               <td>{p.name}</td>
-//               <td>{p.score}</td>
-//             </tr>
-//           ))}
-//         </tbody>
-//       </table>
-
-//     </div>
-//   );
-// }

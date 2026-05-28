@@ -1,3 +1,5 @@
+@use "sass:math";
+
 // .auth {
 //   display: flex;
 //   height: 100vh;
@@ -261,10 +263,10 @@
 
     @for $i from 1 through 20 {
       &:nth-child(#{$i}) {
-        left: random(100) * 1%;
-        animation-delay: random(5) * 1s;
-        animation-duration: 4s + random(5);
-        font-size: 1rem + random(2);
+        left: math.random(100) * 1%;
+        animation-delay: math.random(5) * 1s;
+        animation-duration: 4s + math.random(5) * 1s;
+        font-size: 1rem + math.random(2) * 1rem;
       }
     }
 

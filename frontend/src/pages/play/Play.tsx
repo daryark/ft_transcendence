@@ -3,7 +3,8 @@ import Button from "../../components/Button/Button";
 import "./Play.scss";
 import { useLocation } from "react-router-dom";
 import BackButton from "../../components/BackButton/BackButton";
-import { getStoredGameConfig } from "../../socket/gameConfigStorage";
+
+import {getStoredGameConfig} from "../../socket/gameConfigStorage"
 
 const Play = () => {
   const location = useLocation();
@@ -12,14 +13,9 @@ const Play = () => {
   const gameModes = getModesByPath(currentPath);
 
   const showBackButton = currentPath !== "/play";
-  const config = getStoredGameConfig();
 
+  let config = getStoredGameConfig();
   console.log(config);
-  // const solo = configs.solo;
-  // if (!config) {
-  //   return;
-  // }
-  // const parsed = JSON.parse(config);
 
   return (
     <>

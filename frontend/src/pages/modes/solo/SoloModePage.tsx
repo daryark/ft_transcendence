@@ -4,7 +4,7 @@ import { ModeLayout } from "../../../components/ModeLayout/ModeLayout";
 import {
   getSocket,
   subscribeToSocket,
-} from "../../../socket/SocketConfigSync";
+} from "../../../socket/socketClient";
 import { getStoredGameConfig } from "../../../socket/gameConfigStorage";
 import NotFound from "../../notFound/NotFound";
 import type { GameStartPayload } from "../../game/types";
@@ -57,6 +57,7 @@ export default function SoloModePage() {
   const config = modeId ? MODES_CONFIG[modeId] : undefined;
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [startError, setStartError] = useState("");
   const [socket, setSocket] = useState(() => getSocket());
 
   useEffect(() => {
@@ -68,8 +69,10 @@ export default function SoloModePage() {
   if (!config || !modeId) return <NotFound />;
 
   const handleStart = () => {
+    setStartError("");
+
     if (!socket) {
-      console.error("Socket is not connected yet");
+      setStartError("Socket is not connected yet.");
       return;
     }
 
@@ -80,23 +83,32 @@ export default function SoloModePage() {
       payload = buildSoloPayload(modeId);
     } catch (error) {
       setIsLoading(false);
-      console.error(error);
+      setStartError(
+        error instanceof Error ? error.message : "Game config is not loaded yet.",
+      );
       return;
     }
 
-    socket.once("game:start", (payload: GameStartPayload) => {
+    const handleGameStart = (payload: GameStartPayload) => {
+      socket.off("mode_error", handleModeError);
       window.sessionStorage.setItem(
         "tetra-active-game",
         JSON.stringify(payload),
       );
       setIsLoading(false);
       navigate(`/game/${payload.roomId}`, { state: payload });
-    });
+    };
 
-    socket.once("mode_error", (error: { reason?: string }) => {
+    const handleModeError = (error: { reason?: string }) => {
+      socket.off("game:start", handleGameStart);
       setIsLoading(false);
-      console.error("Failed to start solo mode:", error.reason);
-    });
+      setStartError(error.reason ?? "Failed to start solo mode.");
+    };
+
+    socket.off("game:start", handleGameStart);
+    socket.off("mode_error", handleModeError);
+    socket.once("game:start", handleGameStart);
+    socket.once("mode_error", handleModeError);
 
     socket.emit("mode:join", {
       mode: "solo",
@@ -113,6 +125,13 @@ export default function SoloModePage() {
       showMusic={config.showMusic}
       onStart={handleStart}
       isLoading={isLoading}
+      headerExtra={
+        startError ? (
+          <div className="mode-layout__error" role="alert">
+            {startError}
+          </div>
+        ) : null
+      }
     />
   );
 }
