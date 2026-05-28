@@ -1,8 +1,9 @@
 import { useEffect, useState, type CSSProperties } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import SocialPanels from "../SocialPanels/SocialPanels";
 
 import {
+  clearSession,
   getSessionUser,
   subscribeToSession,
   type SessionUser,
@@ -88,6 +89,7 @@ const getJoinedText = (user: SessionUser) => {
 
 const Header = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [user, setUser] = useState<SessionUser | null>(() => getSessionUser());
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const isLoggedIn = user !== null;
@@ -96,6 +98,13 @@ const Header = () => {
 
   const isActive = (path: string) => location.pathname === path;
   const pageTitle = getPageTitle(location.pathname);
+
+  const handleLogout = () => {
+    setIsProfileOpen(false);
+    setIsSocialOpen(false);
+    clearSession();
+    navigate("/auth", { replace: true });
+  };
 
   useEffect(() => {
     return subscribeToSession(() => {
@@ -270,6 +279,14 @@ const Header = () => {
                   </Link>
                 </>
               ))}
+
+            <button
+              className="logoutButton"
+              type="button"
+              onClick={handleLogout}
+            >
+              LOG OUT
+            </button>
           </section>
         </div>
       )}

@@ -14,7 +14,7 @@ import Custom from "./pages/modes/multiplayer/Custom";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import Profile from "./pages/profile/Profile";
 import SocketConfigSync from "./socket/SocketConfigSync";
-import OAuthSuccess from "./pages/auth/OAuthSuccess"
+import OAuthSuccess from "./pages/auth/OAuthSuccess";
 import SoloGame from "./pages/game/SoloGame";
 
 import "./styles/globals.scss";

@@ -235,7 +235,7 @@ const Auth = () => {
               type="password"
               placeholder="Password"
               value={password}
-              minLength={isLogin ? 1 : 3}
+              minLength={isLogin ? 1 : 8}
               maxLength={128}
               required
               autoComplete={isLogin ? "current-password" : "new-password"}

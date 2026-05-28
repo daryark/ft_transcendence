@@ -2,17 +2,25 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import GameBoard from "../../components/GameBoard/GameBoard";
 import MiniFigure from "../../components/MiniFigure/MiniFigure";
-import { getSession } from "../../auth/session";
 import {
-  connectSocket,
   getSocket,
-} from "../../socket/SocketConfigSync";
+  subscribeToSocket,
+} from "../../socket/socketClient";
 import type { GameStartPayload, GameState, PlayerMove } from "./types";
 import "./SoloGame.scss";
 
 const ACTIVE_GAME_KEY = "tetra-active-game";
-const INPUT_COOLDOWN_MS = 115;
 const TARGET_LINES = 40;
+const HORIZONTAL_REPEAT_DELAY_MS = 95;
+const HORIZONTAL_REPEAT_MS = 42;
+const INPUT_COOLDOWNS: Partial<Record<PlayerMove, number>> = {
+  down: 40,
+  rotate: 75,
+  rotateCCW: 75,
+  rotate180: 75,
+  hold: 140,
+  drop: 180,
+};
 
 function getInitialState(locationState: unknown) {
   const payload = locationState as GameStartPayload | null;
@@ -51,8 +59,16 @@ export default function SoloGame() {
   const [gameState, setGameState] = useState<GameState | null>(() =>
     getInitialState(location.state),
   );
-  const [connectionStatus, setConnectionStatus] = useState("CONNECTING");
-  const lastInputAt = useRef(0);
+  const [socket, setSocket] = useState(() => getSocket());
+  const [connectionStatus, setConnectionStatus] = useState(() =>
+    getSocket() ? "CONNECTING" : "OFFLINE",
+  );
+  const lastInputAt = useRef<Partial<Record<PlayerMove, number>>>({});
+  const horizontalRepeat = useRef<{
+    key: "ArrowLeft" | "ArrowRight";
+    timeoutId: number;
+    intervalId: number | null;
+  } | null>(null);
 
   const linesLeft = useMemo(() => {
     if (!gameState) return TARGET_LINES;
@@ -60,8 +76,15 @@ export default function SoloGame() {
   }, [gameState]);
 
   useEffect(() => {
-    const session = getSession();
-    const socket = getSocket() ?? connectSocket(session?.token);
+    return subscribeToSocket(() => {
+      setSocket(getSocket());
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!socket) {
+      return undefined;
+    }
 
     const handleConnect = () => setConnectionStatus("LIVE");
     const handleDisconnect = () => setConnectionStatus("OFFLINE");
@@ -96,12 +119,61 @@ export default function SoloGame() {
       socket.off("game:start", handleStart);
       socket.off("game:end", handleUpdate);
     };
-  }, [gameId]);
+  }, [gameId, socket]);
 
   useEffect(() => {
-    const socket = getSocket();
-
     if (!socket || !gameState || gameState.gameOver) return undefined;
+
+    const emitMove = (move: PlayerMove) => {
+      const cooldown = INPUT_COOLDOWNS[move] ?? 0;
+      const now = window.performance.now();
+      const lastAt = lastInputAt.current[move] ?? 0;
+
+      if (now - lastAt < cooldown) return;
+
+      lastInputAt.current[move] = now;
+      socket.emit("player:move", { type: move });
+    };
+
+    const stopHorizontalRepeat = () => {
+      if (!horizontalRepeat.current) return;
+
+      window.clearTimeout(horizontalRepeat.current.timeoutId);
+
+      if (horizontalRepeat.current.intervalId !== null) {
+        window.clearInterval(horizontalRepeat.current.intervalId);
+      }
+
+      horizontalRepeat.current = null;
+    };
+
+    const startHorizontalRepeat = (
+      key: "ArrowLeft" | "ArrowRight",
+      move: PlayerMove,
+    ) => {
+      if (horizontalRepeat.current?.key === key) return;
+
+      stopHorizontalRepeat();
+      emitMove(move);
+
+      const timeoutId = window.setTimeout(() => {
+        const intervalId = window.setInterval(() => {
+          emitMove(move);
+        }, HORIZONTAL_REPEAT_MS);
+
+        if (horizontalRepeat.current?.key === key) {
+          horizontalRepeat.current.intervalId = intervalId;
+        } else {
+          window.clearInterval(intervalId);
+        }
+      }, HORIZONTAL_REPEAT_DELAY_MS);
+
+      horizontalRepeat.current = {
+        key,
+        timeoutId,
+        intervalId: null,
+      };
+    };
 
     const handleKeyDown = (event: KeyboardEvent) => {
       const move = keyToMove(event);
@@ -110,19 +182,34 @@ export default function SoloGame() {
 
       event.preventDefault();
 
-      const now = window.performance.now();
-      if (now - lastInputAt.current < INPUT_COOLDOWN_MS) return;
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        startHorizontalRepeat(event.key, move);
+        return;
+      }
 
-      lastInputAt.current = now;
-      socket.emit("player:move", { type: move });
+      if (move === "drop" && event.repeat) return;
+
+      emitMove(move);
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      if (
+        horizontalRepeat.current &&
+        event.key === horizontalRepeat.current.key
+      ) {
+        stopHorizontalRepeat();
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
 
     return () => {
+      stopHorizontalRepeat();
       window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [gameState]);
+  }, [gameState, socket]);
 
   if (!gameState) {
     return (

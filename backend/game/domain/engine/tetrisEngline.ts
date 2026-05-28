@@ -19,12 +19,14 @@ export type Engine = ReturnType<typeof createEngine>;
 const TICK_MS = 100;
 const MAX_INPUTS_PER_TICK = 30;
 const ROTATION_KICKS = [0, -1, 1, -2, 2];
+const ROTATION_GRAVITY_DELAY_TICKS = 2;
 
 //!should i have separate methods to handle end of the game for each solo mode ?
 //!as i will also have different end conditions for other multiplayer and custom modes!!!!
 export default function createEngine(room: Room, roomService: RoomService) {
   const inputs: Input[] = [];
   let interval: ReturnType<typeof setInterval>;
+  let gravityDelayTicks = 0;
 
   function pushInput(input: Input) {
     if (room.status !== "playing") return;
@@ -43,6 +45,10 @@ export default function createEngine(room: Room, roomService: RoomService) {
       x: Math.floor((cols - piece.shape[0].length) / 2),
       y: -2,
     };
+  }
+
+  function resetPiece(type: Figure["type"], cols: number): Figure {
+    return createFigure(type, cols);
   }
 
   function spawnPiece(state: GameState) {
@@ -85,13 +91,19 @@ export default function createEngine(room: Room, roomService: RoomService) {
   function tryRotateCurrent(state: GameState, turns: 1 | 2 | 3) {
     const rotated = rotateMatrix(state.current.shape, turns);
 
-    return ROTATION_KICKS.some((kickX) =>
+    const rotatedSuccessfully = ROTATION_KICKS.some((kickX) =>
       trySetCurrent(state, {
         ...state.current,
         shape: rotated,
         x: state.current.x + kickX,
       }),
     );
+
+    if (rotatedSuccessfully) {
+      gravityDelayTicks = ROTATION_GRAVITY_DELAY_TICKS;
+    }
+
+    return rotatedSuccessfully;
   }
 
   function lockCurrent(state: GameState) {
@@ -139,11 +151,11 @@ export default function createEngine(room: Room, roomService: RoomService) {
     if (!room.gameConfig.controls.hold || !state.canHold) return;
 
     const held = state.hold;
-    state.hold = resetPiecePosition(state.current, state.cols);
+    state.hold = resetPiece(state.current.type, state.cols);
     state.canHold = false;
 
     if (held) {
-      state.current = resetPiecePosition(held, state.cols);
+      state.current = resetPiece(held.type, state.cols);
     } else {
       spawnPiece(state);
     }
@@ -182,6 +194,11 @@ export default function createEngine(room: Room, roomService: RoomService) {
   }
 
   function applyGravity(state: GameState) {
+    // if (gravityDelayTicks > 0) {
+    //   gravityDelayTicks -= 1;
+    //   return;
+    // }
+
     softDrop(state);
   }
 

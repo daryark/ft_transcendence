@@ -18,7 +18,7 @@ export function useConfigs() {
                 const data = await getConfigs();
 
                 setConfigs(data);
-            } catch (err) {
+            } catch {
                 setError("Failed to load configs");
             } finally {
                 setLoading(false);

@@ -1,11 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ModeLayout } from "../../../components/ModeLayout/ModeLayout";
-import { getSession } from "../../../auth/session";
 import {
-  connectSocket,
   getSocket,
-} from "../../../socket/SocketConfigSync";
+  subscribeToSocket,
+} from "../../../socket/socketClient";
 import { getStoredGameConfig } from "../../../socket/gameConfigStorage";
 import NotFound from "../../notFound/NotFound";
 import type { GameStartPayload } from "../../game/types";
@@ -23,56 +22,16 @@ type ConfigPreset = {
   };
 };
 
-const fallbackSoloPreset: Required<ConfigPreset> = {
-  roomConfig: {
-    maxPlayers: 1,
-    public: false,
-    anonymousAllowed: true,
-    unrankedAllowed: true,
-  },
-  gameConfig: {
-    mode: "solo",
-    general: {
-      bagType: "7-bag",
-      boardWidth: 10,
-      boardHeight: 20,
-    },
-    controls: {
-      hold: true,
-      nextPieces: 5,
-      showShadowPiece: true,
-    },
-    survival: {
-      mode: "none",
-      garbageMessiness: 0,
-      stickyLayer: true,
-      minimumLayerHight: 0,
-      timerInterval: 300,
-    },
-    gravity: {
-      lockDelay: 30,
-      gravity: 0.02,
-      useLeveling: false,
-      gravityIncrease: 0.0007,
-      gravitMarginTime: 10000,
-    },
-    objective: {
-      winCondition: "lines",
-      scoreToWin: 0,
-      linesToClear: 40,
-      timeLimit: 0,
-      key: "time",
-      allowRetry: false,
-      stock: 2,
-    },
-  },
-};
-
 function buildSoloPayload(modeId: string) {
   const storedConfig = getStoredGameConfig() as
     | { solo?: ConfigPreset }
     | null;
-  const preset = storedConfig?.solo ?? fallbackSoloPreset;
+
+  if (!storedConfig?.solo) {
+    throw new Error("Game config is not loaded yet");
+  }
+
+  const preset = storedConfig.solo;
 
   if (modeId !== "40lines") {
     return preset;
@@ -80,16 +39,10 @@ function buildSoloPayload(modeId: string) {
 
   return {
     ...preset,
-    roomConfig: {
-      ...fallbackSoloPreset.roomConfig,
-      ...preset.roomConfig,
-    },
     gameConfig: {
-      ...fallbackSoloPreset.gameConfig,
       ...preset.gameConfig,
       mode: "solo",
       objective: {
-        ...fallbackSoloPreset.gameConfig.objective,
         ...preset.gameConfig?.objective,
         winCondition: "lines",
         linesToClear: 40,
@@ -104,32 +57,62 @@ export default function SoloModePage() {
   const config = modeId ? MODES_CONFIG[modeId] : undefined;
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
+  const [startError, setStartError] = useState("");
+  const [socket, setSocket] = useState(() => getSocket());
+
+  useEffect(() => {
+    return subscribeToSocket(() => {
+      setSocket(getSocket());
+    });
+  }, []);
 
   if (!config || !modeId) return <NotFound />;
 
   const handleStart = () => {
-    const session = getSession();
-    const socket = getSocket() ?? connectSocket(session?.token);
+    setStartError("");
+
+    if (!socket) {
+      setStartError("Socket is not connected yet.");
+      return;
+    }
 
     setIsLoading(true);
 
-    socket.once("game:start", (payload: GameStartPayload) => {
+    let payload: ConfigPreset;
+    try {
+      payload = buildSoloPayload(modeId);
+    } catch (error) {
+      setIsLoading(false);
+      setStartError(
+        error instanceof Error ? error.message : "Game config is not loaded yet.",
+      );
+      return;
+    }
+
+    const handleGameStart = (payload: GameStartPayload) => {
+      socket.off("mode_error", handleModeError);
       window.sessionStorage.setItem(
         "tetra-active-game",
         JSON.stringify(payload),
       );
       setIsLoading(false);
       navigate(`/game/${payload.roomId}`, { state: payload });
-    });
+    };
 
-    socket.once("mode_error", (error: { reason?: string }) => {
+    const handleModeError = (error: { reason?: string }) => {
+      socket.off("game:start", handleGameStart);
       setIsLoading(false);
-      console.error("Failed to start solo mode:", error.reason);
-    });
+      setStartError(error.reason ?? "Failed to start solo mode.");
+    };
+
+    socket.off("game:start", handleGameStart);
+    socket.off("mode_error", handleModeError);
+    socket.once("game:start", handleGameStart);
+    socket.once("mode_error", handleModeError);
 
     socket.emit("mode:join", {
       mode: "solo",
-      payload: buildSoloPayload(modeId),
+      payload,
     });
   };
 
@@ -142,6 +125,13 @@ export default function SoloModePage() {
       showMusic={config.showMusic}
       onStart={handleStart}
       isLoading={isLoading}
+      headerExtra={
+        startError ? (
+          <div className="mode-layout__error" role="alert">
+            {startError}
+          </div>
+        ) : null
+      }
     />
   );
 }

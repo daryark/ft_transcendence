@@ -1,8 +1,9 @@
 // ModeLayout.scss
+@use "sass:color";
 
 .mode-layout {
   --accent: #7B2D2D; // fallback
-  --accent-hover: #{darken(#7B2D2D, 10%)};
+  --accent-hover: #{color.adjust(#7B2D2D, $lightness: -10%)};
   --bg-primary: #0a0a0f;
   --bg-secondary: #111118;
   --bg-card: #16161f;
@@ -142,6 +143,8 @@
 
 // Правая часть инфо (кнопки RESET/EXPORT)
 .mode-layout__info-right {
+  max-width: 18rem;
+
   button {
     background: transparent;
     border: 1px solid var(--border);
@@ -158,6 +161,16 @@
       color: var(--accent);
     }
   }
+}
+
+.mode-layout__error {
+  border: 1px solid #7f2a2a;
+  background: rgba(127, 42, 42, 0.18);
+  color: #ffb4b4;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.4;
+  padding: 0.75rem;
 }
 
 // Строка с музыкой и START

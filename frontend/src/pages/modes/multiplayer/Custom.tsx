@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./MultiplayerMode.scss";
 
 export default function Custom() {
   const navigate = useNavigate();
+  const [roomName, setRoomName] = useState("Manya's Room");
+  const [visibility, setVisibility] = useState("public");
 
   return (
     <section className="mp-page mp-page--quick">
@@ -15,19 +18,29 @@ export default function Custom() {
         <div className="mp-create-grid">
           <label className="mp-create-row">
             Room name
-            <input defaultValue="Manya's Room" />
+            <input
+              value={roomName}
+              onChange={(event) => setRoomName(event.target.value)}
+            />
           </label>
           <label className="mp-create-row">
             Visibility
-            <select defaultValue="public">
+            <select
+              value={visibility}
+              onChange={(event) => setVisibility(event.target.value)}
+            >
               <option value="public">Public</option>
               <option value="private">Private</option>
             </select>
           </label>
         </div>
         <div className="mp-create-actions">
-          <button type="button">CREATE</button>
-          <button type="button">BROWSE ROOMS</button>
+          <button type="button" disabled={!roomName.trim()}>
+            CREATE
+          </button>
+          <button type="button" onClick={() => navigate("/play/multiplayer/rooms")}>
+            BROWSE ROOMS
+          </button>
         </div>
       </main>
     </section>

@@ -1,34 +1,11 @@
 import { useEffect, useState } from "react";
-import { io, Socket } from "socket.io-client";
 import {
   getSession,
   subscribeToSession,
   type SessionData,
 } from "../auth/session";
 import { saveGameConfig, type GameConfig } from "./gameConfigStorage";
-
-export const SOCKET_URL =
-  import.meta.env.VITE_SOCKET_URL ?? "http://localhost:3000";
-
-let socket: Socket | null = null;
-
-export const connectSocket = (token?: string) => {
-  if (!socket) {
-    socket = io(SOCKET_URL, {
-      auth: token ? { token } : {},
-      transports: ["websocket", "polling"],
-    });
-  }
-
-  return socket;
-};
-
-export const getSocket = () => socket;
-
-export const disconnectSocket = () => {
-  socket?.disconnect();
-  socket = null;
-};
+import { connectSocket, disconnectSocket } from "./socketClient";
 
 export default function SocketConfigSync() {
   const [session, setSession] = useState<SessionData | null>(() =>
@@ -42,7 +19,8 @@ export default function SocketConfigSync() {
   }, []);
 
   useEffect(() => {
-    if (!session?.token) {
+    if (!session) {
+      disconnectSocket();
       return undefined;
     }
 
@@ -52,15 +30,13 @@ export default function SocketConfigSync() {
       saveGameConfig(config);
     });
 
-    socket.on("connect_error", (error) => {
-      console.error("Socket connection failed:", error.message);
-    });
+    socket.on("connect_error", () => undefined);
 
     return () => {
       socket.off("game:config");
       socket.off("connect_error");
     };
-  }, [session?.token]);
+  }, [session]);
 
   return null;
 }

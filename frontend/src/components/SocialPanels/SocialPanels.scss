@@ -16,10 +16,11 @@
 }
 
 .friendsPanel,
+.chatPanel,
 .notificationsPanel {
   position: fixed;
   top: 0;
-  width: 340px;
+  width: 320px;
   height: 100vh;
 
   background: #111;
@@ -38,8 +39,21 @@
 .friendsPanel {
   left: 0;
   border-right: 1px solid #2a2a2a;
+  background: #060708;
 
   transform: translateX(-100%);
+  padding: 10px 0 0;
+
+  &.open {
+    transform: translateX(0);
+  }
+}
+
+.chatPanel {
+  left: 320px;
+  border-right: 1px solid #2a2a2a;
+
+  transform: translateX(-640px);
 
   &.open {
     transform: translateX(0);
@@ -78,46 +92,54 @@
 
 .searchInput {
   width: 100%;
-  height: 42px;
+  height: 28px;
 
-  background: #1a1a1a;
-  border: 1px solid #333;
+  background: #0a0b0c;
+  border: 1px solid #2c2f34;
 
-  color: white;
+  color: #d3d6d9;
 
-  padding: 0 14px;
-  margin-bottom: 16px;
+  padding: 0 10px;
+  margin-bottom: 8px;
 
   outline: none;
+  font-size: 12px;
+  letter-spacing: 0;
 }
 
 .filterButtons {
   display: flex;
-  gap: 10px;
-
-  margin-bottom: 20px;
+  gap: 0;
+  margin-bottom: 0;
 
   button {
     flex: 1;
-    height: 40px;
+    height: 30px;
 
-    border: 1px solid #333;
-    background: #1a1a1a;
-    color: white;
+    border: 0;
+    border-bottom: 1px solid #2c2f34;
+    background: transparent;
+    color: #8f949a;
 
     cursor: pointer;
 
     transition: 0.2s;
+    font-size: 22px;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    font-weight: 700;
 
     &.active {
-      background: white;
-      color: black;
+      background: transparent;
+      color: #ffffff;
+      border-bottom-color: #f4f4f4;
     }
   }
 }
 
 .friendsList,
-.notificationsList {
+.notificationsList,
+.messagesList {
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -134,42 +156,85 @@
 }
 
 .friendCard {
+  width: 100%;
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+  border-width: 0 0 1px;
+  border-color: #1e2125;
+  border-style: solid;
+  background: transparent;
+  padding: 8px 10px;
+
+  &.active,
+  &:hover {
+    border-color: #2d3137;
+    background: #090b0d;
+  }
 }
 
 .statusDot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
+  width: 22px;
+  height: 22px;
+  border-radius: 0;
+  border: 1px solid #2d3137;
+  flex: 0 0 auto;
+  position: relative;
+  background: #0b0d0f;
 
   &.online {
-    background: #00ff88;
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      background: #27dc72;
+    }
   }
 
   &.offline {
-    background: #666;
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      background: #50555b;
+    }
   }
 
   &.blocked {
-    background: #ff3b3b;
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 5px;
+      background: #dc4242;
+    }
   }
 }
 
 .friendInfo {
   display: flex;
   flex-direction: column;
+  min-width: 0;
 }
 
 .friendName {
-  color: white;
+  color: #d9dde1;
   font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 31px;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .friendStatus {
-  color: #999;
-  font-size: 12px;
+  color: #7f868e;
+  font-size: 18px;
+  font-style: italic;
+  text-transform: none;
 }
 
 .notificationTitle {
@@ -184,4 +249,238 @@
 .notificationCard p {
   color: #999;
   margin: 0;
+}
+
+.panelState {
+  border: 1px solid #2c2f34;
+  color: #727980;
+  font-size: 10px;
+  padding: 10px;
+  text-transform: uppercase;
+}
+
+.errorState {
+  color: #ff6b6b;
+}
+
+.chatHeader {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+
+  h2 {
+    color: white;
+    font-size: 22px;
+    line-height: 1;
+    margin: 0 0 6px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.backChat {
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: white;
+  cursor: pointer;
+  height: 34px;
+  padding: 0 12px;
+
+  &:hover {
+    border-color: #ffffff;
+  }
+}
+
+.chatStatus {
+  color: #999;
+  font-size: 12px;
+  text-transform: uppercase;
+
+  &.online {
+    color: #00ff88;
+  }
+
+  &.blocked {
+    color: #ff3b3b;
+  }
+}
+
+.messagesList {
+  flex: 1;
+  gap: 10px;
+  margin: 0 -4px;
+  padding: 0 4px 12px;
+}
+
+.messageBubble {
+  max-width: 82%;
+  border: 1px solid #2e2e2e;
+  background: #1a1a1a;
+  color: white;
+  padding: 10px 12px;
+
+  p {
+    margin: 0;
+    overflow-wrap: anywhere;
+  }
+
+  time {
+    display: block;
+    color: #777;
+    font-size: 11px;
+    margin-top: 6px;
+  }
+
+  &.mine {
+    align-self: flex-end;
+    border-color: #3b6b55;
+    background: #102419;
+  }
+
+  &.theirs {
+    align-self: flex-start;
+  }
+}
+
+.messageForm {
+  display: flex;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.messageInput {
+  min-width: 0;
+  flex: 1;
+  height: 42px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  color: white;
+  outline: none;
+  padding: 0 12px;
+}
+
+.messageForm button {
+  width: 74px;
+  border: 1px solid #333;
+  background: white;
+  color: black;
+  cursor: pointer;
+  font-weight: 700;
+
+  &:disabled {
+    background: #333;
+    color: #777;
+    cursor: not-allowed;
+  }
+}
+
+@media (max-width: 920px) {
+  .chatPanel {
+    left: 0;
+    width: min(320px, 100vw);
+    transform: translateX(-110%);
+
+    &.open {
+      transform: translateX(0);
+    }
+  }
+}
+
+@media (max-width: 720px) {
+  .friendsPanel,
+  .notificationsPanel {
+    width: min(320px, 100vw);
+  }
+
+  .notificationsPanel {
+    display: none;
+  }
+}
+
+.peopleHeader {
+  align-items: baseline;
+  border-bottom: 1px solid #1f2226;
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 8px;
+  padding: 0 12px 8px;
+
+  h2 {
+    color: #f2f4f6;
+    font-size: 38px;
+    margin: 0;
+    text-transform: uppercase;
+    line-height: 1;
+    letter-spacing: 0;
+  }
+}
+
+.presenceLabel {
+  align-items: center;
+  color: #8b9096;
+  display: inline-flex;
+  font-size: 9px;
+  gap: 4px;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.presenceDot {
+  background: #39e57d;
+  display: inline-block;
+  height: 8px;
+  transform: rotate(45deg);
+  width: 8px;
+}
+
+.peopleSearchWrap {
+  margin: 0 8px 8px;
+  position: relative;
+}
+
+.searchGlyph {
+  border: 1px solid #56606b;
+  border-radius: 50%;
+  box-sizing: border-box;
+  display: block;
+  height: 10px;
+  left: 8px;
+  position: absolute;
+  top: 8px;
+  width: 10px;
+
+  &::after {
+    background: #56606b;
+    content: "";
+    display: block;
+    height: 1px;
+    left: 7px;
+    position: absolute;
+    top: 8px;
+    transform: rotate(35deg);
+    width: 5px;
+  }
+}
+
+.peopleSearch {
+  margin-bottom: 0;
+  padding-left: 22px;
+
+  &::placeholder {
+    color: #5f666e;
+  }
+}
+
+.peopleTabs {
+  margin: 0 8px 8px;
+
+  button {
+    font-size: 11px;
+    height: 24px;
+  }
+}
+
+.peopleList {
+  gap: 0;
+  border-top: 1px solid #1f2226;
 }

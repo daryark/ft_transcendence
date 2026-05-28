@@ -12,10 +12,17 @@ type JwtPayload = {
 
 function parseJwt(token: string): JwtPayload | null {
   try {
-    const base64 = token.split(".")[1];
-    if (!base64) return null;
+    const payload = token.split(".")[1];
 
-    const decoded = atob(base64);
+    if (!payload) return null;
+
+    const base64 = payload.replaceAll("-", "+").replaceAll("_", "/");
+    const padded = base64.padEnd(
+      base64.length + ((4 - (base64.length % 4)) % 4),
+      "=",
+    );
+
+    const decoded = atob(padded);
     return JSON.parse(decoded);
   } catch {
     return null;
@@ -37,6 +44,8 @@ export default function OAuthSuccess() {
       navigate("/", { replace: true });
       return;
     }
+
+    window.history.replaceState(null, "", "/auth/callback");
 
     const payload = parseJwt(token);
 
