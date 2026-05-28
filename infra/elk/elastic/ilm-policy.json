@@ -1,4 +1,3 @@
-PUT _ilm/policy/nginx-logs-policy
 {
   "policy": {
     "phases": {

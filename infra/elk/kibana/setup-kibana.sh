@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -e
-
 ES_URL="http://elasticsearch:9200"
 KIBANA_URL="http://localhost:5601"
 NDJSON_FILE="/tmp/dashboard.ndjson"

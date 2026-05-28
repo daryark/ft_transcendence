@@ -1,4 +1,3 @@
-PUT _index_template/nginx-logs-template
 {
   "index_patterns": ["nginx-logs-*"],
   "template": {

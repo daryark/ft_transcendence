@@ -113,7 +113,8 @@ services:
   kibana:
     image: docker.elastic.co/kibana/kibana:7.17.27
     container_name: kibana
-    depends_on: [elasticsearch]
+    depends_on:
+      - elasticsearch
     volumes:
       - ./infra/elk/kibana/basic_dash.ndjson:/tmp/dashboard.ndjson:ro
       - ./infra/elk/kibana/setup-kibana.sh:/tmp/setup-kibana.sh:ro
