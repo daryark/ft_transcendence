@@ -26,7 +26,17 @@ const ROTATION_GRAVITY_DELAY_TICKS = 2;
 export default function createEngine(room: Room, roomService: RoomService) {
   const inputs: Input[] = [];
   let interval: ReturnType<typeof setInterval>;
-  let gravityDelayTicks = 0;
+  const gravityConfig = room.gameConfig.gravity;
+  const gameStartedAt = room.state?.startedAt ?? Date.now();
+  const gravityIncreaseInterval = gravityConfig.gravitMarginTime > 0 ? gravityConfig.gravitMarginTime : null;
+  let gravityValue = gravityConfig.gravity;
+  let gravityAccumulator = 0;
+  let nextGravityIncreaseAt = gravityIncreaseInterval ? gameStartedAt + gravityIncreaseInterval : null;
+  let lockStartedAt: number | null = null;
+
+  function resetLockDelay() {
+    lockStartedAt = Date.now();
+  }
 
   function pushInput(input: Input) {
     if (room.status !== "playing") return;
@@ -75,7 +85,13 @@ export default function createEngine(room: Room, roomService: RoomService) {
   }
 
   function tryMoveCurrent(state: GameState, dx: number, dy: number) {
-    return trySetCurrent(state, moveFigure(state.current, dx, dy));
+    const moved = trySetCurrent(state, moveFigure(state.current, dx, dy));
+
+    if (moved) {
+      resetLockDelay();
+    }
+
+    return moved;
   }
 
   function rotateMatrix(matrix: number[][], turns: 1 | 2 | 3) {
@@ -100,7 +116,7 @@ export default function createEngine(room: Room, roomService: RoomService) {
     );
 
     if (rotatedSuccessfully) {
-      gravityDelayTicks = ROTATION_GRAVITY_DELAY_TICKS;
+      resetLockDelay();
     }
 
     return rotatedSuccessfully;
@@ -127,14 +143,14 @@ export default function createEngine(room: Room, roomService: RoomService) {
     state.lines += cleared;
     state.score += scoreAdd;
     spawnPiece(state);
+    gravityAccumulator = 0;
+    lockStartedAt = null;
   }
 
   function softDrop(state: GameState) {
-    if (!tryMoveCurrent(state, 0, 1)) {
-      lockCurrent(state);
-      return true;
-    }
+    if (!tryMoveCurrent(state, 0, 1)) return false;
 
+    resetLockDelay();
     return false;
   }
 
@@ -161,6 +177,7 @@ export default function createEngine(room: Room, roomService: RoomService) {
     }
 
     state.canHold = false;
+    resetLockDelay();
     state.gameOver =
       state.gameOver || collision(state.board, { ...state.current, y: 0 });
   }
@@ -194,12 +211,44 @@ export default function createEngine(room: Room, roomService: RoomService) {
   }
 
   function applyGravity(state: GameState) {
-    // if (gravityDelayTicks > 0) {
-    //   gravityDelayTicks -= 1;
-    //   return;
-    // }
+    const now = Date.now();
 
-    softDrop(state);
+    if (gravityIncreaseInterval && gravityConfig.gravityIncrease > 0 && nextGravityIncreaseAt !== null) {
+      while (now >= nextGravityIncreaseAt) {
+        gravityValue = Math.min(1, gravityValue + gravityConfig.gravityIncrease);
+        nextGravityIncreaseAt += gravityIncreaseInterval;
+      }
+    }
+
+    gravityAccumulator += gravityValue;
+
+    while (gravityAccumulator >= 1) {
+      if (!tryMoveCurrent(state, 0, 1)) break;
+
+      gravityAccumulator -= 1;
+    }
+  }
+
+  function isTouchingGround(state: GameState) {
+    return collision(state.board, moveFigure(state.current, 0, 1));
+  }
+
+  function handleLockDelay(state: GameState) {
+    if (!isTouchingGround(state)) {
+      lockStartedAt = null;
+      return;
+    }
+
+    const now = Date.now();
+
+    if (lockStartedAt === null) {
+      lockStartedAt = now;
+      return;
+    }
+
+    if (now - lockStartedAt >= gravityConfig.lockDelay) {
+      lockCurrent(state);
+    }
   }
 
   function shouldFinishByObjective(state: GameState): boolean {
@@ -274,8 +323,8 @@ export default function createEngine(room: Room, roomService: RoomService) {
     if (!lockedByInput) {
       applyGravity(state);
     }
-    if (handleEndConditions(state)) return; //!should check end conditions before applying movements?
-    //!or after broadcasting update, so clients receive final state before end state?
+    handleLockDelay(state);
+    if (handleEndConditions(state)) return;
 
     roomService.broadcast(room.id, "game:update", state);
   }

@@ -16,6 +16,6 @@ export default function startGame(room: Room, roomService: RoomService) {
   roomService.broadcast(room.id, "game:start", {
     roomId: room.id,
     state: room.state,
-    config: room.gameConfig
+    config: room.gameConfig,
   });
 }

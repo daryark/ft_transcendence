@@ -4,7 +4,7 @@ import {
   subscribeToSession,
   type SessionData,
 } from "../auth/session";
-import { saveGameConfig, type GameConfig } from "./gameConfigStorage";
+import { saveGameConfig, type GameConfigDTO } from "./gameConfigStorage";
 import { connectSocket, disconnectSocket } from "./socketClient";
 
 export default function SocketConfigSync() {
@@ -26,7 +26,7 @@ export default function SocketConfigSync() {
 
     const socket = connectSocket(session.token);
 
-    socket.on("game:config", (config: GameConfig) => {
+    socket.on("game:config", (config: GameConfigDTO) => {
       saveGameConfig(config);
     });
 

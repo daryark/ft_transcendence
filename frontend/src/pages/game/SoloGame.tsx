@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import GameBoard from "../../components/GameBoard/GameBoard";
 import MiniFigure from "../../components/MiniFigure/MiniFigure";
 import {
@@ -21,6 +21,7 @@ const INPUT_COOLDOWNS: Partial<Record<PlayerMove, number>> = {
   hold: 140,
   drop: 180,
 };
+const ESC_HOLD_MS = 2000;
 
 function getInitialState(locationState: unknown) {
   const payload = locationState as GameStartPayload | null;
@@ -69,10 +70,20 @@ export default function SoloGame() {
     timeoutId: number;
     intervalId: number | null;
   } | null>(null);
+  const navigate = useNavigate();
+  const gameStateRef = useRef<GameState | null>(gameState);
+
+  const [escProgress, setEscProgress] = useState(0);
+  const escIntervalRef = useRef<number | null>(null);
+  const escStartRef = useRef<number | null>(null);
 
   const linesLeft = useMemo(() => {
     if (!gameState) return TARGET_LINES;
     return Math.max(0, TARGET_LINES - gameState.lines);
+  }, [gameState]);
+
+  useEffect(() => {
+    gameStateRef.current = gameState;
   }, [gameState]);
 
   useEffect(() => {
@@ -91,15 +102,39 @@ export default function SoloGame() {
     const handleUpdate = (state: GameState) => {
       setConnectionStatus("LIVE");
       setGameState(state);
-      window.sessionStorage.setItem(
-        ACTIVE_GAME_KEY,
-        JSON.stringify({ roomId: gameId, state }),
-      );
+      try {
+        const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
+        const saved = savedRaw ? JSON.parse(savedRaw) : {};
+        window.sessionStorage.setItem(
+          ACTIVE_GAME_KEY,
+          JSON.stringify({ roomId: gameId, state, from: saved?.from }),
+        );
+      } catch {
+        window.sessionStorage.setItem(
+          ACTIVE_GAME_KEY,
+          JSON.stringify({ roomId: gameId, state }),
+        );
+      }
     };
-    const handleStart = (payload: GameStartPayload) => {
+    const handleStart = (payload: GameStartPayload & { from?: string }) => {
       if (payload.roomId !== gameId) return;
       setConnectionStatus("LIVE");
       setGameState(payload.state);
+
+      try {
+        const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
+        const saved = savedRaw ? JSON.parse(savedRaw) : {};
+        const from = (payload as any).from ?? saved?.from;
+        window.sessionStorage.setItem(
+          ACTIVE_GAME_KEY,
+          JSON.stringify({ roomId: gameId, state: payload.state, from }),
+        );
+      } catch {
+        window.sessionStorage.setItem(
+          ACTIVE_GAME_KEY,
+          JSON.stringify({ roomId: gameId, state: payload.state }),
+        );
+      }
     };
 
     if (socket.connected) {
@@ -121,8 +156,78 @@ export default function SoloGame() {
     };
   }, [gameId, socket]);
 
+  // ESC hold handling
   useEffect(() => {
-    if (!socket || !gameState || gameState.gameOver) return undefined;
+    if (!socket) return undefined;
+
+    const clearEsc = () => {
+      if (escIntervalRef.current) {
+        window.clearInterval(escIntervalRef.current);
+        escIntervalRef.current = null;
+      }
+      escStartRef.current = null;
+      setEscProgress(0);
+    };
+
+    const startEsc = () => {
+      if (escStartRef.current) return;
+      escStartRef.current = window.performance.now();
+      setEscProgress(0);
+      escIntervalRef.current = window.setInterval(() => {
+        const now = window.performance.now();
+        const start = escStartRef.current ?? now;
+        const progress = Math.min(1, (now - start) / ESC_HOLD_MS);
+        setEscProgress(progress);
+        if (progress >= 1) {
+          // emit stop and navigate back
+          socket.emit("game:stop");
+          // determine return path
+          let returnTo =
+            (location.state as any)?.from ??
+            (() => {
+              try {
+                const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
+                const saved = savedRaw ? JSON.parse(savedRaw) : {};
+                return saved?.from;
+              } catch {
+                return undefined;
+              }
+            })();
+
+          if (!returnTo) returnTo = "/play/solo/40lines";
+
+          clearEsc();
+          navigate(returnTo);
+        }
+      }, 100);
+    };
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        startEsc();
+      }
+    };
+
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        clearEsc();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("keyup", onKeyUp);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("keyup", onKeyUp);
+      clearEsc();
+    };
+  }, [socket, navigate, location.state]);
+
+  useEffect(() => {
+    if (!socket) return undefined;
 
     const emitMove = (move: PlayerMove) => {
       const cooldown = INPUT_COOLDOWNS[move] ?? 0;
@@ -176,6 +281,8 @@ export default function SoloGame() {
     };
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (gameStateRef.current?.gameOver) return;
+
       const move = keyToMove(event);
 
       if (!move) return;
@@ -201,15 +308,21 @@ export default function SoloGame() {
       }
     };
 
+    const handleBlur = () => {
+      stopHorizontalRepeat();
+    };
+
     window.addEventListener("keydown", handleKeyDown);
     window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", handleBlur);
 
     return () => {
       stopHorizontalRepeat();
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", handleBlur);
     };
-  }, [gameState, socket]);
+  }, [socket]);
 
   if (!gameState) {
     return (
@@ -268,6 +381,17 @@ export default function SoloGame() {
           </div>
         </aside>
       </section>
+
+      {/* ESC hold abort UI */}
+      <div className="solo-game__abort" aria-hidden={escProgress === 0}>
+        <div
+          className="solo-game__abort__bar"
+          style={{ height: `${escProgress * 100}%` }}
+        />
+        {escProgress > 0 && (
+          <div className="solo-game__abort__text">Keep pressing ESC to exit</div>
+        )}
+      </div>
     </main>
   );
 }

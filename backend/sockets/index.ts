@@ -10,7 +10,7 @@ import disconnectHandlers from "./disconnectHandler";
 
 import modes from '../game/domain/mode';
 import { socketAuth } from "../middleware/socketAuth";
-import { configBase } from "../game/config/configBase";
+import { configDTO } from "../game/config/configDTO";
 
 import type { RoomId } from "../game/domain/room";
 import type { Identity } from "../auth/identity";
@@ -35,7 +35,7 @@ export default function socketSetup(io: Server) {
         if (socket.data.roomId) {
             socket.join(socket.data.roomId);
         }
-        socket.emit('game:config', { ...configBase(socket.data.identity.type) });
+        socket.emit('game:config', configDTO);
 
         gameHandlers(socket, { modeService, roomService });
         // chatHandlers(socket);

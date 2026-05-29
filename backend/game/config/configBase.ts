@@ -12,51 +12,32 @@ import type Config from "./config.types";
 import type { GameMode } from "./gameConfig.types";
 
 
-function deepFreeze<T>(obj: T): T {
-    Object.freeze(obj);
-
-    for (const key of Object.keys(obj as object)) {
-        const value = (obj as any)[key];
-
-        if (
-            value !== null &&
-            typeof value === "object" &&
-            !Object.isFrozen(value)
-        ) {
-            deepFreeze(value);
-        }
-    }
-
-    return obj;
-}
-
-
-const frozenConfigs = {
-    solo: deepFreeze(soloBase),
-    quickplay: deepFreeze(quickplayBase),
-    custom: deepFreeze(customMultiBase),
-    league: deepFreeze(leagueBase),
+const baseConfig = {
+    solo: soloBase,
+    quickplay: quickplayBase,
+    custom: customMultiBase,
+    league: leagueBase,
 } satisfies Record<GameMode, Config>;
 
 
-export function configBase(
-    userType: "anonymous" | "registered",
-) {
-    return {
-        solo: frozenConfigs.solo,
-        quickplay: frozenConfigs.quickplay,
-        custom: frozenConfigs.custom,
+// export function configBase(
+//     userType: "anonymous" | "registered",
+// ) {
+//     return {
+//         solo: frozenConfigs.solo,
+//         quickplay: frozenConfigs.quickplay,
+//         custom: frozenConfigs.custom,
 
-        ...(userType === "registered" && {
-            league: frozenConfigs.league,
-        }),
-    };
-}
+//         ...(userType === "registered" && {
+//             league: frozenConfigs.league,
+//         }),
+//     };
+// }
 
 
 export function createConfig(mode: GameMode): Config {
-    return structuredClone(frozenConfigs[mode]);
-} 
+    return structuredClone(baseConfig[mode]);
+}
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
     return value !== null && typeof value === "object" && !Array.isArray(value);

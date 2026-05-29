@@ -21,15 +21,9 @@ export function collision(board: number[][], f: Figure): boolean {
         const x = f.x + c;
         const y = f.y + r;
 
+        if (x < 0 || x >= board[0].length) return true;
         if (y < 0) continue;
-
-        if (
-          x < 0 ||
-          x >= board[0].length ||
-          y >= board.length ||
-          board[y]?.[x] !== 0
-        )
-          return true;
+        if (y >= board.length || board[y]?.[x] !== 0) return true;
       }
     }
   }

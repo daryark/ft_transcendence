@@ -10,44 +10,19 @@ import NotFound from "../../notFound/NotFound";
 import type { GameStartPayload } from "../../game/types";
 import { MODES_CONFIG } from "./config/modes.config";
 
-type ConfigPreset = {
-  roomConfig?: Record<string, unknown>;
-  gameConfig?: {
-    mode?: string;
-    general?: Record<string, unknown>;
-    controls?: Record<string, unknown>;
-    survival?: Record<string, unknown>;
-    gravity?: Record<string, unknown>;
-    objective?: Record<string, unknown>;
-  };
-};
-
 function buildSoloPayload(modeId: string) {
-  const storedConfig = getStoredGameConfig() as
-    | { solo?: ConfigPreset }
-    | null;
+  const storedConfig = getStoredGameConfig();
+  const presetKey = modeId === "40lines" ? "40lines" : modeId;
+  const preset = storedConfig?.solo.presets[presetKey];
 
-  if (!storedConfig?.solo) {
+  if (!preset) {
     throw new Error("Game config is not loaded yet");
   }
-
-  const preset = storedConfig.solo;
-
-  if (modeId !== "40lines") {
-    return preset;
-  }
-
   return {
-    ...preset,
     gameConfig: {
-      ...preset.gameConfig,
       mode: "solo",
-      objective: {
-        ...preset.gameConfig?.objective,
-        winCondition: "lines",
-        linesToClear: 40,
-        key: "time",
-      },
+      preset: modeId === "40lines" ? "40Lines" : modeId,
+      objective: preset.objective,
     },
   };
 }
@@ -78,25 +53,11 @@ export default function SoloModePage() {
 
     setIsLoading(true);
 
-    let payload: ConfigPreset;
-    try {
-      payload = buildSoloPayload(modeId);
-    } catch (error) {
-      setIsLoading(false);
-      setStartError(
-        error instanceof Error ? error.message : "Game config is not loaded yet.",
-      );
-      return;
-    }
-
     const handleGameStart = (payload: GameStartPayload) => {
       socket.off("mode_error", handleModeError);
-      window.sessionStorage.setItem(
-        "tetra-active-game",
-        JSON.stringify(payload),
-      );
       setIsLoading(false);
-      navigate(`/game/${payload.roomId}`, { state: payload });
+      // include return path so the game can navigate back if aborted
+      navigate(`/game/${payload.roomId}`, { state: { ...payload, from: `/play/solo/${modeId}` } });
     };
 
     const handleModeError = (error: { reason?: string }) => {
@@ -110,10 +71,33 @@ export default function SoloModePage() {
     socket.once("game:start", handleGameStart);
     socket.once("mode_error", handleModeError);
 
-    socket.emit("mode:join", {
-      mode: "solo",
-      payload,
-    });
+    try {
+      const payload = buildSoloPayload(modeId);
+
+      // persist return path in session storage so game page can navigate back if aborted
+      try {
+        window.sessionStorage.setItem(
+          "tetra-active-game",
+          JSON.stringify({ from: `/play/solo/${modeId}` }),
+        );
+      } catch {
+        // ignore
+      }
+
+      socket.emit("mode:join", {
+        mode: "solo",
+        payload,
+      });
+    } catch (error) {
+      socket.off("game:start", handleGameStart);
+      socket.off("mode_error", handleModeError);
+      setIsLoading(false);
+      setStartError(
+        error instanceof Error ? error.message : "Game config is not loaded yet.",
+      );
+      return;
+    }
+
   };
 
   return (

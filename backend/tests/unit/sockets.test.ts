@@ -3,7 +3,7 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || 'test_secret';
 import socketSetup from '../../sockets';
 
 describe('sockets/index connection', () => {
-  test('on connection emits game:config and registers handlers', () => {
+  test('on connection emits game:config DTO and registers handlers', () => {
     const listeners: Record<string, Function> = {};
     let middleware: Function | undefined;
 
@@ -48,6 +48,13 @@ describe('sockets/index connection', () => {
       (c: any[]) => c[0] === 'game:config'
     );
     expect(calledWith).toBeDefined();
+    expect(calledWith?.[1]).toEqual(
+      expect.objectContaining({
+        shared: expect.any(Object),
+        solo: expect.any(Object),
+        multiplayer: expect.any(Object),
+      })
+    );
 
     // should attach identity/session data to socket.data
     expect(socket.data.identity).toEqual(expect.objectContaining({ type: 'anonymous' }));

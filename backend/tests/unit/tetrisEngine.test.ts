@@ -52,8 +52,8 @@ describe('tetris engine solo runtime loop', () => {
 
   test('time objective emits game:end', () => {
     const config = createConfig('solo');
-    config.gameConfig.objective.winCondition = 'time';
-    config.gameConfig.objective.timeLimit = 0;
+    config.gameConfig.objective!.winCondition = 'time';
+    config.gameConfig.objective!.timeLimit = 0;
     const room = createRoom(config as Partial<Room>);
     const roomService = { broadcast: jest.fn() };
 
@@ -70,7 +70,7 @@ describe('tetris engine solo runtime loop', () => {
 
   test('zen solo restarts instead of ending on game over', () => {
     const config = createConfig('solo');
-    config.gameConfig.objective.winCondition = 'none';
+    config.gameConfig.objective!.winCondition = 'none';
     const room = createRoom(config as Partial<Room>);
     room.state!.gameOver = true;
     const firstRound = room.state!.round;

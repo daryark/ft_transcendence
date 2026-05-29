@@ -55,7 +55,7 @@ describe('Socket Game Integration Tests', () => {
             });
         });
 
-        test('should receive game config on connection', (done) => {
+        test('should receive game config dto on connection', (done) => {
             clientSocket = ioClient(TEST_URL, {
                 auth: {},
                 reconnection: false,
@@ -63,8 +63,9 @@ describe('Socket Game Integration Tests', () => {
 
             clientSocket.on('game:config', (config) => {
                 expect(config).toBeDefined();
+                expect(config.shared).toBeDefined();
                 expect(config.solo).toBeDefined();
-                expect(config.quickplay).toBeDefined();
+                expect(config.multiplayer).toBeDefined();
                 clientSocket.disconnect();
                 done();
             });

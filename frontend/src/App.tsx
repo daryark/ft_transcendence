@@ -34,7 +34,7 @@ export default function App() {
               </ProtectedRoute>
             }
           />
-          
+
           <Route
             path="play/solo/:modeId"
             element={
@@ -100,7 +100,7 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Route>
 
-         <Route path="auth/callback" element={<OAuthSuccess />} />
+        <Route path="auth/callback" element={<OAuthSuccess />} />
       </Routes>
     </BrowserRouter>
   );
