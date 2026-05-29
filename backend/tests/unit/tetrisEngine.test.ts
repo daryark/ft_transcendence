@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 import createEngine from '../../game/domain/engine/tetrisEngline';
+import { TICK_MS } from '../../game/domain/engine/tetrisEngline';
+import { createFigure, figures } from '../../game/domain/engine/figures';
 import { initGame } from '../../game/domain/engine/state';
 import { createConfig } from '../../game/config/configBase';
 import type Room from '../../game/domain/room';
@@ -31,7 +33,7 @@ describe('tetris engine solo runtime loop', () => {
     const roomService = { broadcast: jest.fn() };
 
     const engine = createEngine(room, roomService);
-    jest.advanceTimersByTime(100);
+    jest.advanceTimersByTime(TICK_MS);
     engine.stop();
 
     expect(roomService.broadcast).toHaveBeenCalledWith(room.id, 'game:update', room.state);
@@ -44,10 +46,57 @@ describe('tetris engine solo runtime loop', () => {
 
     const engine = createEngine(room, roomService);
     engine.pushInput({ type: 'left' });
-    jest.advanceTimersByTime(100);
+    jest.advanceTimersByTime(TICK_MS);
     engine.stop();
 
     expect(room.state!.current.x).toBe(startX - 1);
+  });
+
+  test('grounded piece locks after lock delay even if rotated repeatedly', () => {
+    const room = createRoom();
+    room.state!.current = createFigure('J', room.state!.cols);
+    room.state!.current.y = room.state!.rows - room.state!.current.shape.length;
+    const roomService = { broadcast: jest.fn() };
+
+    const engine = createEngine(room, roomService);
+
+    for (let elapsed = 0; elapsed < 600; elapsed += 100) {
+      engine.pushInput({ type: 'rotate' });
+      jest.advanceTimersByTime(TICK_MS);
+    }
+
+    engine.stop();
+
+    expect(room.state!.board.flat().some((cell) => cell === 1)).toBe(true);
+  });
+
+  test('unrotated grounded piece locks in half the configured delay', () => {
+    const room = createRoom();
+    room.state!.current = createFigure('O', room.state!.cols);
+    room.state!.current.y = room.state!.rows - room.state!.current.shape.length;
+    const roomService = { broadcast: jest.fn() };
+
+    const engine = createEngine(room, roomService);
+    jest.advanceTimersByTime(300);
+    engine.stop();
+
+    expect(room.state!.board.flat().some((cell) => cell === 1)).toBe(true);
+  });
+
+  test('rotation can kick a J piece away from the right wall', () => {
+    const room = createRoom();
+    room.state!.current = createFigure('J', room.state!.cols);
+    room.state!.current.shape = figures.J[3];
+    room.state!.current.x = room.state!.cols - 2;
+    room.state!.current.y = 0;
+    const roomService = { broadcast: jest.fn() };
+
+    const engine = createEngine(room, roomService);
+    engine.pushInput({ type: 'rotate' });
+    jest.advanceTimersByTime(TICK_MS);
+    engine.stop();
+
+    expect(room.state!.current.x).toBe(room.state!.cols - 3);
   });
 
   test('time objective emits game:end', () => {
@@ -58,7 +107,7 @@ describe('tetris engine solo runtime loop', () => {
     const roomService = { broadcast: jest.fn() };
 
     createEngine(room, roomService);
-    jest.advanceTimersByTime(100);
+    jest.advanceTimersByTime(TICK_MS);
 
     expect(room.status).toBe('ended');
     expect(roomService.broadcast).toHaveBeenCalledWith(room.id, 'game:end', {
@@ -77,7 +126,7 @@ describe('tetris engine solo runtime loop', () => {
     const roomService = { broadcast: jest.fn() };
 
     const engine = createEngine(room, roomService);
-    jest.advanceTimersByTime(100);
+    jest.advanceTimersByTime(TICK_MS);
     engine.stop();
 
     expect(room.status).toBe('playing');

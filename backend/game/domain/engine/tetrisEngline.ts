@@ -16,10 +16,23 @@ type InputHandler = (state: GameState) => boolean | void;
 
 export type Engine = ReturnType<typeof createEngine>;
 
-const TICK_MS = 100;
+export const TICK_MS = 1000 / 60;
 const MAX_INPUTS_PER_TICK = 30;
-const ROTATION_KICKS = [0, -1, 1, -2, 2];
-const ROTATION_GRAVITY_DELAY_TICKS = 2;
+const ROTATION_KICKS = [
+  { x: 0, y: 0 },
+  { x: 1, y: 0 },
+  { x: -1, y: 0 },
+  { x: 2, y: 0 },
+  { x: -2, y: 0 },
+  { x: 0, y: -1 },
+  { x: 1, y: -1 },
+  { x: -1, y: -1 },
+  { x: 2, y: -1 },
+  { x: -2, y: -1 },
+  { x: 0, y: -2 },
+  { x: 1, y: -2 },
+  { x: -1, y: -2 },
+];
 
 //!should i have separate methods to handle end of the game for each solo mode ?
 //!as i will also have different end conditions for other multiplayer and custom modes!!!!
@@ -29,13 +42,32 @@ export default function createEngine(room: Room, roomService: RoomService) {
   const gravityConfig = room.gameConfig.gravity;
   const gameStartedAt = room.state?.startedAt ?? Date.now();
   const gravityIncreaseInterval = gravityConfig.gravitMarginTime > 0 ? gravityConfig.gravitMarginTime : null;
+  const lockDelayTicks = gravityConfig.lockDelay;
   let gravityValue = gravityConfig.gravity;
   let gravityAccumulator = 0;
   let nextGravityIncreaseAt = gravityIncreaseInterval ? gameStartedAt + gravityIncreaseInterval : null;
-  let lockStartedAt: number | null = null;
+  let lockTimeoutId: ReturnType<typeof setTimeout> | null = null;
+  let currentPieceWasRotated = false;
 
-  function resetLockDelay() {
-    lockStartedAt = Date.now();
+  function clearLockTimeout() {
+    if (lockTimeoutId !== null) {
+      clearTimeout(lockTimeoutId);
+      lockTimeoutId = null;
+    }
+  }
+
+  function scheduleLock(state: GameState) {
+    if (lockTimeoutId !== null || !isTouchingGround(state)) return;
+
+    const lockMultiplier = currentPieceWasRotated ? 1 : 0.5;
+    const lockDelayMs = Math.max(1, Math.round(lockDelayTicks * TICK_MS * lockMultiplier));
+
+    lockTimeoutId = setTimeout(() => {
+      lockTimeoutId = null;
+
+      if (room.status !== "playing" || room.state !== state) return;
+      lockCurrent(state);
+    }, lockDelayMs);
   }
 
   function pushInput(input: Input) {
@@ -74,6 +106,8 @@ export default function createEngine(room: Room, roomService: RoomService) {
 
     state.current = current;
     state.canHold = true;
+    currentPieceWasRotated = false;
+    clearLockTimeout();
     state.gameOver = collision(state.board, { ...current, y: 0 });
   }
 
@@ -85,13 +119,7 @@ export default function createEngine(room: Room, roomService: RoomService) {
   }
 
   function tryMoveCurrent(state: GameState, dx: number, dy: number) {
-    const moved = trySetCurrent(state, moveFigure(state.current, dx, dy));
-
-    if (moved) {
-      resetLockDelay();
-    }
-
-    return moved;
+    return trySetCurrent(state, moveFigure(state.current, dx, dy));
   }
 
   function rotateMatrix(matrix: number[][], turns: 1 | 2 | 3) {
@@ -107,23 +135,28 @@ export default function createEngine(room: Room, roomService: RoomService) {
   function tryRotateCurrent(state: GameState, turns: 1 | 2 | 3) {
     const rotated = rotateMatrix(state.current.shape, turns);
 
-    const rotatedSuccessfully = ROTATION_KICKS.some((kickX) =>
+    const rotatedSuccessfully = ROTATION_KICKS.some((kick) =>
       trySetCurrent(state, {
         ...state.current,
         shape: rotated,
-        x: state.current.x + kickX,
+        x: state.current.x + kick.x,
+        y: state.current.y + kick.y,
       }),
     );
 
     if (rotatedSuccessfully) {
-      resetLockDelay();
+      currentPieceWasRotated = true;
     }
 
     return rotatedSuccessfully;
   }
 
   function lockCurrent(state: GameState) {
-    const current = state.current;
+    let current = state.current;
+
+    while (!collision(state.board, moveFigure(current, 0, 1))) {
+      current = moveFigure(current, 0, 1);
+    }
 
     current.shape.forEach((row, dy) => {
       row.forEach((cell, dx) => {
@@ -144,17 +177,17 @@ export default function createEngine(room: Room, roomService: RoomService) {
     state.score += scoreAdd;
     spawnPiece(state);
     gravityAccumulator = 0;
-    lockStartedAt = null;
+    clearLockTimeout();
+    currentPieceWasRotated = false;
   }
 
   function softDrop(state: GameState) {
-    if (!tryMoveCurrent(state, 0, 1)) return false;
-
-    resetLockDelay();
-    return false;
+    return tryMoveCurrent(state, 0, 1);
   }
 
   function hardDrop(state: GameState) {
+    clearLockTimeout();
+
     while (tryMoveCurrent(state, 0, 1)) {
       state.score += 2;
     }
@@ -177,7 +210,8 @@ export default function createEngine(room: Room, roomService: RoomService) {
     }
 
     state.canHold = false;
-    resetLockDelay();
+    clearLockTimeout();
+    currentPieceWasRotated = false;
     state.gameOver =
       state.gameOver || collision(state.board, { ...state.current, y: 0 });
   }
@@ -234,21 +268,9 @@ export default function createEngine(room: Room, roomService: RoomService) {
   }
 
   function handleLockDelay(state: GameState) {
-    if (!isTouchingGround(state)) {
-      lockStartedAt = null;
-      return;
-    }
+    if (!isTouchingGround(state)) return;
 
-    const now = Date.now();
-
-    if (lockStartedAt === null) {
-      lockStartedAt = now;
-      return;
-    }
-
-    if (now - lockStartedAt >= gravityConfig.lockDelay) {
-      lockCurrent(state);
-    }
+    scheduleLock(state);
   }
 
   function shouldFinishByObjective(state: GameState): boolean {

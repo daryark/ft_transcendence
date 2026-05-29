@@ -294,6 +294,14 @@ export default function SoloGame() {
         return;
       }
 
+      if (
+        move === "rotate" ||
+        move === "rotateCCW" ||
+        move === "rotate180"
+      ) {
+        if (event.repeat) return;
+      }
+
       if (move === "drop" && event.repeat) return;
 
       emitMove(move);

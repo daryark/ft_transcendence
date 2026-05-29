@@ -65,7 +65,7 @@ interface GameControlsConfig {
 }
 
 interface GameGravityConfig {
-    lockDelay: number; // in ms
+    lockDelay: number; // in ticks at 60 fps
     gravity: number; // how fast pieces fall (0-1, where 1 is instant)
     useLeveling?: boolean; //overrides gravity
     gravityIncrease: number; // how much gravity increases per second/ per level (if useLeveling = true)
