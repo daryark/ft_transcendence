@@ -17,7 +17,7 @@ curl -sf -X PUT "$ES_URL/_ilm/policy/nginx-logs-policy" \
 echo "Applying index template..."
 curl -sf -X PUT "$ES_URL/_index_template/nginx-logs-template" \
 	-H "Content-Type: application/json" \
-	-d @/tmp/elastic/ilm-template.json
+	-d @/tmp/elastic/index-template.json
 
 echo "Elasticsearch setup is done."
 
