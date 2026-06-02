@@ -27,7 +27,13 @@ export async function githubCallback(req: Request, res: Response) {
     const providerId = String(profile.id || profile.node_id || profile.login);
     const username = profile.login || undefined;
 
-    const { user, token } = await findOrCreateOAuthUser("github", providerId, email, username);
+    const { user, token } = await findOrCreateOAuthUser({
+      provider: "github",
+      providerId,
+      email,
+      username,
+      request: req,
+    });
 
     const frontend = process.env.FRONTEND_URL || process.env.FRONTEND_CALLBACK_URL || "http://localhost:5173";
 
