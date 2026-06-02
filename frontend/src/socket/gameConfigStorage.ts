@@ -1,3 +1,9 @@
+import type { ObjectiveConfig } from "../../shared/types/config.types";
+
+export type SoloPresetKey = "40lines" | "zen" | "blitz";
+
+export type SoloBackendPreset = "40Lines" | "zen" | "blitz";
+
 export type GameConfigDTO = {
   shared: {
     gameConfig: {
@@ -14,11 +20,11 @@ export type GameConfigDTO = {
   };
   solo: {
     presets: Record<
-      string,
+      SoloPresetKey,
       {
         label: string;
         description: string;
-        objective: Record<string, unknown>;
+        objective: Partial<ObjectiveConfig>;
       }
     >;
     roomRules: {

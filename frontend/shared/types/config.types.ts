@@ -2,6 +2,8 @@
 
 export type Mode = "solo" | "quickplay" | "custom" | "league";
 
+export type SoloPresetName = "zen" | "40Lines" | "blitz";
+
 export interface RoomConfig {
   maxPlayers: number | null;
   public: boolean;
@@ -70,6 +72,7 @@ export interface ObjectiveConfig {
 
 export interface SoloGameConfig {
   mode: "solo";
+  preset?: SoloPresetName;
   general: GeneralConfig;
   controls: ControlsConfig;
   survival: SurvivalConfig;

@@ -4,6 +4,15 @@
   color: var(--app-text);
 }
 
+.solo-game--results {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  background:
+    linear-gradient(90deg, rgba(6, 8, 12, 0.86), rgba(6, 8, 12, 0.45), rgba(6, 8, 12, 0.86)),
+    radial-gradient(circle at 50% 20%, rgba(226, 169, 112, 0.16), transparent 34%);
+}
+
 .solo-game--empty {
   display: grid;
   place-content: center;
@@ -16,15 +25,16 @@
   font-weight: 900;
 }
 
-.solo-game__hud {
+.solo-game__status {
   width: min(var(--app-page-max), 100%);
   margin: 0 auto 1rem;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(7rem, 10rem));
+  justify-content: end;
   gap: 0.75rem;
 }
 
-.solo-game__hud > div,
+.solo-game__status > div,
 .solo-game__panel {
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-lg);
@@ -32,7 +42,7 @@
   box-shadow: var(--app-shadow-step);
 }
 
-.solo-game__hud > div {
+.solo-game__status > div {
   min-height: 4.5rem;
   padding: 0.85rem;
 }
@@ -46,7 +56,7 @@
   text-transform: uppercase;
 }
 
-.solo-game__hud strong {
+.solo-game__status strong {
   color: var(--app-text);
   font-family: var(--app-font-display);
   font-size: 1.5rem;
@@ -54,8 +64,12 @@
 }
 
 .solo-game__stage {
+  position: relative;
   display: grid;
-  grid-template-columns: 9rem auto 9rem;
+  grid-template-columns: minmax(10.75rem, 12rem) auto 9rem;
+  grid-template-areas:
+    "hold board next"
+    "stats board next";
   justify-content: center;
   align-items: start;
   gap: 1rem;
@@ -65,6 +79,18 @@
   display: grid;
   gap: 0.75rem;
   padding: 0.85rem;
+}
+
+.solo-game__panel--hold {
+  grid-area: hold;
+}
+
+.solo-game__panel--next {
+  grid-area: next;
+}
+
+.solo-game__stage .game-board {
+  grid-area: board;
 }
 
 .solo-game__panel h2 {
@@ -92,6 +118,226 @@
 .solo-game__empty {
   color: var(--app-muted);
   font-weight: 900;
+}
+
+.solo-game__live-stats {
+  grid-area: stats;
+  align-self: end;
+  display: grid;
+  width: 100%;
+  gap: 0.7rem;
+  justify-items: end;
+  padding: 0.25rem 0.2rem 0.4rem 0;
+  color: var(--app-text);
+  text-align: right;
+  text-shadow: 0 0 0.75rem rgba(0, 0, 0, 0.7);
+}
+
+.solo-game__live-stats > div {
+  display: grid;
+  gap: 0.08rem;
+}
+
+.solo-game__live-stats span,
+.solo-game__live-stats small {
+  color: rgba(255, 255, 255, 0.86);
+  font-family: var(--app-font-display);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.solo-game__live-stats strong {
+  color: #ffffff;
+  font-family: var(--app-font-display);
+  font-size: clamp(1.25rem, 1.9vw, 1.85rem);
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.solo-game__countdown {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 60;
+  width: min(44rem, calc(100vw - 2rem));
+  min-height: 4.5rem;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  padding: 0.65rem 1.5rem;
+  border-block: 1px solid rgba(255, 229, 96, 0.78);
+  background: linear-gradient(
+    90deg,
+    rgba(137, 108, 0, 0),
+    rgba(137, 108, 0, 0.44) 14%,
+    rgba(28, 22, 0, 0.62) 50%,
+    rgba(137, 108, 0, 0.44) 86%,
+    rgba(137, 108, 0, 0)
+  );
+  color: #ffe86a;
+  font-family: var(--app-font-display);
+  font-size: clamp(1.45rem, 3.2vw, 2.65rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  text-align: center;
+  text-shadow: 0 0 1rem rgba(255, 232, 106, 0.76);
+  pointer-events: none;
+}
+
+.solo-game__countdown--number {
+  width: 8rem;
+  min-height: 8rem;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(25, 20, 0, 0.42);
+  color: #f7c600;
+  font-size: clamp(4rem, 9vw, 6.5rem);
+}
+
+.solo-game-results__top,
+.solo-game-results__card,
+.solo-game-results__actions {
+  width: min(var(--app-page-max), 100%);
+  margin: 0 auto;
+}
+
+.solo-game-results__top {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.solo-game-results__top h1 {
+  margin: 0;
+  color: #f0b98c;
+  font-family: var(--app-font-display);
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.solo-game-results__status {
+  display: grid;
+  min-width: 8rem;
+  min-height: 3rem;
+  justify-items: end;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid rgba(238, 180, 126, 0.26);
+  background: rgba(30, 20, 15, 0.62);
+}
+
+.solo-game-results__status span {
+  color: rgba(255, 209, 173, 0.62);
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.solo-game-results__status strong {
+  color: #ffd1ad;
+  font-family: var(--app-font-display);
+  font-size: 1.25rem;
+}
+
+.solo-game-results__back,
+.solo-game-results__again {
+  display: inline-grid;
+  min-height: 3rem;
+  place-items: center;
+  border: 1px solid rgba(238, 180, 126, 0.42);
+  background: rgba(75, 47, 31, 0.88);
+  color: #ffd1ad;
+  font-family: var(--app-font-display);
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.solo-game-results__back {
+  padding: 0 1.25rem;
+}
+
+.solo-game-results__card {
+  display: grid;
+  gap: 1rem;
+  padding: clamp(1rem, 3vw, 1.8rem);
+  border: 1px solid rgba(238, 180, 126, 0.46);
+  background: rgba(70, 45, 32, 0.9);
+  box-shadow: var(--app-shadow-step);
+}
+
+.solo-game-results__eyebrow {
+  color: #f4c09a;
+  font-family: var(--app-font-display);
+  font-size: clamp(1.2rem, 3vw, 2rem);
+  font-weight: 900;
+}
+
+.solo-game-results__time {
+  display: grid;
+  min-height: clamp(7rem, 18vw, 11rem);
+  place-items: center;
+  border-radius: var(--app-radius-md);
+  background: rgba(35, 21, 15, 0.44);
+  color: #ffc096;
+  font-family: var(--app-font-display);
+  font-size: clamp(4rem, 13vw, 8rem);
+  font-weight: 900;
+  text-shadow: 0 0 1rem rgba(255, 192, 150, 0.36);
+}
+
+.solo-game-results__banner {
+  min-height: 5rem;
+  display: grid;
+  place-items: center;
+  background: rgba(206, 166, 111, 0.86);
+  color: #fff8e9;
+  font-family: var(--app-font-display);
+  font-size: clamp(2rem, 5vw, 4rem);
+  font-weight: 900;
+  text-align: center;
+  text-shadow: 0 0 1.1rem rgba(255, 255, 255, 0.52);
+}
+
+.solo-game-results__stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  background: rgba(238, 180, 126, 0.18);
+}
+
+.solo-game-results__stats > div {
+  display: grid;
+  min-height: 6rem;
+  place-items: center;
+  background: rgba(40, 24, 16, 0.42);
+}
+
+.solo-game-results__stats span {
+  color: rgba(255, 209, 173, 0.68);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.solo-game-results__stats strong {
+  color: #ffd1ad;
+  font-family: var(--app-font-display);
+  font-size: clamp(2rem, 4vw, 3.4rem);
+}
+
+.solo-game-results__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.solo-game-results__again {
+  min-width: min(18rem, 100%);
+  padding: 0 2rem;
+  background: rgba(151, 103, 67, 0.94);
+  color: #fff1df;
+  font-size: clamp(1.8rem, 5vw, 3rem);
 }
 
 .solo-game__abort {
@@ -126,12 +372,18 @@
 }
 
 @media (max-width: 860px) {
-  .solo-game__hud {
+  .solo-game__status {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
   }
 
   .solo-game__stage {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "hold"
+      "board"
+      "stats"
+      "next";
     justify-items: center;
   }
 
@@ -141,5 +393,28 @@
 
   .solo-game__next {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .solo-game__live-stats {
+    width: min(100%, 22rem);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    justify-items: center;
+    text-align: center;
+  }
+
+  .solo-game-results__stats {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .solo-game-results__actions {
+    justify-content: stretch;
+  }
+
+  .solo-game-results__top {
+    grid-template-columns: 1fr;
+  }
+
+  .solo-game-results__status {
+    justify-items: start;
   }
 }
