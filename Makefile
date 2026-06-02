@@ -37,6 +37,13 @@ check:
 	echo "Checking database..."
 	curl http://localhost:5432/
 
+ilm-check:
+	curl -X PUT "http://localhost:9200/_ilm/policy/test-delete-policy" -H "Content-Type: application/json" -d '{"policy": {"phases": {"hot": { "min_age": "0ms", "actions": {} }, "delete": { "min_age": "1m", "actions": { "delete": {} }}}}}'
+	curl -X PUT "http://localhost:9200/test-logs-001" -H "Content-Type: application/json" -d '{"settings": {"index.lifecycle.name": "test-delete-policy"}}'
+	curl -s "http://localhost:9200/_cat/indices/test-logs-*?v"
+	curl -s "http://localhost:9200/test-logs-001/_ilm/explain?pretty"
+	echo "Now wait for 10 mins and check again..."
+
 cert:
 	curl -s https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep browser_download_url  | grep linux-amd64 | cut -d '"' -f 4 | wget -qi -
 	mv mkcert-v*-linux-amd64 mkcert
