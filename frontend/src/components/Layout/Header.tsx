@@ -1,5 +1,6 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import ProfileHeader, { getAvatarStyle } from "../ProfileHeader/ProfileHeader";
 import SocialPanels from "../SocialPanels/SocialPanels";
 
 import {
@@ -24,38 +25,6 @@ const titles: Record<string, string> = {
   auth: "AUTH",
 };
 
-const avatarColors = [
-  "#d6cc1e",
-  "#8ed053",
-  "#6ec6ff",
-  "#ff7f50",
-  "#c986ff",
-  "#ffcc66",
-  "#6ee7b7",
-  "#ef6f8f",
-  "#a7f3d0",
-  "#f97316",
-  "#93c5fd",
-  "#f0abfc",
-  "#fde047",
-  "#34d399",
-  "#fb7185",
-  "#60a5fa",
-  "#c4b5fd",
-  "#facc15",
-  "#5eead4",
-  "#e879f9",
-];
-
-const getAvatarStyle = (avatarId?: number) => {
-  const index =
-    avatarId && avatarId >= 1 && avatarId <= avatarColors.length
-      ? avatarId - 1
-      : 0;
-
-  return { "--avatar-color": avatarColors[index] } as CSSProperties;
-};
-
 const getPageTitle = (pathname: string) => {
   const parts = pathname.split("/").filter(Boolean);
 
@@ -66,25 +35,6 @@ const getPageTitle = (pathname: string) => {
   const lastPart = parts[parts.length - 1];
 
   return titles[lastPart] || lastPart.replaceAll("-", " ").toUpperCase();
-};
-
-const getJoinedText = (user: SessionUser) => {
-  if (!user.created_at) {
-    return "JOINED TODAY";
-  }
-
-  const createdAt = new Date(user.created_at).getTime();
-
-  if (Number.isNaN(createdAt)) {
-    return "JOINED TODAY";
-  }
-
-  const days = Math.max(
-    0,
-    Math.floor((Date.now() - createdAt) / (1000 * 60 * 60 * 24)),
-  );
-
-  return days === 0 ? "JOINED TODAY" : `JOINED ${days} DAYS AGO`;
 };
 
 const Header = () => {
@@ -215,79 +165,12 @@ const Header = () => {
           role="presentation"
           onMouseDown={() => setIsProfileOpen(false)}
         >
-          <section
-            className={`profileModal ${
-              user.isAnonymous ? "anonymousProfile" : ""
-            }`}
-            aria-label="Profile"
-            onMouseDown={(event) => event.stopPropagation()}
-          >
-            <button
-              className="closeProfile"
-              type="button"
-              onClick={() => setIsProfileOpen(false)}
-            >
-              CLOSE
-            </button>
-
-            <div className="profileHeader">
-              <div
-                className="profileAvatar"
-                style={getAvatarStyle(user.avatarId)}
-              >
-                {user.isAnonymous ? "?" : ""}
-              </div>
-              <div>
-                <h2>{user.username}</h2>
-                {!user.isAnonymous && <p>{getJoinedText(user)} - HEARTS 0</p>}
-              </div>
-            </div>
-
-            {isLoggedIn &&
-              (user.isAnonymous ? (
-                <div className="anonymousNotice">
-                  THIS USER IS PLAYING ANONYMOUSLY
-                </div>
-              ) : (
-                <>
-                  <div className="profileLevel">
-                    <span className="levelBadge">0</span>
-                  </div>
-                  <div className="profileStats">
-                    <article>
-                      <span>TETRA LEAGUE</span>
-                      <strong>0 TR</strong>
-                      <small>0 APM 0 PPS 0 VS</small>
-                    </article>
-                    <article>
-                      <span>40 LINES</span>
-                      <strong>0:00.000</strong>
-                      <small>NO RECORD</small>
-                    </article>
-                    <article>
-                      <span>QUICK PLAY</span>
-                      <strong>0 M</strong>
-                      <small>NO RECORD</small>
-                    </article>
-                  </div>
-                  <Link
-                    className="fullProfile"
-                    to={`/profile/${encodeURIComponent(user.username)}`}
-                    onClick={() => setIsProfileOpen(false)}
-                  >
-                    VIEW FULL PROFILE
-                  </Link>
-                </>
-              ))}
-
-            <button
-              className="logoutButton"
-              type="button"
-              onClick={handleLogout}
-            >
-              LOG OUT
-            </button>
-          </section>
+          <ProfileHeader
+            user={user}
+            isOwnProfile
+            onClose={() => setIsProfileOpen(false)}
+            onLogout={handleLogout}
+          />
         </div>
       )}
     </>

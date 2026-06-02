@@ -3,5 +3,5 @@
 }
 
 .main {
+  min-height: calc(100vh - var(--app-header-height));
 }
-

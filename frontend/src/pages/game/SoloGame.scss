@@ -1,100 +1,131 @@
 .solo-game {
-  min-height: 100vh;
-  padding: 32px;
-  color: #f7fbff;
-  background:
-    linear-gradient(180deg, rgba(9, 11, 18, 0.92), rgba(7, 8, 12, 0.98)),
-    #08090f;
+  min-height: calc(100vh - var(--app-header-height));
+  padding: clamp(1rem, 3vw, 2rem);
+  color: var(--app-text);
 }
 
 .solo-game--empty {
   display: grid;
   place-content: center;
-  gap: 16px;
+  gap: 1rem;
   text-align: center;
 }
 
 .solo-game__link {
-  color: #7ddcff;
-  text-decoration: none;
+  color: var(--app-accent);
+  font-weight: 900;
 }
 
 .solo-game__hud {
+  width: min(var(--app-page-max), 100%);
+  margin: 0 auto 1rem;
   display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr));
-  gap: 12px;
-  max-width: 920px;
-  margin: 0 auto 24px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
 }
 
-.solo-game__hud>div,
+.solo-game__hud > div,
 .solo-game__panel {
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  background: rgba(12, 17, 24, 0.82);
+  box-shadow: var(--app-shadow-step);
 }
 
-.solo-game__hud>div {
-  min-height: 72px;
-  padding: 12px 14px;
+.solo-game__hud > div {
+  min-height: 4.5rem;
+  padding: 0.85rem;
 }
 
 .solo-game__label {
   display: block;
-  margin-bottom: 6px;
-  color: rgba(247, 251, 255, 0.58);
-  font-size: 0.72rem;
-  letter-spacing: 0;
+  margin-bottom: 0.25rem;
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .solo-game__hud strong {
-  font-size: 1.35rem;
+  color: var(--app-text);
+  font-family: var(--app-font-display);
+  font-size: 1.5rem;
+  font-weight: 900;
 }
 
 .solo-game__stage {
   display: grid;
-  grid-template-columns: 128px auto 128px;
+  grid-template-columns: 9rem auto 9rem;
   justify-content: center;
   align-items: start;
-  gap: 18px;
+  gap: 1rem;
 }
 
 .solo-game__panel {
   display: grid;
-  gap: 12px;
-  width: 128px;
-  padding: 12px;
+  gap: 0.75rem;
+  padding: 0.85rem;
 }
 
 .solo-game__panel h2 {
   margin: 0;
-  color: rgba(247, 251, 255, 0.72);
-  font-size: 0.82rem;
-  font-weight: 700;
+  color: var(--app-muted);
+  font-family: var(--app-font-display);
+  font-size: 1rem;
+  font-weight: 900;
 }
 
 .solo-game__preview {
   display: grid;
-  width: 100%;
-  min-height: 92px;
+  min-height: 6rem;
   place-items: center;
-  background: rgba(0, 0, 0, 0.24);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .solo-game__next {
   display: grid;
-  gap: 8px;
+  gap: 0.55rem;
 }
 
 .solo-game__empty {
-  color: rgba(247, 251, 255, 0.32);
-  font-size: 0.76rem;
+  color: var(--app-muted);
+  font-weight: 900;
 }
 
-@media (max-width: 760px) {
-  .solo-game {
-    padding: 18px 12px;
-  }
+.solo-game__abort {
+  position: fixed;
+  left: 0;
+  bottom: 0;
+  z-index: 80;
+  width: 100%;
+  height: 10rem;
+  pointer-events: none;
+  display: grid;
+  place-items: center;
+}
 
+.solo-game__abort__bar {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  background: linear-gradient(180deg, rgba(255, 101, 117, 0.82), rgba(170, 28, 42, 0.95));
+  transition: height 0.16s linear;
+}
+
+.solo-game__abort__text {
+  position: relative;
+  z-index: 1;
+  color: var(--app-text);
+  font-family: var(--app-font-display);
+  font-size: clamp(1.5rem, 5vw, 3rem);
+  font-weight: 900;
+  text-align: center;
+}
+
+@media (max-width: 860px) {
   .solo-game__hud {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -105,53 +136,10 @@
   }
 
   .solo-game__panel {
-    width: min(100%, 300px);
+    width: min(100%, 22rem);
   }
 
   .solo-game__next {
-    grid-template-columns: repeat(5, minmax(48px, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
-
-  .solo-game__preview {
-    min-height: 72px;
-  }
-}
-
-.solo-game__abort {
-  position: fixed;
-  left: 0;
-  bottom: 0;
-  width: 100%;
-  height: 160px;
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 60;
-}
-
-.solo-game__abort__bar {
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 100%;
-  background: linear-gradient(180deg, rgba(200, 10, 10, 0.9), rgba(160, 10, 10, 0.95));
-  transition: height 0.16s linear;
-  z-index: 62;
-}
-
-.solo-game__abort__text {
-  position: absolute;
-  inset: 0;
-  z-index: 64;
-  color: #fff;
-  font-weight: 700;
-  font-family: 'Inter', 'Segoe UI', monospace;
-  font-size: 2rem;
-  line-height: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  pointer-events: none;
 }

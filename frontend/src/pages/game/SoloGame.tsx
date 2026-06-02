@@ -23,6 +23,18 @@ const INPUT_COOLDOWNS: Partial<Record<PlayerMove, number>> = {
 };
 const ESC_HOLD_MS = 2000;
 
+type ActiveGamePayload = GameStartPayload & {
+  from?: string;
+};
+
+const toActiveGamePayload = (value: unknown): Partial<ActiveGamePayload> => {
+  if (!value || typeof value !== "object") {
+    return {};
+  }
+
+  return value as Partial<ActiveGamePayload>;
+};
+
 function getInitialState(locationState: unknown) {
   const payload = locationState as GameStartPayload | null;
 
@@ -32,7 +44,7 @@ function getInitialState(locationState: unknown) {
 
   try {
     const saved = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
-    const parsed = saved ? (JSON.parse(saved) as GameStartPayload) : null;
+    const parsed = saved ? toActiveGamePayload(JSON.parse(saved)) : null;
 
     return parsed?.state ?? null;
   } catch {
@@ -104,7 +116,9 @@ export default function SoloGame() {
       setGameState(state);
       try {
         const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
-        const saved = savedRaw ? JSON.parse(savedRaw) : {};
+        const saved = toActiveGamePayload(
+          savedRaw ? JSON.parse(savedRaw) : null,
+        );
         window.sessionStorage.setItem(
           ACTIVE_GAME_KEY,
           JSON.stringify({ roomId: gameId, state, from: saved?.from }),
@@ -116,15 +130,17 @@ export default function SoloGame() {
         );
       }
     };
-    const handleStart = (payload: GameStartPayload & { from?: string }) => {
+    const handleStart = (payload: ActiveGamePayload) => {
       if (payload.roomId !== gameId) return;
       setConnectionStatus("LIVE");
       setGameState(payload.state);
 
       try {
         const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
-        const saved = savedRaw ? JSON.parse(savedRaw) : {};
-        const from = (payload as any).from ?? saved?.from;
+        const saved = toActiveGamePayload(
+          savedRaw ? JSON.parse(savedRaw) : null,
+        );
+        const from = payload.from ?? saved.from;
         window.sessionStorage.setItem(
           ACTIVE_GAME_KEY,
           JSON.stringify({ roomId: gameId, state: payload.state, from }),
@@ -183,12 +199,14 @@ export default function SoloGame() {
           socket.emit("game:stop");
           // determine return path
           let returnTo =
-            (location.state as any)?.from ??
+            toActiveGamePayload(location.state).from ??
             (() => {
               try {
                 const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
-                const saved = savedRaw ? JSON.parse(savedRaw) : {};
-                return saved?.from;
+                const saved = toActiveGamePayload(
+                  savedRaw ? JSON.parse(savedRaw) : null,
+                );
+                return saved.from;
               } catch {
                 return undefined;
               }

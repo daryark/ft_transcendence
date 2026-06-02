@@ -1,347 +1,231 @@
 .profile-page {
-  min-height: calc(100vh - 5.4rem);
-  padding: 1.8rem 1rem 4rem;
-  color: #9edb94;
-  background:
-    linear-gradient(180deg, rgba(10, 31, 13, 0.98), rgba(4, 15, 7, 0.98)),
-    #071407;
-  font-family: "Arial Narrow", "Segoe UI", Arial, sans-serif;
-  letter-spacing: 0.04em;
+  min-height: calc(100vh - var(--app-header-height));
+  padding: clamp(1rem, 3vw, 2rem) 0;
 }
 
 .profile-page--state {
+  width: min(var(--app-page-max), calc(100vw - 2rem));
+  margin: 0 auto;
   display: grid;
   place-items: center;
-  color: #caffcf;
-  font-size: clamp(1.4rem, 4vw, 2.4rem);
+  color: var(--app-muted);
   font-weight: 900;
-  text-transform: uppercase;
-}
-
-.profile-page__emptyState {
-  width: min(720px, calc(100vw - 2rem));
-  padding: 1.4rem;
-  background: rgba(18, 45, 19, 0.94);
-  border-left: 3px solid #9d64c8;
-  box-shadow: 0 0.25rem 0 rgba(0, 0, 0, 0.32);
-}
-
-.profile-page__emptyState h1 {
-  margin: 0;
-  color: #dcffd9;
-  font-size: clamp(1.8rem, 5vw, 3rem);
-}
-
-.profile-page__emptyState p {
-  margin: 0.8rem 0 0;
-  color: #79b975;
-  font-size: clamp(0.95rem, 2vw, 1.2rem);
-  line-height: 1.35;
-  text-transform: none;
 }
 
 .profile-page__wrap {
-  width: min(1560px, 100%);
+  width: min(var(--app-page-max), calc(100vw - 2rem));
   margin: 0 auto;
+  display: grid;
+  gap: 1rem;
 }
 
 .profile-page__top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  background: linear-gradient(135deg, rgba(24, 34, 47, 0.94), rgba(10, 15, 22, 0.96));
+  box-shadow: var(--app-shadow-panel);
 }
 
 .profile-page__top h1 {
-  display: flex;
-  align-items: baseline;
-  gap: 0.7rem;
   margin: 0;
-  color: #9fd79b;
-  font-size: clamp(2.4rem, 5vw, 4.4rem);
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.profile-page__top h1 span {
-  color: #ffe45c;
-  font-size: clamp(1rem, 2vw, 1.5rem);
-}
-
-.profile-page__hearts {
-  color: #aee8aa;
-  font-size: 1.2rem;
+  font-family: var(--app-font-display);
+  font-size: clamp(3rem, 11vw, 7rem);
   font-weight: 900;
+  line-height: 0.88;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.profile-page__top span {
+  display: block;
+  margin-top: 0.35rem;
+  color: var(--app-accent);
+  font-size: 0.22em;
 }
 
 .profile-page__grid {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr);
-  gap: 0.8rem;
-  align-items: start;
+  grid-template-columns: minmax(16rem, 0.34fr) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.profile-page__sidebar,
+.profile-page__panel,
+.profile-page__editModal,
+.profile-page__emptyState {
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  background: rgba(12, 17, 24, 0.82);
+  box-shadow: var(--app-shadow-panel);
 }
 
 .profile-page__sidebar {
+  align-self: start;
   display: grid;
-  gap: 0.5rem;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.profile-page__avatar,
+.profile-page__avatarChoice {
+  background:
+    linear-gradient(90deg, transparent 0 20%, var(--avatar-color, #4fd1c5) 20% 80%, transparent 80%),
+    linear-gradient(var(--avatar-color, #4fd1c5) 0 36%, transparent 36% 58%, var(--avatar-color, #4fd1c5) 58% 100%);
 }
 
 .profile-page__avatar {
-  width: 100%;
+  width: min(100%, 12rem);
   aspect-ratio: 1;
-  background:
-    linear-gradient(90deg, transparent 0 16%, var(--avatar-color) 16% 84%, transparent 84%),
-    linear-gradient(var(--avatar-color) 0 34%, transparent 34% 57%, var(--avatar-color) 57% 82%, transparent 82%);
-  border: 1px solid rgba(145, 199, 139, 0.18);
-  box-shadow: inset 0 0 0 2rem rgba(0, 0, 0, 0.7);
+  justify-self: center;
+  border: 1px solid rgba(0, 0, 0, 0.7);
+  border-radius: var(--app-radius-lg);
 }
 
 .profile-page__summary {
-  padding: 0.8rem;
-  background: rgba(22, 54, 24, 0.82);
-  border: 1px solid rgba(147, 216, 145, 0.1);
+  display: grid;
+  gap: 1rem;
+}
+
+.profile-page__summary strong,
+.profile-page__summary dt,
+.profile-page__tag {
+  color: var(--app-muted);
+  font-size: 0.78rem;
   font-weight: 900;
   text-transform: uppercase;
 }
 
-.profile-page__summary > strong {
-  display: block;
-  color: #78b474;
-  font-size: 0.9rem;
-  text-align: center;
-}
-
 .profile-page__level {
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 0.45rem;
-  margin: 0.55rem 0 0.75rem;
+  gap: 0.5rem;
 }
 
 .profile-page__level span {
-  min-width: 2.4rem;
-  padding: 0.05rem 0.35rem;
-  color: #0d1a0e;
-  background: #e8efeb;
-  font-size: 1.05rem;
-  text-align: center;
+  color: var(--app-accent);
+  font-family: var(--app-font-display);
+  font-size: 3rem;
+  font-weight: 900;
+  line-height: 1;
 }
 
 .profile-page__level div {
-  height: 0.25rem;
-  background: #386d3d;
+  height: 0.55rem;
+  overflow: hidden;
+  border-radius: var(--app-radius-sm);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .profile-page__level i {
   display: block;
   height: 100%;
-  background: #b9f3b5;
-}
-
-.profile-page__level small,
-.profile-page__summary > small {
-  color: #bff2b9;
-  font-size: 0.72rem;
+  background: var(--app-accent);
 }
 
 .profile-page__summary dl {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 0.2rem 0.5rem;
+  gap: 0.45rem 0.8rem;
   margin: 0;
 }
 
-.profile-page__summary dt,
 .profile-page__summary dd {
   margin: 0;
-  border-bottom: 1px solid rgba(154, 213, 149, 0.12);
-}
-
-.profile-page__summary dt {
-  color: #82c07c;
-}
-
-.profile-page__summary dd {
-  color: #dcffda;
+  color: var(--app-soft);
+  font-weight: 800;
   text-align: right;
 }
 
+.profile-page__summary small {
+  color: var(--app-muted);
+}
+
 .profile-page__editButton,
-.profile-page__save {
-  min-height: 2.8rem;
-  color: #d6ffd4;
-  background: #244f28;
-  border: 1px solid #57935a;
-  cursor: pointer;
-  font: inherit;
+.profile-page__save,
+.profile-page__editClose {
+  min-height: 2.85rem;
+  padding: 0 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: rgba(17, 24, 33, 0.86);
+  color: var(--app-text);
+  font-family: var(--app-font-display);
   font-weight: 900;
-  letter-spacing: 0.08em;
   text-transform: uppercase;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease;
 }
 
 .profile-page__editButton:hover,
-.profile-page__save:hover {
-  background: #2f6534;
+.profile-page__save:hover,
+.profile-page__editClose:hover {
+  transform: translateX(-4px);
+  border-color: var(--app-accent);
+  background: rgba(79, 209, 197, 0.12);
 }
 
 .profile-page__content {
   display: grid;
-  gap: 0.75rem;
-  min-width: 0;
-}
-
-.profile-page__notice {
-  margin: 0;
-  padding: 0.6rem 0.85rem;
-  color: #d9ffd6;
-  background: rgba(69, 90, 38, 0.55);
-  font-weight: 900;
+  gap: 1rem;
 }
 
 .profile-page__panel {
+  --mode-accent: var(--app-accent);
+  min-height: 9rem;
+  padding: 1rem;
   position: relative;
-  min-height: 5rem;
-  padding: 2.2rem 1rem 0.9rem;
   overflow: hidden;
-  background: rgba(18, 45, 19, 0.94);
-  border-left: 3px solid var(--mode-accent, #6da06b);
-  box-shadow: 0 0.25rem 0 rgba(0, 0, 0, 0.32);
+}
+
+.profile-page__panel::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.28rem;
+  content: "";
+  background: var(--mode-accent);
 }
 
 .profile-page__tag {
-  position: absolute;
-  top: 0;
-  left: 0;
-  min-width: 9rem;
-  padding: 0.28rem 1.4rem 0.28rem 0.55rem;
-  color: #f2fff0;
-  background: var(--mode-accent, #5f8b5b);
-  clip-path: polygon(0 0, 100% 0, calc(100% - 1rem) 100%, 0 100%);
-  font-size: 0.9rem;
-  font-weight: 900;
-  text-transform: uppercase;
+  color: var(--mode-accent);
 }
 
 .profile-page__never {
-  color: #6ca466;
-  font-size: clamp(1.6rem, 4vw, 2.45rem);
-  font-weight: 900;
-}
-
-.profile-page__panelTop {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: center;
+  margin-top: 1.5rem;
+  color: var(--app-muted);
+  font-weight: 800;
 }
 
 .profile-page__leagueScore,
 .profile-page__modeScore {
-  display: grid;
-  gap: 0.15rem;
-}
-
-.profile-page__leagueScore span {
-  color: var(--mode-accent);
-  font-size: clamp(2rem, 5vw, 4rem);
-  font-weight: 900;
-  line-height: 0.8;
+  margin-top: 1rem;
 }
 
 .profile-page__leagueScore strong,
 .profile-page__modeScore strong {
-  color: #dcffd9;
-  font-size: clamp(2rem, 4vw, 3rem);
+  display: block;
+  color: var(--app-text);
+  font-family: var(--app-font-display);
+  font-size: clamp(2rem, 7vw, 4rem);
+  font-weight: 900;
   line-height: 1;
 }
 
+.profile-page__leagueScore span,
 .profile-page__leagueScore small,
-.profile-page__modeScore small {
-  color: #79b975;
-  font-size: 1rem;
-  font-weight: 900;
+.profile-page__modeScore small,
+.profile-page__notice {
+  color: var(--app-muted);
+  font-weight: 800;
 }
 
-.profile-page__ranks {
-  display: flex;
-  gap: 0.35rem;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.profile-page__ranks span {
-  min-width: 5.2rem;
-  padding: 0.35rem 0.55rem;
-  color: #bff6ba;
-  background: #071006;
-  font-size: 1.4rem;
-  font-weight: 900;
-  text-align: center;
-}
-
-.profile-page__ranks small {
-  display: block;
-  color: #5d9559;
-  font-size: 0.65rem;
-}
-
-.profile-page__metrics {
-  display: grid;
-  gap: 0.25rem 2rem;
-  margin-top: 1rem;
-  padding-top: 0.6rem;
-  border-top: 1px solid rgba(156, 213, 151, 0.18);
-}
-
-.profile-page__metrics--two {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.profile-page__metrics span {
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 0.4rem;
-  align-items: center;
-  color: #76b071;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.profile-page__metrics span::after {
-  content: "";
-  height: 1px;
-  background: rgba(158, 219, 148, 0.14);
-  order: 2;
-}
-
-.profile-page__metrics strong {
-  order: 3;
-  color: #dbffd8;
-}
-
-.profile-page__achievementValue {
-  display: flex;
-  align-items: baseline;
-  gap: 0.6rem;
-}
-
-.profile-page__achievementValue strong {
-  color: #dcffd9;
-  font-size: clamp(2.4rem, 5vw, 3.5rem);
-}
-
-.profile-page__achievementValue span {
-  color: #62975d;
-  font-size: clamp(1.6rem, 4vw, 2.4rem);
-}
-
-.profile-page__achievementBadges {
-  display: flex;
-  gap: 1rem;
-  color: #9bd793;
-  font-weight: 900;
+.profile-page__notice {
+  margin: 0;
+  padding: 0.85rem;
+  border: 1px solid rgba(255, 101, 117, 0.32);
+  border-radius: var(--app-radius-md);
+  background: rgba(255, 101, 117, 0.12);
 }
 
 .profile-page__editOverlay {
@@ -351,141 +235,78 @@
   display: grid;
   place-items: center;
   padding: 1rem;
-  background: rgba(0, 0, 0, 0.84);
+  background: rgba(3, 6, 10, 0.82);
+  backdrop-filter: blur(14px);
 }
 
 .profile-page__editModal {
-  position: relative;
-  width: min(680px, 100%);
-  padding: 1.3rem;
-  color: #caffcf;
-  background: #17361b;
-  border: 2px solid #4f8a51;
-  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.5);
+  width: min(36rem, 100%);
+  padding: 1.25rem;
 }
 
 .profile-page__editModal h2 {
-  margin: 0 7rem 1rem 0;
-  font-size: clamp(1.8rem, 4vw, 2.5rem);
-  text-transform: uppercase;
-}
-
-.profile-page__editClose {
-  position: absolute;
-  top: 1rem;
-  right: 1rem;
-  color: #9edb94;
-  background: transparent;
-  cursor: pointer;
-  font: inherit;
-  font-weight: 900;
+  margin: 1rem 0;
+  font-family: var(--app-font-display);
+  font-size: 2.4rem;
+  line-height: 1;
 }
 
 .profile-page__avatarGrid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(3.5rem, 1fr));
-  gap: 0.55rem;
-  margin-bottom: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(3rem, 1fr));
+  gap: 0.6rem;
 }
 
 .profile-page__avatarChoice {
   aspect-ratio: 1;
-  min-height: 3.6rem;
-  background:
-    linear-gradient(90deg, transparent 0 16%, var(--avatar-color) 16% 84%, transparent 84%),
-    linear-gradient(var(--avatar-color) 0 34%, transparent 34% 57%, var(--avatar-color) 57% 82%, transparent 82%),
-    #050805;
-  border: 2px solid rgba(159, 215, 155, 0.22);
-  box-shadow: inset 0 0 0 0.5rem rgba(0, 0, 0, 0.72);
-  cursor: pointer;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
 }
 
 .profile-page__avatarChoice--active {
-  border-color: #d6ffd4;
-  outline: 2px solid #6eb96e;
+  border-color: var(--app-accent);
+  box-shadow: var(--app-shadow-focus);
 }
 
 .profile-page__passwordFields {
   display: grid;
-  gap: 0.6rem;
-}
-
-.profile-page__passwordFields input {
-  min-height: 3rem;
-  padding: 0 0.8rem;
-  color: #eaffea;
-  background: #0a190c;
-  border: 1px solid #3f7443;
-  font: inherit;
+  gap: 0.75rem;
+  margin-top: 1rem;
 }
 
 .profile-page__editError,
 .profile-page__editStatus {
-  margin: 0.75rem 0 0;
-  font-weight: 900;
+  margin: 1rem 0 0;
+  padding: 0.75rem;
+  border-radius: var(--app-radius-md);
+  font-weight: 800;
 }
 
 .profile-page__editError {
-  color: #ff9a9a;
+  border: 1px solid rgba(255, 101, 117, 0.32);
+  background: rgba(255, 101, 117, 0.12);
+  color: #ffd7dc;
 }
 
 .profile-page__editStatus {
-  color: #dbffd8;
+  border: 1px solid rgba(98, 217, 133, 0.32);
+  background: rgba(98, 217, 133, 0.12);
+  color: #d8ffe2;
 }
 
 .profile-page__save {
   width: 100%;
   margin-top: 1rem;
+  background: var(--app-accent);
+  color: #061016;
 }
 
-.profile-page__save:disabled {
-  opacity: 0.65;
-  cursor: wait;
-}
-
-@media (max-width: 860px) {
+@media (max-width: 880px) {
   .profile-page__grid {
     grid-template-columns: 1fr;
   }
 
-  .profile-page__sidebar {
-    grid-template-columns: minmax(8rem, 12rem) 1fr;
-    align-items: stretch;
-  }
-
-  .profile-page__editButton {
-    grid-column: 1 / -1;
-  }
-
-  .profile-page__panelTop,
-  .profile-page__top {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .profile-page__ranks {
-    justify-content: flex-start;
-  }
-
-  .profile-page__metrics--two {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 560px) {
-  .profile-page {
-    padding-inline: 0.5rem;
-  }
-
-  .profile-page__sidebar {
-    grid-template-columns: 1fr;
-  }
-
   .profile-page__avatar {
-    max-width: 14rem;
-  }
-
-  .profile-page__avatarGrid {
-    grid-template-columns: repeat(4, 1fr);
+    width: 9rem;
   }
 }
