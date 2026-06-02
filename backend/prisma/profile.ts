@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { prisma } from "./prisma";
+import type { Prisma } from "@prisma/client";
 
 const profileUpdateSchema = z
 	.object({
@@ -182,10 +183,12 @@ async function findUserByField(
 	} as const;
 
 	try {
-		return await prisma.users.findUnique({
+		const result = await prisma.users.findUnique({
 			where: where as any,
 			select: select as any,
 		});
+
+		return result as Prisma.usersGetPayload<{ select: typeof select }> | null;
 	} catch (error) {
 		if (!isMissingCountryFieldError(error)) {
 			throw error;
@@ -203,10 +206,12 @@ async function findUserByField(
 			wins: true,
 		} as const;
 
-		return await prisma.users.findUnique({
+		const fallbackResult = await prisma.users.findUnique({
 			where: where as any,
 			select: fallbackSelect as any,
 		});
+
+		return fallbackResult as Prisma.usersGetPayload<{ select: typeof fallbackSelect }> | null;
 	}
 }
 
