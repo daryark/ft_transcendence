@@ -46,6 +46,8 @@ export type OAuthUserInput = {
   request?: RequestLike;
 };
 
+const UNKNOWN_COUNTRY = "Undefined";
+
 const changePasswordSchema = z.object({
   newPassword: z.string().min(8).max(128),
 });
@@ -99,14 +101,14 @@ export async function registerUser(rawInput: RegisterInput, request?: RequestLik
   }
 
   const password_hash = await bcrypt.hash(input.password, 10);
-  const country = await resolveCountryFromRequest(request);
+  const country = (await resolveCountryFromRequest(request)) ?? UNKNOWN_COUNTRY;
 
   const user = await prisma.users.create({
     data: {
       email: input.email,
       username: input.username,
       password_hash,
-      ...(country ? { country } : {}),
+      country,
     },
     select: {
       id: true,
@@ -256,14 +258,14 @@ export async function findOrCreateOAuthUser(rawInput: OAuthUserInput): Promise<A
 
   const randomPassword = (await import("crypto")).randomBytes(16).toString("hex");
   const password_hash = await bcrypt.hash(randomPassword, 10);
-  const country = await resolveCountryFromRequest(request);
+  const country = (await resolveCountryFromRequest(request)) ?? UNKNOWN_COUNTRY;
 
   const created = await prisma.users.create({
     data: {
       email: email ?? `${provider}_${providerId}@noemail.local`,
       username: candidate,
       password_hash,
-      ...(country ? { country } : {}),
+      country,
     },
     select: { id: true, email: true, username: true, created_at: true },
   });

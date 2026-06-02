@@ -173,6 +173,40 @@ api.patch("/users/me/password", authenticateToken, async (req: ApiRequest, res: 
   }
 });
 
+// -----------------------------------------------------------------------------
+// TODO: API route stubs — add real logic later (placeholders return 501)
+// These endpoints were noted in `backend/prisma/todo.txt` and should be
+// implemented when wiring actual services/DB logic.
+// -----------------------------------------------------------------------------
+
+// GET /api/friends
+api.get("/friends", (req: ApiRequest, res: Response) => {
+  res.status(501).json({ message: "TODO: implement GET /api/friends" });
+});
+
+// GET /api/notifications
+api.get("/notifications", (req: ApiRequest, res: Response) => {
+  res.status(501).json({ message: "TODO: implement GET /api/notifications" });
+});
+
+// GET /api/users/search?nickname=...&query=...
+api.get("/users/search", (req: ApiRequest, res: Response) => {
+  // preserve incoming query params for later implementation
+  const { nickname, query } = req.query;
+  res.status(501).json({ message: "TODO: implement GET /api/users/search", nickname, query });
+});
+
+// GET /api/messages/conversation/:friendId
+api.get("/messages/conversation/:friendId", (req: ApiRequest, res: Response) => {
+  res.status(501).json({ message: "TODO: implement GET /api/messages/conversation/:friendId", friendId: req.params.friendId });
+});
+
+// POST /api/messages
+api.post("/messages", (req: ApiRequest, res: Response) => {
+  // expected body will be validated/implemented later
+  res.status(501).json({ message: "TODO: implement POST /api/messages", received: req.body ?? null });
+});
+
 // POST /api/items  (example)
 //api.post("/items", (req, res) => {
 //  res.status(201).json({ received: req.body });
