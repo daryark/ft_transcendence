@@ -25,7 +25,6 @@ export interface LeaderboardOptions {
 }
 
 const modeMap: Record<string, string> = {
-  '40-lines': 'fortyLines',
   quick: 'quickPlay',
   blitz: 'blitz',
   league: 'tetraLeague',

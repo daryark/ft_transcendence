@@ -1,0 +1,72 @@
+- fix/rewrite full profile✅
+- add small profile
+- users.country by ip✅
+- change password logic - remove current✅
+- review friends
+    - api
+    - global search
+    - add, remove, block
+    - accept, reject
+
+
+/////////////////////////////
+
+
+GET /api/users/:username/profile
+{
+  id: number;
+  username: string;
+  country?: string;
+  avatarId: number;
+  created_at: string | null;
+  level: number;
+  xp: number;
+  nextLevelXp: number;
+  playTimeHours: number;
+  onlineGames: number;
+  wins: number;
+  modes: {
+    league?: {
+      tr: number;
+      glicko: number;
+      rank: string;
+    } | null;
+    quickPlay?: {
+      value: string;
+      achievedAgo?: string;
+    } | null;
+    fortyLines?: {
+      value: string;
+      achievedAgo?: string;
+    } | null;
+    blitz?: {
+      value: string;
+      achievedAgo?: string;
+    } | null;
+    zen?: {
+      value: string;
+      achievedAgo?: string;
+    } | null;
+  }
+}
+
+GET /api/friends
+GET /api/notifications
+
+GET  /api/users/search
+но у меня строка выглядит так
+   ${PLAYERS_SEARCH_ENDPOINT}?nickname=${encodedSearch}&query=${encodedSearch},
+
+
+const searchPlayers = async () => {
+      try {
+        const encodedSearch = encodeURIComponent(trimmedSearch);
+        const response = await authFetch(${PLAYERS_SEARCH_ENDPOINT}?nickname=${encodedSearch}&query=${encodedSearch}, { signal: controller.signal }, );
+      };
+};
+
+занрузка переписки 
+GET /api/messages/conversation/${friendId}`
+
+Нужен для отправки сообщения
+POST /api/messages
