@@ -26,7 +26,7 @@ fclean:
 	@docker system prune --all --force --volumes
 	@docker network prune --force
 	@docker volume prune --force
-	@docker volume rm trans_nginx-logs trans_esdata trans_grafana_data trans_prometheus_data
+	@docker volume rm trans_nginx-logs trans_esdata trans_es-snapshots trans_grafana_data trans_prometheus_data
 
 re: down
 	@$(COMPOSE) up -d --build
@@ -46,8 +46,22 @@ ilm-check:
 	echo "Now wait for 10 mins and check again..."
 
 slm-check:
-	curl -sS -X PUT "http://localhost:9200/_snapshot/trans_archive/manual-test-1?wait_for_completion=true" -H "Content-Type: application/json" -d '{ "indices": "nginx-logs-2026.06.03", "ignore_unavailable": true, "include_global_state": false}'
+	curl -k https://localhost
+	curl -k https://localhost
+	curl -sS -X POST "http://localhost:9200/_slm/policy/daily-nginx-logs/_execute"
+	curl -sS -X POST "http://localhost:9200/_slm/policy/daily-nginx-logs/_execute"
+	curl -sS -X POST "http://localhost:9200/_slm/policy/daily-nginx-logs/_execute"
+	curl -sS -X POST "http://localhost:9200/_slm/policy/daily-nginx-logs/_execute"
+	sleep 120
 	curl -s "http://localhost:9200/_cat/snapshots/trans_archive?v"
+	curl -s "http://localhost:9200/_slm/stats?pretty"
+
+show-policies:
+	curl -s "http://localhost:9200/_slm/policy/daily-nginx-logs?pretty"
+	curl -s "http://localhost:9200/_snapshot/trans_archive?pretty"
+	curl -s "http://localhost:9200/_cat/snapshots/trans_archive?v"
+	curl -s "http://localhost:9200/_ilm/policy/nginx-logs-policy?pretty" 
+	curl -s "http://localhost:9200/_cat/indices/nginx-logs-*?v"
 
 cert:
 	curl -s https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep browser_download_url  | grep linux-amd64 | cut -d '"' -f 4 | wget -qi -

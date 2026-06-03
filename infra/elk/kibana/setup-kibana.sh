@@ -47,4 +47,22 @@ curl -X POST "$KIBANA_URL/api/saved_objects/_import?overwrite=true" \
 echo ""
 echo "Dashboard imported!"
 
+echo "Setting password for kibana..."
+curl -X POST "http://localhost:9200/_security/user/kibana_system/_password" \
+  -u "elastic:${ELASTIC_PASSWORD}" \
+  -H "Content-Type: application/json" \
+  -d "{\"password\":\"${KIBANA_SYSTEM_PASSWORD}\"}"
+echo "Password is set"
+
+echo "Creating user for logstash..."
+curl -X POST "http://localhost:9200/_security/user/logstash_internal" \
+  -u "elastic:${ELASTIC_PASSWORD}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "password": "YOUR_LOGSTASH_PASSWORD",
+    "roles": ["logstash_writer"],
+    "full_name": "Logstash internal user"
+  }'
+echo "User created"
+
 wait

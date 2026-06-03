@@ -8,8 +8,8 @@
     "include_global_state": false
   },
   "retention": {
-    "expire_after": "5m",
-    "min_count": 7,
-    "max_count": 90
+    "expire_after": "2m",
+    "min_count": 1,
+    "max_count": 3
   }
 }
