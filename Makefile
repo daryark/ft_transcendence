@@ -72,4 +72,5 @@ cert:
 	mkcert ft-transcendence.42.fr
 	
 #docker exec -it 7ef22cde1b09 psql -U myuser -d mydatabase -c "SELECT * FROM users;"
+# try accessing kibana https://localhost/kibana/ — TLS + Kibana login.
 .PHONY: prep build up down clean fclean re check cert

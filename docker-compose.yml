@@ -75,7 +75,7 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.27
     container_name: elasticsearch
-    environment: # TODO: MOVE TO .env
+    environment:
       - discovery.type=single-node
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
       - path.repo=/usr/share/elasticsearch/snapshots
@@ -84,6 +84,8 @@ services:
       - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
     #ports:
     #  - "9200:9200"
+    env_file:
+      - .env
     volumes:
       - esdata:/usr/share/elasticsearch/data
       - es-snapshots:/usr/share/elasticsearch/snapshots
@@ -95,7 +97,11 @@ services:
     image: docker.elastic.co/logstash/logstash:7.17.27
     container_name: logstash
     depends_on: [elasticsearch]
-    ports: ["5044:5044"]
+    environment:
+      - LOGSTASH_INTERNAL_PASSWORD=${LOGSTASH_INTERNAL_PASSWORD}
+    env_file:
+      - .env
+    #ports: ["5044:5044"]
     volumes:
       - ./infra/elk/logstash/pipeline/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
     networks:
@@ -126,7 +132,15 @@ services:
       - ./infra/elk/elastic:/tmp/elastic:ro
     environment:
       - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
-    ports: ["5601:5601"]
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_SYSTEM_PASSWORD}
+      - SERVER_PUBLICBASEURL=https://localhost/kibana
+      - SERVER_REWRITEBASEPATH=true
+      - XPACK_SECURITY_ENABLED=true
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${KIBANA_ENCRYPTION_KEY}
+    #ports: ["5601:5601"]
+    env_file:
+    - .env
     entrypoint: ["sh"]
     command: ["/tmp/setup-kibana.sh"]
     networks:
