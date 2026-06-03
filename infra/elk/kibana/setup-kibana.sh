@@ -19,6 +19,16 @@ curl -sf -X PUT "$ES_URL/_index_template/nginx-logs-template" \
 	-H "Content-Type: application/json" \
 	-d @/tmp/elastic/index-template.json
 
+echo "Registering archiving repo..."
+curl -sS -X PUT "$ES_URL/_snapshot/trans_archive" \
+  -H "Content-Type: application/json" \
+  -d @/tmp/elastic/snapshot-repo.json
+
+echo "Applying SLM policy..."
+curl -sf -X PUT "$ES_URL/_slm/policy/daily-nginx-logs" \
+	-H "Content-Type: application/json" \
+	-d @/tmp/elastic/slm-policy.json
+
 echo "Elasticsearch setup is done."
 
 /usr/local/bin/kibana-docker &

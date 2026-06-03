@@ -75,13 +75,15 @@ services:
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.17.27
     container_name: elasticsearch
-    environment:
+    environment: # TODO: MOVE TO .env
       - discovery.type=single-node
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - path.repo=/usr/share/elasticsearch/snapshots
     ports:
       - "9200:9200"
     volumes:
       - esdata:/usr/share/elasticsearch/data
+      - es-snapshots:/usr/share/elasticsearch/snapshots
     networks:
       - trancendence
     restart: always
@@ -217,6 +219,7 @@ services:
 
 volumes:
   esdata:
+  es-snapshots:
   nginx-logs:
   prometheus_data: {}
   grafana_data: {}

@@ -7,6 +7,7 @@ prep:
 
 build:
 	@$(COMPOSE) up -d --build
+	@docker run --rm -v trans_es-snapshots:/snap alpine chown -R 1000:1000 /snap
 
 dev-build:
 	@$(COMPOSE) -f docker-compose.dev.yml up -d --build
@@ -43,6 +44,10 @@ ilm-check:
 	curl -s "http://localhost:9200/_cat/indices/test-logs-*?v"
 	curl -s "http://localhost:9200/test-logs-001/_ilm/explain?pretty"
 	echo "Now wait for 10 mins and check again..."
+
+slm-check:
+	curl -sS -X PUT "http://localhost:9200/_snapshot/trans_archive/manual-test-1?wait_for_completion=true" -H "Content-Type: application/json" -d '{ "indices": "nginx-logs-2026.06.03", "ignore_unavailable": true, "include_global_state": false}'
+	curl -s "http://localhost:9200/_cat/snapshots/trans_archive?v"
 
 cert:
 	curl -s https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep browser_download_url  | grep linux-amd64 | cut -d '"' -f 4 | wget -qi -
