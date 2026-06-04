@@ -510,7 +510,7 @@ export default function Custom() {
       mode: "custom",
       payload: {
         roomConfig: {
-          roomName: `JOIN:${autoJoinCode}`,
+          roomName: `JOIN:${autoJoinCode}`, //no need to send on mode:join (only in the room on modification, later!)
         },
       },
     });

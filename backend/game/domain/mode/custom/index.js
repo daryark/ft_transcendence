@@ -1,26 +1,12 @@
 import { applyConfigPatch, createConfig } from "../../../config/configBase";
 import { ConfigPatchSchema } from "../../../config/config.schema";
+import createEngine, { TICK_MS } from "../../engine/tetrisEngline";
 import { initGame } from "../../engine/state";
 import { isInput } from "../../engine/input";
-import { createBag, moveFigure, rotate, collision, clearLines } from "../../engine/logic";
-import { createFigure } from "../../engine/figures";
 
 const JOIN_PREFIX = "JOIN:";
-const TICK_MS = 1000 / 60;
-const MAX_INPUTS_PER_TICK = 30;
 const customRoomHosts = new Map();
 const customEngines = new Map();
-
-const ROTATION_KICKS = [
-  { x: 0, y: 0 },
-  { x: 1, y: 0 },
-  { x: -1, y: 0 },
-  { x: 2, y: 0 },
-  { x: -2, y: 0 },
-  { x: 0, y: -1 },
-  { x: 1, y: -1 },
-  { x: -1, y: -1 },
-];
 
 function emitError(socket, reason) {
   socket.emit("server:error", { reason });
@@ -67,131 +53,56 @@ function broadcastRoomUpdate(roomService, room) {
   roomService.broadcast(room.id, "room:update", serializeRoom(room));
 }
 
-function ensureNextQueue(state) {
-  while (state.next.length < 7) {
-    state.next.push(...createBag().map((type) => createFigure(type, state.cols)));
-  }
-}
-
-function resetPiecePosition(piece, cols) {
+function toEngineGameConfig(gameConfig) {
   return {
-    ...piece,
-    x: Math.floor((cols - piece.shape[0].length) / 2),
-    y: -2,
+    ...gameConfig,
+    mode: "solo",
+    objective: {
+      winCondition: "score",
+      scoreToWin: Number.MAX_SAFE_INTEGER,
+    },
   };
 }
 
-function spawnPiece(state) {
-  ensureNextQueue(state);
-  const nextPiece = state.next.shift();
+function createPlayerEngineRoom(room, player, startedAt) {
+  const { boardHeight, boardWidth } = room.gameConfig.general;
+  const state = initGame(boardHeight, boardWidth);
+  state.startedAt = startedAt;
 
-  if (!nextPiece) {
-    state.gameOver = true;
-    return;
+  return {
+    id: `${room.id}:${player.id}`,
+    status: "playing",
+    players: new Map([[player.id, player]]),
+    spectators: new Map(),
+    state,
+    engine: null,
+    roomConfig: room.roomConfig,
+    matchConfig: room.matchConfig,
+    gameConfig: toEngineGameConfig(room.gameConfig),
+  };
+}
+
+function getFirstPlayerState(engine) {
+  return engine.playerEngines.values().next().value?.room.state ?? null;
+}
+
+function getActivePlayerIds(engine) {
+  const activePlayerIds = [];
+
+  for (const [playerId, playerEngine] of engine.playerEngines.entries()) {
+    const state = playerEngine.room.state;
+
+    if (
+      playerEngine.room.status === "playing" &&
+      state &&
+      !state.gameOver &&
+      !engine.eliminatedPlayerIds.has(playerId)
+    ) {
+      activePlayerIds.push(playerId);
+    }
   }
 
-  state.current = resetPiecePosition(nextPiece, state.cols);
-  state.canHold = true;
-  state.gameOver = collision(state.board, { ...state.current, y: 0 });
-}
-
-function trySetCurrent(state, piece) {
-  if (collision(state.board, piece)) return false;
-
-  state.current = piece;
-  return true;
-}
-
-function tryMoveCurrent(state, dx, dy) {
-  return trySetCurrent(state, moveFigure(state.current, dx, dy));
-}
-
-function rotateMatrix(matrix, turns) {
-  let rotated = matrix;
-
-  for (let i = 0; i < turns; i += 1) {
-    rotated = rotate(rotated);
-  }
-
-  return rotated;
-}
-
-function tryRotateCurrent(state, turns) {
-  const rotated = rotateMatrix(state.current.shape, turns);
-
-  return ROTATION_KICKS.some((kick) =>
-    trySetCurrent(state, {
-      ...state.current,
-      shape: rotated,
-      x: state.current.x + kick.x,
-      y: state.current.y + kick.y,
-    }),
-  );
-}
-
-function lockCurrent(state) {
-  let current = state.current;
-
-  while (!collision(state.board, moveFigure(current, 0, 1))) {
-    current = moveFigure(current, 0, 1);
-  }
-
-  current.shape.forEach((row, dy) => {
-    row.forEach((cell, dx) => {
-      if (!cell) return;
-
-      const x = current.x + dx;
-      const y = current.y + dy;
-
-      if (y >= 0 && y < state.rows && x >= 0 && x < state.cols) {
-        state.board[y][x] = 1;
-      }
-    });
-  });
-
-  const { newBoard, cleared, scoreAdd } = clearLines(state.board);
-  state.board = newBoard;
-  state.lines += cleared;
-  state.score += scoreAdd;
-  spawnPiece(state);
-}
-
-function hardDrop(state) {
-  while (tryMoveCurrent(state, 0, 1)) {
-    state.score += 2;
-  }
-
-  lockCurrent(state);
-  return true;
-}
-
-function holdCurrent(state, controls) {
-  if (!controls.hold || !state.canHold) return;
-
-  const held = state.hold;
-  state.hold = createFigure(state.current.type, state.cols);
-  state.canHold = false;
-
-  if (held) {
-    state.current = createFigure(held.type, state.cols);
-  } else {
-    spawnPiece(state);
-  }
-}
-
-function applyInput(state, input, controls) {
-  if (state.gameOver) return false;
-
-  if (input.type === "left") return tryMoveCurrent(state, -1, 0);
-  if (input.type === "right") return tryMoveCurrent(state, 1, 0);
-  if (input.type === "down") return tryMoveCurrent(state, 0, 1);
-  if (input.type === "rotate") return tryRotateCurrent(state, 1);
-  if (input.type === "rotateCCW") return tryRotateCurrent(state, 3);
-  if (input.type === "rotate180") return tryRotateCurrent(state, 2);
-  if (input.type === "drop") return hardDrop(state);
-  if (input.type === "hold") return holdCurrent(state, controls);
-
-  return false;
+  return activePlayerIds;
 }
 
 function serializeVersusGame(room, engine) {
@@ -199,21 +110,28 @@ function serializeVersusGame(room, engine) {
 
   for (const player of room.players.values()) {
     const playerId = String(player.id);
+    const playerEngine = engine.playerEngines.get(playerId);
+    const state = playerEngine?.room.state ?? null;
+
     players[playerId] = {
       id: player.id,
       username: getPlayerName(player),
       rank: player.profile?.rank,
-      state: engine.states.get(playerId),
+      state,
+      gameOver: Boolean(state?.gameOver || engine.eliminatedPlayerIds.has(playerId)),
     };
   }
+
+  const activePlayerIds = getActivePlayerIds(engine);
 
   return {
     roomId: room.id,
     status: room.status,
     config: room.gameConfig,
     players,
-    state: engine.states.values().next().value ?? null,
+    state: getFirstPlayerState(engine),
     startedAt: engine.startedAt,
+    winnerId: activePlayerIds.length === 1 ? activePlayerIds[0] : null,
   };
 }
 
@@ -221,8 +139,96 @@ function stopCustomEngine(roomId) {
   const engine = customEngines.get(roomId);
   if (!engine) return;
 
-  clearInterval(engine.interval);
-  customEngines.delete(roomId);
+  engine.stop();
+}
+
+function maybeEndVersus(room, roomService, engine, reason = "game_over") {
+  if (room.status !== "playing") return false;
+
+  const activePlayerIds = getActivePlayerIds(engine);
+  if (activePlayerIds.length > 1) return false;
+
+  room.status = "ended";
+  room.state = getFirstPlayerState(engine);
+
+  const payload = {
+    ...serializeVersusGame(room, engine),
+    reason,
+    winnerId: activePlayerIds[0] ?? null,
+  };
+
+  roomService.broadcast(room.id, "game:update", payload);
+  roomService.broadcast(room.id, "game:end", payload);
+  engine.stop();
+  return true;
+}
+
+function createVersusEngine(room, roomService) {
+  const startedAt = Date.now();
+  const playerEngines = new Map();
+  const eliminatedPlayerIds = new Set();
+
+  const versusEngine = {
+    startedAt,
+    playerEngines,
+    eliminatedPlayerIds,
+    interval: null,
+    pushInput(playerId, input) {
+      if (room.status !== "playing") return;
+
+      const playerEngine = playerEngines.get(String(playerId));
+      if (!playerEngine || playerEngine.room.status !== "playing") return;
+
+      playerEngine.engine.pushInput(input);
+    },
+    stop() {
+      if (versusEngine.interval) {
+        clearInterval(versusEngine.interval);
+        versusEngine.interval = null;
+      }
+
+      for (const playerEngine of playerEngines.values()) {
+        playerEngine.engine?.stop?.();
+        playerEngine.room.status = "ended";
+      }
+
+      customEngines.delete(room.id);
+    },
+  };
+
+  for (const player of room.players.values()) {
+    const playerId = String(player.id);
+    const playerRoom = createPlayerEngineRoom(room, player, startedAt);
+    const playerRoomService = {
+      broadcast(_roomId, event, payload) {
+        if (event === "game:end") {
+          eliminatedPlayerIds.add(playerId);
+          playerRoom.status = "ended";
+          playerRoom.state = payload?.state ?? playerRoom.state;
+          maybeEndVersus(room, roomService, versusEngine, payload?.reason);
+        }
+      },
+    };
+
+    const playerEngine = createEngine(playerRoom, playerRoomService);
+    playerRoom.engine = playerEngine;
+    playerEngines.set(playerId, {
+      player,
+      room: playerRoom,
+      engine: playerEngine,
+    });
+  }
+
+  versusEngine.interval = setInterval(() => {
+    if (room.status !== "playing") return;
+
+    room.state = getFirstPlayerState(versusEngine);
+    if (maybeEndVersus(room, roomService, versusEngine)) return;
+
+    roomService.broadcast(room.id, "game:update", serializeVersusGame(room, versusEngine));
+  }, TICK_MS);
+
+  return versusEngine;
 }
 
 function startCustomVersus(room, roomService) {
@@ -235,80 +241,11 @@ function startCustomVersus(room, roomService) {
   stopCustomEngine(room.id);
   room.status = "playing";
 
-  const { boardHeight, boardWidth } = room.gameConfig.general;
-  const states = new Map();
-  const inputs = new Map();
-  const gravity = new Map();
-  const startedAt = Date.now();
-
-  for (const player of room.players.values()) {
-    const playerId = String(player.id);
-    const state = initGame(boardHeight, boardWidth);
-    state.startedAt = startedAt;
-    states.set(playerId, state);
-    inputs.set(playerId, []);
-    gravity.set(playerId, 0);
-  }
-
-  const engine = {
-    startedAt,
-    states,
-    inputs,
-    gravity,
-    interval: null,
-    pushInput(playerId, input) {
-      if (room.status !== "playing") return;
-
-      const queue = inputs.get(String(playerId));
-      if (queue) queue.push(input);
-    },
-    stop() {
-      stopCustomEngine(room.id);
-    },
-  };
-
-  engine.interval = setInterval(() => {
-    if (room.status !== "playing") return;
-
-    let activePlayers = 0;
-
-    for (const [playerId, state] of states.entries()) {
-      if (state.gameOver) continue;
-      activePlayers += 1;
-
-      const queue = inputs.get(playerId) ?? [];
-      let processed = 0;
-      while (queue.length > 0 && processed < MAX_INPUTS_PER_TICK) {
-        applyInput(state, queue.shift(), room.gameConfig.controls);
-        processed += 1;
-      }
-
-      const currentGravity = (gravity.get(playerId) ?? 0) + room.gameConfig.gravity.gravity;
-      if (currentGravity >= 1) {
-        if (!tryMoveCurrent(state, 0, 1)) {
-          lockCurrent(state);
-        }
-        gravity.set(playerId, currentGravity - 1);
-      } else {
-        gravity.set(playerId, currentGravity);
-      }
-    }
-
-    if (activePlayers <= 1) {
-      room.status = "ended";
-      roomService.broadcast(room.id, "game:end", {
-        ...serializeVersusGame(room, engine),
-        reason: "game_over",
-      });
-      stopCustomEngine(room.id);
-      return;
-    }
-
-    roomService.broadcast(room.id, "game:update", serializeVersusGame(room, engine));
-  }, TICK_MS);
-
-  room.state = states.values().next().value ?? null;
+  const engine = createVersusEngine(room, roomService);
   room.engine = engine;
+  room.state = getFirstPlayerState(engine);
+  customEngines.set(room.id, engine);
+
   roomService.broadcast(room.id, "game:start", serializeVersusGame(room, engine));
 }
 
@@ -411,8 +348,8 @@ function maybeAutoStart(roomService, room) {
 }
 
 function registerCustomRoomEvents(socket, roomService) {
-  socket.removeAllListeners("room:updateConfig");
-  socket.removeAllListeners("room:start");
+  socket.removeAllListeners("room:updateConfig"); //! do i need it on other modes?
+  socket.removeAllListeners("room:start"); //! is it native socket.io fn?
   socket.removeAllListeners("player:move");
 
   socket.on("room:updateConfig", (payload = {}) => {
@@ -482,7 +419,7 @@ function registerCustomRoomEvents(socket, roomService) {
 export default function join(
   socket,
   { roomService, playerService },
-  payload = {},
+  payload = {}, //! delete this param!!!!!!
 ) {
   const player = playerService.get(socket.data.identity.id);
   if (!player) {
