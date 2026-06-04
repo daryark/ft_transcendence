@@ -11,7 +11,6 @@
         "start": "npm run build && node dist/server/index.js",
         "dev": "tsc -w & nodemon dist/server/index.js",
         "test": "jest",
-        "seed": "npx tsx prisma/seed.ts",
         "prisma:test:auth": "npx tsx ../tests/prisma/test-auth.ts",
         "prisma:test:auth:keep": "KEEP_TEST_USER=1 npx tsx ../tests/prisma/test-auth.ts",
         "prisma:test:leaderboard": "npx tsx ../tests/prisma/test-leaderboard.ts",
