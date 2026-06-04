@@ -12,33 +12,52 @@
 /////////////////////////////
 
 --- API: Profiles
-
-GET /api/users/:username/profile
-Response shape (full profile):
 {
-  id: number;
-  username: string;
-  country?: string;
-  avatarId: number;   # internal: keep, but prefer avatarUrl for public APIs
-  avatarUrl?: string; # public-facing signed URL or CDN path
-  createdAt: string | null; # ISO timestamp
-  level: number;
-  xp: number;
-  nextLevelXp: number;
-  playTimeHours: number;
-  onlineGames: number;
-  wins: number;
-  modes: {
-    league?: { tr: number; glicko: number; rank: string } | null;
-    quickPlay?: { value: string; achievedAgo?: string } | null;
-    fortyLines?: { value: string; achievedAgo?: string } | null;
-    blitz?: { value: string; achievedAgo?: string } | null;
-    zen?: { value: string; achievedAgo?: string } | null;
-  };
-}
+  GET /api/users/:username/profile
+  Response shape (full profile):
+  {
+    id: number;
+    username: string;
+    country?: string;
+    avatarId: number;   # internal: keep, but prefer avatarUrl for public APIs
+    avatarUrl?: string; # public-facing signed URL or CDN path
+    createdAt: string | null; # ISO timestamp
+    level: number;
+    xp: number;
+    nextLevelXp: number;
+    playTimeHours: number;
+    onlineGames: number;
+    wins: number;
+    modes: {
+      league?: { tr: number; glicko: number; rank: string } | null;
+      quickPlay?: { value: string; achievedAgo?: string } | null;
+      fortyLines?: { value: string; achievedAgo?: string } | null;
+      blitz?: { value: string; achievedAgo?: string } | null;
+      zen?: { value: string; achievedAgo?: string } | null;
+    };
+  }
 
-GET /api/users/:username/small-profile
-Response shape (small): { id, username, avatarUrl, country?, level }
+  GET /api/users/:username/miniprofile
+  {
+    "miniprofile": {
+      "level": 12,
+      "modes": {
+        "league": {
+          "tr": 14523,
+          "rank": "A+"
+        },
+        "fortyLines": {
+          "value": "0:42.123",
+          "achievedAgo": "2 DAYS AGO"
+        },
+        "quickPlay": {
+          "value": "124 M",
+          "achievedAgo": "TODAY"
+        }
+      }
+    }
+  }
+}
 
 --- API: Friends
 - GET /api/friends?status=all|pending|accepted&page=&limit=
@@ -62,15 +81,17 @@ WebSocket: `notifications` channel for real-time pushes (friend requests, messag
 Notes: enforce message size limits, content sanitization, block checks, and rate-limiting. Add read receipts / statuses.
 
 --- API: Search
-- GET /api/users/search?q=...&nickname=...&page=&limit=  # prefer single `q` param; server can match nickname & full-text
+{
+  - GET /api/users/search?q=...&nickname=...&page=&limit=  # prefer single `q` param; server can match nickname & full-text
 
-Client snippet fix (use template string properly):
-const searchPlayers = async () => {
-  try {
-    const encodedSearch = encodeURIComponent(trimmedSearch);
-    const response = await authFetch(`${PLAYERS_SEARCH_ENDPOINT}?nickname=${encodedSearch}&query=${encodedSearch}`, { signal: controller.signal });
-  } catch (err) { /* handle */ }
-};
+  Client snippet fix (use template string properly):
+  const searchPlayers = async () => {
+    try {
+      const encodedSearch = encodeURIComponent(trimmedSearch);
+      const response = await authFetch(`${PLAYERS_SEARCH_ENDPOINT}?nickname=${encodedSearch}&query=${encodedSearch}`, { signal: controller.signal });
+    } catch (err) { /* handle */ }
+  };
+}
 
 --- Misc / Operational TODOs (add / prioritize)
 - API: pagination & limits — add `page`/`limit` or cursor to all list endpoints (friends, messages, notifications, search).

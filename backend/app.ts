@@ -17,7 +17,8 @@ export type ApiRequest = Request & { user?: any }; //! consider defining a prope
 // All routes here are under /api/... (matches nginx proxy_pass to this app)
 const api = express.Router();
 const { registerUser, loginUser, changeUserPassword } = require("./prisma/auth");
-const { getProfileByUsername, updateMyProfile } = require("./prisma/profile");
+const { getProfileByUsername, updateMyProfile, getMiniProfileByUsername } = require("./prisma/profile");
+const { searchUsers } = require("./prisma/search");
 const oauthController = require("./auth/oauthController");
 // lightweight helpers
 const { getLeaderboard } = require("./prisma/leaderboard");
@@ -139,6 +140,18 @@ api.get("/users/:username/profile", async (req: ApiRequest, res: Response) => {
   }
 });
 
+// GET /api/users/:username/miniprofile
+api.get("/users/:username/miniprofile", async (req: ApiRequest, res: Response) => {
+  try {
+    const mini = await getMiniProfileByUsername(req.params.username);
+    res.json(mini);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message === "User not found" ? 404 : 400;
+    res.status(status).json({ message: "Failed to load miniprofile", error: message });
+  }
+});
+
 // PATCH /api/users/me/profile
 api.patch("/users/me/profile", authenticateToken, async (req: ApiRequest, res: Response) => {
   try {
@@ -180,8 +193,31 @@ api.patch("/users/me/password", authenticateToken, async (req: ApiRequest, res: 
 // -----------------------------------------------------------------------------
 
 // GET /api/friends
-api.get("/friends", (req: ApiRequest, res: Response) => {
-  res.status(501).json({ message: "TODO: implement GET /api/friends" });
+api.get("/friends", async (req: ApiRequest, res: Response) => {
+  try {
+    const requesterUserId = getOptionalBearerUserId(req);
+
+    // If no bearer token, return empty list rather than 501 to keep UI usable.
+    if (!requesterUserId) {
+      return res.json({ friends: [] });
+    }
+
+    // Lazy-load friend helper to avoid circular startup ordering.
+    const { listFriends } = require("./prisma/friends");
+
+    const rows = await listFriends({ userId: requesterUserId });
+
+    // Map to a thin shape the frontend `SocialPanels` can consume.
+    const friends = rows.map((r: any) => {
+      const otherId = r.user_id === requesterUserId ? r.friend_id : r.user_id;
+      return { id: otherId, username: r.username ?? `user${otherId}`, status: "offline" };
+    });
+
+    return res.json({ friends });
+  } catch (error) {
+    // On error, return an empty list to avoid breaking the UI (quick fix).
+    return res.json({ friends: [] });
+  }
 });
 
 // GET /api/notifications
@@ -190,10 +226,32 @@ api.get("/notifications", (req: ApiRequest, res: Response) => {
 });
 
 // GET /api/users/search?nickname=...&query=...
-api.get("/users/search", (req: ApiRequest, res: Response) => {
-  // preserve incoming query params for later implementation
-  const { nickname, query } = req.query;
-  res.status(501).json({ message: "TODO: implement GET /api/users/search", nickname, query });
+api.get("/users/search", async (req: ApiRequest, res: Response) => {
+  try {
+    const term = typeof req.query.q === "string" && req.query.q.trim().length > 0
+      ? req.query.q
+      : typeof req.query.nickname === "string" && req.query.nickname.trim().length > 0
+        ? req.query.nickname
+        : typeof req.query.query === "string" && req.query.query.trim().length > 0
+          ? req.query.query
+          : "";
+    const page = req.query.page ? parseInt(String(req.query.page), 10) : 1;
+    const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 20;
+    const requesterUserId = getOptionalBearerUserId(req);
+
+    const results = await searchUsers({
+      term,
+      page,
+      limit,
+      requesterUserId: requesterUserId ?? undefined,
+    });
+
+    res.json(results);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("required") || message.includes("must") || message.includes("range") ? 400 : 500;
+    res.status(status).json({ message: "Failed to search users", error: message });
+  }
 });
 
 // GET /api/messages/conversation/:friendId

@@ -98,3 +98,87 @@ CREATE TABLE IF NOT EXISTS messages (
 		FOREIGN KEY (receiver_id) REFERENCES users(id)
 		ON DELETE CASCADE
 );
+
+-- STARTUP SEED DATA
+-- Shared test password for all accounts below: Password123!
+BEGIN;
+
+TRUNCATE TABLE
+	messages,
+	match_players,
+	oauth_accounts,
+	friends,
+	matches,
+	users
+RESTART IDENTITY CASCADE;
+
+INSERT INTO users (
+	email,
+	username,
+	password_hash,
+	avatar_id,
+	country,
+	level,
+	xp,
+	next_level_xp,
+	play_time_seconds,
+	wins
+)
+VALUES -- Password hash generated from bcrypt with 10 salt rounds for "Password123!"
+	('alice@example.com', 'alice', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 1, 'France', 12, 1800, 2400, 5400, 2),
+	('bob@example.com', 'bob', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 2, 'Brazil', 10, 1400, 2000, 4200, 1),
+	('carol@example.com', 'carol', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 3, 'Japan', 11, 1600, 2200, 4800, 1),
+	('dave@example.com', 'dave', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 4, 'Canada', 9, 1200, 1800, 3600, 0),
+	('eva@example.com', 'eva', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 5, 'Germany', 4, 320, 800, 900, 0),
+	('frank@example.com', 'frank', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 6, 'Spain', 3, 260, 700, 600, 0),
+	('gwen@example.com', 'gwen', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 7, 'Chile', 5, 480, 900, 1200, 0),
+	('hugo@example.com', 'hugo', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 8, 'Italy', 7, 760, 1300, 1800, 0),
+	('ivy@example.com', 'ivy', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 9, 'Morocco', 2, 120, 500, 240, 0),
+	('jules@example.com', 'jules', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 10, 'Poland', 6, 640, 1100, 1500, 0);
+
+INSERT INTO oauth_accounts (user_id, provider, provider_user_id, provider_data)
+VALUES
+	(1, 'github', 'alice_github', '{"seed":"startup","username":"alice"}'::jsonb),
+	(2, 'github', 'bob_github', '{"seed":"startup","username":"bob"}'::jsonb),
+	(3, 'github', 'carol_github', '{"seed":"startup","username":"carol"}'::jsonb),
+	(4, 'github', 'dave_github', '{"seed":"startup","username":"dave"}'::jsonb);
+
+INSERT INTO friends (user_id, friend_id, status)
+VALUES
+	(1, 2, 'accepted'),
+	(1, 3, 'pending'),
+	(2, 3, 'accepted'),
+	(3, 4, 'blocked'),
+	(4, 1, 'accepted');
+
+INSERT INTO messages (sender_id, receiver_id, content)
+VALUES
+	(1, 2, 'Hey Bob, want to play?'),
+	(2, 1, 'Sure Alice, let''s go!'),
+	(3, 1, 'Good game earlier'),
+	(4, 2, 'Can we talk about the last match?'),
+	(1, 3, 'Rematch after lunch?'),
+	(2, 4, 'I am ready when you are.');
+
+INSERT INTO matches (status, gamemode)
+VALUES
+	('finished', 'quickPlay'),
+	('finished', 'tetraLeague'),
+	('finished', 'fortyLines'),
+	('finished', 'blitz'),
+	('finished', 'zen');
+
+INSERT INTO match_players (match_id, user_id, score, result)
+VALUES
+	(1, 1, 15, 'win'),
+	(1, 2, 8, 'lose'),
+	(2, 2, 12, 'draw'),
+	(2, 3, 12, 'draw'),
+	(3, 3, 20, 'win'),
+	(3, 4, 5, 'lose'),
+	(4, 1, 18, 'win'),
+	(4, 4, 7, 'lose'),
+	(5, 2, 16, 'win'),
+	(5, 1, 11, 'lose');
+
+COMMIT;
