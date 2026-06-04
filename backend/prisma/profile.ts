@@ -243,6 +243,72 @@ export async function getProfileByUsername(username: string): Promise<ProfileRes
 	return buildProfileResponse(user, matchRows);
 }
 
+export type MiniProfileResponse = {
+	miniprofile: {
+		id: number;
+		username: string;
+		avatarId: number;
+		level: number;
+		modes: {
+			league?: { tr: number; rank?: string } | null;
+			quickPlay?: ProfileModeStats;
+			fortyLines?: ProfileModeStats;
+			blitz?: ProfileModeStats;
+			zen?: ProfileModeStats;
+		};
+	};
+};
+
+function buildMiniProfileResponse(user: ProfileUserRecord, matchRows: ProfileModeRow[]): MiniProfileResponse {
+	const bestModeStats: Partial<Record<keyof ProfileResponse["modes"], { score: number; achievedAt: Date | null }>> = {};
+
+	for (const row of matchRows) {
+		const mode = row.matches?.gamemode;
+		if (!mode || !(mode in modeAliases)) {
+			continue;
+		}
+
+		const key = modeAliases[mode as keyof typeof modeAliases];
+		const score = row.score ?? 0;
+		const current = bestModeStats[key];
+
+		if (!current || score > current.score) {
+			bestModeStats[key] = {
+				score,
+				achievedAt: row.matches?.created_at ?? null,
+			};
+		}
+	}
+
+	return {
+		miniprofile: {
+			id: user.id,
+			username: user.username,
+			avatarId: user.avatar_id ?? 0,
+			level: user.level ?? 1,
+			modes: {
+				league: bestModeStats.league ? { tr: bestModeStats.league.score } : null,
+				quickPlay: toModeStats(bestModeStats.quickPlay?.score ?? null, bestModeStats.quickPlay?.achievedAt ?? null),
+				fortyLines: toModeStats(bestModeStats.fortyLines?.score ?? null, bestModeStats.fortyLines?.achievedAt ?? null),
+				blitz: toModeStats(bestModeStats.blitz?.score ?? null, bestModeStats.blitz?.achievedAt ?? null),
+				zen: toModeStats(bestModeStats.zen?.score ?? null, bestModeStats.zen?.achievedAt ?? null),
+			},
+		},
+	};
+}
+
+export async function getMiniProfileByUsername(username: string): Promise<MiniProfileResponse> {
+	const normalizedUsername = z.string().trim().min(1).max(100).parse(username);
+	const user = await findUserByField("username", normalizedUsername);
+
+	if (!user) {
+		throw new Error("User not found");
+	}
+
+	const matchRows = await loadUserProfileRows(user.id);
+	return buildMiniProfileResponse(user, matchRows);
+}
+
 export async function updateMyProfile(userId: number, rawInput: unknown): Promise<ProfileResponse> {
 	assertPositiveInteger(userId, "userId");
 	const input = profileUpdateSchema.parse(rawInput);
