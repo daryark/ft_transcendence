@@ -18,14 +18,14 @@ curl -X POST "$ES_URL/_security/user/kibana_system/_password" \
 echo "Password is set"
 
 echo "Creating user for logstash..."
-curl -X POST "$ES_URL/_security/user/logstash_internal" \
-  -u "elastic:${ELASTIC_PASSWORD}" \
+curl -sS -X PUT "$ES_URL/_security/user/logstash_internal" \
+  -u "$ES_AUTH" \
   -H "Content-Type: application/json" \
-  -d '{
-    "password": "YOUR_LOGSTASH_PASSWORD",
-    "roles": ["logstash_writer"],
-    "full_name": "Logstash internal user"
-  }'
+  -d "{
+    \"password\": \"${LOGSTASH_INTERNAL_PASSWORD}\",
+    \"roles\": [\"logstash_writer\"],
+    \"full_name\": \"Logstash internal user\"
+  }"
 echo "User created"
 
 echo "Applying ILM policy..."

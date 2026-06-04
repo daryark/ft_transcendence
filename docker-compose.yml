@@ -97,7 +97,9 @@ services:
   logstash:
     image: docker.elastic.co/logstash/logstash:7.17.27
     container_name: logstash
-    depends_on: [elasticsearch]
+    depends_on:
+    - elasticsearch
+    - kibana
     environment:
       - LOGSTASH_INTERNAL_PASSWORD=${LOGSTASH_INTERNAL_PASSWORD}
     env_file:
