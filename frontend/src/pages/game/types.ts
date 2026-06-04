@@ -28,11 +28,20 @@ export interface GameStartPayload {
   roomId: string;
   state: GameState;
   config?: GameConfig;
+  players?: Record<string, VersusPlayerState>;
 }
 
 export interface GameEndPayload {
   roomId: string;
   reason: "game_over" | "objective_complete";
+  state: GameState;
+  players?: Record<string, VersusPlayerState>;
+}
+
+export interface VersusPlayerState {
+  id: number | string;
+  username: string;
+  rank?: string;
   state: GameState;
 }
 

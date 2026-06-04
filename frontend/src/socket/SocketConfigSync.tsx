@@ -25,16 +25,17 @@ export default function SocketConfigSync() {
     }
 
     const socket = connectSocket(session.token);
-
-    socket.on("game:config", (config: GameConfigDTO) => {
+    const handleGameConfig = (config: GameConfigDTO) => {
       saveGameConfig(config);
-    });
+    };
+    const handleConnectError = () => undefined;
 
-    socket.on("connect_error", () => undefined);
+    socket.on("game:config", handleGameConfig);
+    socket.on("connect_error", handleConnectError);
 
     return () => {
-      socket.off("game:config");
-      socket.off("connect_error");
+      socket.off("game:config", handleGameConfig);
+      socket.off("connect_error", handleConnectError);
     };
   }, [session]);
 

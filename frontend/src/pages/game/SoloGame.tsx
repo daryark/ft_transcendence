@@ -6,12 +6,14 @@ import {
   getSocket,
   subscribeToSocket,
 } from "../../socket/socketClient";
+import { getSessionUser } from "../../auth/session";
 import type { GameConfig } from "../../../shared/types/config.types";
 import type {
   GameEndPayload,
   GameStartPayload,
   GameState,
   PlayerMove,
+  VersusPlayerState,
 } from "./types";
 import "./SoloGame.scss";
 
@@ -35,6 +37,8 @@ type ActiveGamePayload = GameStartPayload & {
   runStartedAt?: number;
 };
 
+type GameUpdatePayload = GameState | (GameStartPayload & { players: Record<string, VersusPlayerState> });
+
 type CountdownStep =
   | "CLEAR 40 LINES!"
   | "TWO-MINUTE BLITZ"
@@ -55,6 +59,14 @@ const toActiveGamePayload = (value: unknown): Partial<ActiveGamePayload> => {
 
   return value as Partial<ActiveGamePayload>;
 };
+
+const isVersusPayload = (
+  value: unknown,
+): value is GameStartPayload & { players: Record<string, VersusPlayerState> } =>
+  !!value &&
+  typeof value === "object" &&
+  "players" in value &&
+  !!(value as { players?: unknown }).players;
 
 function getInitialState(locationState: unknown) {
   const payload = locationState as GameStartPayload | null;
@@ -127,6 +139,9 @@ function keyToMove(event: KeyboardEvent): PlayerMove | null {
 }
 
 function getSoloModeLabel(config: GameConfig | null) {
+  if (config?.mode === "custom") return "VERSUS";
+  if (config?.mode === "quickplay") return "QUICK PLAY";
+  if (config?.mode === "league") return "LEAGUE";
   if (config?.mode !== "solo") return "SOLO";
 
   if (config.preset === "40Lines") return "40 LINES";
@@ -164,9 +179,21 @@ function getReturnPath(locationState: unknown) {
   );
 }
 
+function formatVersusName(name: string | undefined, fallback: string) {
+  const trimmed = name?.trim();
+
+  if (!trimmed) return fallback;
+  if (trimmed.length > 18 && trimmed.includes("-")) return fallback;
+  if (trimmed.length > 18) return `${trimmed.slice(0, 15)}...`;
+
+  return trimmed;
+}
+
 export default function SoloGame() {
   const { gameId } = useParams();
   const location = useLocation();
+  const currentUser = getSessionUser();
+  const currentUserId = currentUser ? String(currentUser.id) : null;
   const [gameState, setGameState] = useState<GameState | null>(() =>
     getInitialState(location.state),
   );
@@ -187,6 +214,13 @@ export default function SoloGame() {
     }
   });
   const [soloResult, setSoloResult] = useState<SoloResult | null>(null);
+  const [versusPlayers, setVersusPlayers] = useState<
+    Record<string, VersusPlayerState>
+  >(() => {
+    const payload = toActiveGamePayload(location.state);
+
+    return payload.players ?? {};
+  });
   const [now, setNow] = useState(() => Date.now());
   const [socket, setSocket] = useState(() => getSocket());
   const [connectionStatus, setConnectionStatus] = useState(() =>
@@ -227,6 +261,14 @@ export default function SoloGame() {
     : `${gameState?.lines ?? 0}`;
 
   const modeLabel = getSoloModeLabel(gameConfig);
+  const isVersus = gameConfig?.mode === "custom" && Object.keys(versusPlayers).length > 0;
+  const versusEntries = Object.values(versusPlayers);
+  const selfVersusPlayer =
+    (currentUserId ? versusPlayers[currentUserId] : undefined) ?? versusEntries[0];
+  const opponentVersusPlayers = versusEntries.filter(
+    (player) => String(player.id) !== String(selfVersusPlayer?.id),
+  );
+  const primaryOpponent = opponentVersusPlayers[0];
 
   useEffect(() => {
     gameStateRef.current = gameState;
@@ -244,6 +286,19 @@ export default function SoloGame() {
     countdownStepRef.current = countdownStep;
     inputLockedRef.current = Boolean(countdownStep || soloResult);
   }, [countdownStep, soloResult]);
+
+  useEffect(() => {
+    if (!isVersus) {
+      document.body.classList.remove("solo-versus-active");
+      return undefined;
+    }
+
+    document.body.classList.add("solo-versus-active");
+
+    return () => {
+      document.body.classList.remove("solo-versus-active");
+    };
+  }, [isVersus]);
 
   useEffect(() => {
     return subscribeToSocket(() => {
@@ -304,9 +359,21 @@ export default function SoloGame() {
 
     const handleConnect = () => setConnectionStatus("LIVE");
     const handleDisconnect = () => setConnectionStatus("OFFLINE");
-    const handleUpdate = (state: GameState) => {
+    const handleUpdate = (payload: GameUpdatePayload) => {
       setConnectionStatus("LIVE");
       if (countdownStepRef.current) return;
+
+      const state = isVersusPayload(payload)
+        ? payload.players[currentUserId ?? ""]?.state ??
+          Object.values(payload.players)[0]?.state
+        : payload;
+
+      if (isVersusPayload(payload)) {
+        setVersusPlayers(payload.players);
+        setGameConfig(payload.config ?? gameConfigRef.current);
+      }
+
+      if (!state) return;
 
       setGameState(state);
       setNow(Date.now());
@@ -320,7 +387,10 @@ export default function SoloGame() {
           JSON.stringify({
             roomId: gameId,
             state,
-            config: saved?.config ?? gameConfigRef.current,
+            config: isVersusPayload(payload)
+              ? payload.config
+              : saved?.config ?? gameConfigRef.current,
+            players: isVersusPayload(payload) ? payload.players : saved?.players,
             runStartedAt: saved?.runStartedAt ?? runStartedAtRef.current,
             from: saved?.from,
           }),
@@ -335,8 +405,14 @@ export default function SoloGame() {
     const handleStart = (payload: ActiveGamePayload) => {
       if (payload.roomId !== gameId) return;
       setConnectionStatus("LIVE");
-      setGameState(payload.state);
+      const state = payload.players
+        ? payload.players[currentUserId ?? ""]?.state ??
+          Object.values(payload.players)[0]?.state
+        : payload.state;
+
+      setGameState(state);
       setGameConfig(payload.config ?? null);
+      setVersusPlayers(payload.players ?? {});
       setSoloResult(null);
       const countdownSequence = getCountdownSequence(payload.config ?? null);
       const needsCountdown = countdownSequence.length > 0;
@@ -356,8 +432,9 @@ export default function SoloGame() {
           ACTIVE_GAME_KEY,
           JSON.stringify({
             roomId: gameId,
-            state: payload.state,
+            state,
             config: payload.config,
+            players: payload.players,
             runStartedAt: startedAt,
             from,
           }),
@@ -365,19 +442,25 @@ export default function SoloGame() {
       } catch {
         window.sessionStorage.setItem(
           ACTIVE_GAME_KEY,
-          JSON.stringify({ roomId: gameId, state: payload.state }),
+          JSON.stringify({ roomId: gameId, state }),
         );
       }
     };
     const handleEnd = (payload: GameEndPayload) => {
       if (payload.roomId !== gameId) return;
       setConnectionStatus("ENDED");
-      setGameState(payload.state);
+      const state = payload.players
+        ? payload.players[currentUserId ?? ""]?.state ??
+          Object.values(payload.players)[0]?.state
+        : payload.state;
+
+      setVersusPlayers(payload.players ?? {});
+      setGameState(state);
       setSoloResult({
         reason: payload.reason,
         endedAt: Date.now(),
-        runStartedAt: runStartedAtRef.current ?? payload.state.startedAt,
-        state: payload.state,
+        runStartedAt: runStartedAtRef.current ?? state.startedAt,
+        state,
       });
       setCountdownStep(null);
       setNow(Date.now());
@@ -390,8 +473,9 @@ export default function SoloGame() {
           ACTIVE_GAME_KEY,
           JSON.stringify({
             roomId: gameId,
-            state: payload.state,
+            state,
             config: saved?.config ?? gameConfigRef.current,
+            players: payload.players ?? saved?.players,
             runStartedAt: saved?.runStartedAt ?? runStartedAtRef.current,
             from: saved?.from,
           }),
@@ -399,7 +483,7 @@ export default function SoloGame() {
       } catch {
         window.sessionStorage.setItem(
           ACTIVE_GAME_KEY,
-          JSON.stringify({ roomId: gameId, state: payload.state }),
+          JSON.stringify({ roomId: gameId, state }),
         );
       }
     };
@@ -421,7 +505,7 @@ export default function SoloGame() {
       socket.off("game:start", handleStart);
       socket.off("game:end", handleEnd);
     };
-  }, [gameId, socket]);
+  }, [currentUserId, gameId, socket]);
 
   // ESC hold handling
   useEffect(() => {
@@ -593,6 +677,127 @@ export default function SoloGame() {
         <Link className="solo-game__link" to="/play/solo">
           Back to Solo
         </Link>
+      </main>
+    );
+  }
+
+  if (isVersus) {
+    const selfState = selfVersusPlayer?.state ?? gameState;
+    const opponentState = primaryOpponent?.state ?? null;
+    const renderVersusPlayer = (
+      player:
+        | VersusPlayerState
+        | {
+            username: string;
+            state: GameState;
+          },
+      fallbackName: string,
+      modifier: "self" | "opponent",
+    ) => {
+      const state = player.state;
+      const displayName = formatVersusName(player.username, fallbackName);
+
+      return (
+        <article className={`versus-game__player versus-game__player--${modifier}`}>
+          <div className="versus-game__side-panel versus-game__side-panel--hold">
+            <h2>HOLD</h2>
+            <div className="solo-game__preview">
+              {state.hold ? (
+                <MiniFigure figure={state.hold} size={18} />
+              ) : (
+                <span className="solo-game__empty">EMPTY</span>
+              )}
+            </div>
+            <div className="versus-game__stats">
+              <span>LINES</span>
+              <strong>{state.lines}</strong>
+              <span>SCORE</span>
+              <strong>{state.score}</strong>
+            </div>
+          </div>
+
+          <div className="versus-game__board-wrap">
+            <GameBoard gameState={state} cellSize={24} />
+            <div className="versus-game__name">
+              {displayName}
+            </div>
+          </div>
+
+          <div className="versus-game__side-panel versus-game__side-panel--next">
+            <h2>NEXT</h2>
+            <div className="solo-game__next">
+              {state.next.slice(0, 5).map((figure, index) => (
+                <div className="solo-game__preview" key={`${figure.type}-${index}`}>
+                  <MiniFigure figure={figure} size={14} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </article>
+      );
+    };
+
+    return (
+      <main className="solo-game solo-game--versus">
+        <header className="versus-game__topbar">
+          <div className="versus-game__live">LIVE</div>
+          <div className="versus-game__title">
+            VERSUS{" "}
+            <strong>
+              {formatVersusName(
+                selfVersusPlayer?.username ?? currentUser?.username,
+                "YOU",
+              )}
+            </strong>
+            {primaryOpponent && (
+              <>
+                {" "}
+                VS <strong>{formatVersusName(primaryOpponent.username, "OPPONENT")}</strong>
+              </>
+            )}
+          </div>
+          <button
+            className="versus-game__exit"
+            onClick={() => {
+              socket?.emit("game:stop");
+              navigate("/play/multiplayer/custom");
+            }}
+            type="button"
+          >
+            EXIT
+          </button>
+        </header>
+
+        <section className="versus-game__stage">
+          {renderVersusPlayer(
+            selfVersusPlayer ?? {
+              username: currentUser?.username ?? "YOU",
+              state: selfState,
+            },
+            "YOU",
+            "self",
+          )}
+
+          {opponentState && primaryOpponent ? (
+            renderVersusPlayer(primaryOpponent, "OPPONENT", "opponent")
+          ) : (
+            <article className="versus-game__player versus-game__player--opponent">
+              <div className="versus-game__waiting">
+                WAITING FOR OPPONENT
+              </div>
+            </article>
+          )}
+        </section>
+
+        <div className="solo-game__abort" aria-hidden={escProgress === 0}>
+          <div
+            className="solo-game__abort__bar"
+            style={{ height: `${escProgress * 100}%` }}
+          />
+          {escProgress > 0 && (
+            <div className="solo-game__abort__text">Keep pressing ESC to exit</div>
+          )}
+        </div>
       </main>
     );
   }

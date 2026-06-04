@@ -31,6 +31,18 @@
   filter: brightness(1.16) saturate(1.08);
 }
 
+.button--disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+  filter: grayscale(0.28) brightness(0.78);
+}
+
+.button--disabled:hover {
+  width: calc(100% - 3.2rem);
+  opacity: 0.56;
+  filter: grayscale(0.2) brightness(0.9);
+}
+
 .button::before {
   position: absolute;
   inset: 0 auto 0 0;
@@ -72,6 +84,22 @@
   font-size: clamp(0.8rem, 1.4vw, 1rem);
   font-weight: 900;
   line-height: 1;
+  text-transform: uppercase;
+}
+
+.button__disabledReason {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-items: center;
+  padding: 0.75rem 1.6rem;
+  background: rgba(20, 0, 0, 0.76);
+  color: #fff;
+  font-size: clamp(1.25rem, 2.5vw, 2rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.05;
+  text-shadow: 0 0.08rem 0 #000;
   text-transform: uppercase;
 }
 
@@ -140,6 +168,10 @@
 
   .button:hover {
     width: 100%;
+  }
+
+  .button--disabled:hover {
+    width: calc(100% - 0.8rem);
   }
 
   .button img {

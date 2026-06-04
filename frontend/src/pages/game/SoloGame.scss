@@ -20,6 +20,186 @@
   text-align: center;
 }
 
+.solo-game--versus {
+  min-height: 100vh;
+  padding: 0;
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.34), rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.28)),
+    rgba(0, 0, 0, 0.18);
+}
+
+body.solo-versus-active .header,
+body.solo-versus-active::after {
+  display: none;
+}
+
+body.solo-versus-active::before {
+  inset: 0;
+}
+
+body.solo-versus-active {
+  overflow: hidden;
+}
+
+.versus-game__topbar {
+  min-height: 3.1rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  background: rgba(30, 31, 33, 0.92);
+  color: #fff;
+  font-family: var(--app-font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.versus-game__live {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  padding: 0 2.25rem;
+  background: #ff7d00;
+  color: #050505;
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  font-style: italic;
+}
+
+.versus-game__title {
+  min-width: 0;
+  overflow: hidden;
+  padding: 0 1rem;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: clamp(1rem, 1.5vw, 1.35rem);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.versus-game__title strong {
+  color: #ff8a15;
+}
+
+.versus-game__exit {
+  min-height: 2rem;
+  margin-right: 0.35rem;
+  padding: 0 0.85rem;
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+
+.versus-game__stage {
+  min-height: calc(100vh - 3.1rem);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 35rem));
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1.2rem, 3vw, 3.5rem);
+  padding: clamp(0.75rem, 3vh, 2.5rem) clamp(0.75rem, 3vw, 3rem);
+  overflow: hidden;
+}
+
+.versus-game__player {
+  display: grid;
+  grid-template-columns: minmax(7rem, 8.5rem) auto minmax(7rem, 8.5rem);
+  align-items: start;
+  gap: 0.75rem;
+  justify-self: center;
+}
+
+.versus-game__side-panel {
+  display: grid;
+  align-content: start;
+  gap: 0.65rem;
+  min-width: 0;
+  color: #fff;
+  font-family: var(--app-font-display);
+  text-transform: uppercase;
+  text-shadow: 0 0 0.7rem rgba(0, 0, 0, 0.86);
+}
+
+.versus-game__side-panel h2 {
+  margin: 0;
+  min-height: 1.55rem;
+  display: grid;
+  align-items: center;
+  padding: 0 0.22rem;
+  background: #fff;
+  color: #111;
+  font-size: clamp(1.05rem, 1.4vw, 1.45rem);
+  line-height: 1;
+}
+
+.versus-game__stats {
+  display: grid;
+  justify-items: end;
+  gap: 0.1rem;
+  margin-top: 1rem;
+}
+
+.versus-game__stats span {
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.versus-game__stats strong {
+  color: #fff;
+  font-size: clamp(1.65rem, 2.6vw, 2.65rem);
+  line-height: 0.92;
+}
+
+.versus-game__board-wrap {
+  display: grid;
+  min-width: 0;
+  justify-items: stretch;
+}
+
+.versus-game__board-wrap .game-board {
+  width: auto;
+  max-width: none;
+  border: 3px solid #fff;
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.72);
+  box-shadow: 0 0 0 0.18rem rgba(0, 0, 0, 0.56);
+}
+
+.versus-game__name {
+  min-height: 2.05rem;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  font-family: var(--app-font-display);
+  font-size: clamp(1rem, 1.5vw, 1.4rem);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.versus-game__waiting {
+  grid-column: 1 / -1;
+  min-height: 30rem;
+  display: grid;
+  place-items: center;
+  padding: 2rem;
+  border: 3px solid rgba(255, 255, 255, 0.72);
+  background: rgba(0, 0, 0, 0.48);
+  color: #fff;
+  font-family: var(--app-font-display);
+  font-size: clamp(1.6rem, 3vw, 2.8rem);
+  font-weight: 900;
+  text-align: center;
+}
+
+.solo-game--versus .solo-game__preview {
+  min-height: 4.7rem;
+  border-radius: 0;
+}
+
+.solo-game--versus .solo-game__next {
+  gap: 0.45rem;
+}
+
 .solo-game__link {
   color: var(--app-accent);
   font-weight: 900;
@@ -372,6 +552,31 @@
 }
 
 @media (max-width: 860px) {
+  .versus-game__topbar,
+  .versus-game__stage,
+  .versus-game__player--self,
+  .versus-game__player--opponent {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .versus-game__stage {
+    padding: 1rem;
+  }
+
+  .versus-game__player--self,
+  .versus-game__player--opponent {
+    justify-self: center;
+  }
+
+  .versus-game__side-panel {
+    width: min(100%, 20rem);
+    justify-self: center;
+  }
+
+  .versus-game__side-panel .solo-game__next {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
   .solo-game__status {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     justify-content: stretch;

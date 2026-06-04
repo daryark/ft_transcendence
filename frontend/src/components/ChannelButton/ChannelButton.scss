@@ -23,6 +23,18 @@
   filter: brightness(1.18);
 }
 
+.channel-button--disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  filter: grayscale(0.25) brightness(0.78);
+}
+
+.channel-button--disabled:hover {
+  transform: none;
+  opacity: 0.56;
+  filter: grayscale(0.18) brightness(0.88);
+}
+
 .channel-button h2 {
   margin: 0;
   color: #baffbf;
@@ -36,6 +48,22 @@
   margin: 0.35rem 0 0;
   color: #cfead0;
   font-weight: 900;
+  text-transform: uppercase;
+}
+
+.channel-button__disabledReason {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-items: center;
+  padding: 0.75rem 1.1rem;
+  background: rgba(0, 22, 4, 0.72);
+  color: #fff;
+  font-size: clamp(1.1rem, 2.5vw, 1.85rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.05;
+  text-shadow: 0 0.08rem 0 #000;
   text-transform: uppercase;
 }
 

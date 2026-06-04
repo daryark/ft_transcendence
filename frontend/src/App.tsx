@@ -29,52 +29,59 @@ export default function App() {
           <Route
             path="play/*"
             element={
+              <ProtectedRoute>
                 <Play />
-
-              // <ProtectedRoute>
-              // </ProtectedRoute>
+              </ProtectedRoute>
             }
           />
 
           <Route
             path="play/solo/:modeId"
             element={
-              // <ProtectedRoute>
+              <ProtectedRoute>
                 <SoloModePage />
-              // </ProtectedRoute>
+              </ProtectedRoute>
             }
           />
 
           <Route
             path="play/multiplayer/quick"
             element={
-              // <ProtectedRoute>
+              <ProtectedRoute>
                 <Quick />
-              // </ProtectedRoute>
+              </ProtectedRoute>
             }
           />
           <Route
             path="play/multiplayer/league"
             element={
-              // <ProtectedRoute>
+              <ProtectedRoute>
                 <League />
-              // </ProtectedRoute>
+              </ProtectedRoute>
             }
           />
           <Route
             path="play/multiplayer/rooms"
             element={
-              // <ProtectedRoute>
+              <ProtectedRoute>
                 <Rooms />
-              // </ProtectedRoute>
+              </ProtectedRoute>
             }
           />
           <Route
             path="play/multiplayer/custom"
             element={
-              // <ProtectedRoute>
+              <ProtectedRoute>
                 <Custom />
-              // </ProtectedRoute>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="play/multiplayer/custom/:roomCode"
+            element={
+              <ProtectedRoute>
+                <Custom />
+              </ProtectedRoute>
             }
           />
 

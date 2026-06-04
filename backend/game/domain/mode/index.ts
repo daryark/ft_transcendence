@@ -1,10 +1,14 @@
 import solo from "./solo";
+import custom from "./custom";
+
 
 import { GameMode } from "../../config/gameConfig.types";
 import { ModeJoinHandler } from "../../services/modeService";
 
 const modes: Partial<Record<GameMode, ModeJoinHandler>> = {
-  solo,
+  solo, 
+  custom,
+
 };
 
 export default modes;

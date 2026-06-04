@@ -14,6 +14,7 @@ export type SessionData = {
 
 const SESSION_EVENT = "tetra-session-change";
 const SESSION_STORAGE_KEY = "tetra-session";
+const ANONYMOUS_SESSION_STORAGE_KEY = "tetra-anonymous-session";
 let currentSession: SessionData | null = null;
 
 const emitSessionChange = () => {
@@ -59,18 +60,40 @@ const readStoredSession = (): SessionData | null => {
     const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
     const session = raw ? (JSON.parse(raw) as SessionData) : null;
 
-    return isSessionExpired(session) ? null : session;
+    if (session && !isSessionExpired(session)) {
+      return session;
+    }
+
+    const anonymousRaw = window.sessionStorage.getItem(
+      ANONYMOUS_SESSION_STORAGE_KEY,
+    );
+    const anonymousSession = anonymousRaw
+      ? (JSON.parse(anonymousRaw) as SessionData)
+      : null;
+
+    return anonymousSession?.user.isAnonymous ? anonymousSession : null;
   } catch {
     return null;
   }
 };
 
 const persistSession = (session: SessionData | null) => {
-  if (!session || session.user.isAnonymous) {
+  if (!session) {
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    window.sessionStorage.removeItem(ANONYMOUS_SESSION_STORAGE_KEY);
     return;
   }
 
+  if (session.user.isAnonymous) {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    window.sessionStorage.setItem(
+      ANONYMOUS_SESSION_STORAGE_KEY,
+      JSON.stringify(session),
+    );
+    return;
+  }
+
+  window.sessionStorage.removeItem(ANONYMOUS_SESSION_STORAGE_KEY);
   window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
 };
 
@@ -117,7 +140,7 @@ export const clearSession = () => {
 };
 
 export const createAnonymousUser = (): SessionUser => ({
-  id: Date.now(),
+  id: Math.floor(Date.now() + Math.random() * 1000),
   email: "anonymous@local",
   username: `GUEST-${Math.random().toString(36).slice(2, 9).toUpperCase()}`,
   created_at: new Date().toISOString(),

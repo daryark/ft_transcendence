@@ -1,8 +1,13 @@
+import { useSyncExternalStore } from "react";
 import { useNavigate } from "react-router-dom";
+import { userCapabilities } from "../../../auth/capabilities";
+import { getSessionUser, subscribeToSession } from "../../../auth/session";
 import "./MultiplayerMode.scss";
 
 export default function League() {
   const navigate = useNavigate();
+  const user = useSyncExternalStore(subscribeToSession, getSessionUser);
+  const capabilities = userCapabilities(user);
 
   return (
     <section className="mp-page mp-page--league">
@@ -30,10 +35,16 @@ export default function League() {
         <small>Estimated queue time: 39 seconds</small>
       </div>
 
-      <button className="mp-league-action" type="button">
-        ENTER MATCHMAKING
-        <span>Leaving early is punished</span>
-      </button>
+      {capabilities.canEnterTetraLeague ? (
+        <button className="mp-league-action" type="button">
+          ENTER MATCHMAKING
+          <span>Leaving early is punished</span>
+        </button>
+      ) : (
+        <div className="mp-access-notice mp-access-notice--league">
+          Anonymous users may not enter Tetra League
+        </div>
+      )}
 
       <article className="mp-help">
         <h2>HOW DOES IT WORK?</h2>

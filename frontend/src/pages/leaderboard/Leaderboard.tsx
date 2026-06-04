@@ -1,6 +1,8 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { authFetch } from "../../auth/authFetch";
+import { userCapabilities } from "../../auth/capabilities";
+import { getSessionUser, subscribeToSession } from "../../auth/session";
 
 import "./Leaderboard.scss";
 
@@ -45,15 +47,31 @@ export default function Leaderboard() {
   }>();
 
   const navigate = useNavigate();
+  const user = useSyncExternalStore(subscribeToSession, getSessionUser);
+  const capabilities = userCapabilities(user);
 
   const currentMode = isLeaderboardMode(mode) ? mode : "fortyLines";
-  const currentScope = isLeaderboardScope(scope) ? scope : "global";
+  const requestedScope = isLeaderboardScope(scope) ? scope : "global";
+  const currentScope =
+    requestedScope === "global" ||
+    (requestedScope === "country" && capabilities.canUseCountryLeaderboards) ||
+    (requestedScope === "friends" && capabilities.canUseFriends)
+      ? requestedScope
+      : "global";
 
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // loading data
+  useEffect(() => {
+    if (requestedScope !== currentScope) {
+      navigate(`/channel/leaderboards/${currentMode}/${currentScope}`, {
+        replace: true,
+      });
+    }
+  }, [currentMode, currentScope, navigate, requestedScope]);
+
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -119,6 +137,7 @@ export default function Leaderboard() {
 
         <button
           className={currentScope === "country" ? "active" : ""}
+          disabled={!capabilities.canUseCountryLeaderboards}
           onClick={() =>
             navigate(`/channel/leaderboards/${currentMode}/country`)
           }
@@ -128,6 +147,7 @@ export default function Leaderboard() {
 
         <button
           className={currentScope === "friends" ? "active" : ""}
+          disabled={!capabilities.canUseFriends}
           onClick={() =>
             navigate(`/channel/leaderboards/${currentMode}/friends`)
           }

@@ -421,6 +421,13 @@ export default function Profile() {
       setProfile(null);
 
       try {
+        if (
+          currentUser?.isAnonymous &&
+          currentUser.username.toLowerCase() === decodedUsername.toLowerCase()
+        ) {
+          throw new Error("Anonymous users do not have profiles.");
+        }
+
         const data = await fetchProfile(decodedUsername, controller.signal);
 
         if (!ignore) {

@@ -39,6 +39,18 @@
   color: var(--app-text);
 }
 
+.leaderboard__row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.leaderboard__row button:disabled:hover {
+  transform: none;
+  border-color: var(--app-border);
+  background: rgba(17, 24, 33, 0.86);
+  color: var(--app-soft);
+}
+
 .leaderboard > p {
   margin: 0;
   padding: 1rem;
