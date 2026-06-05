@@ -59,10 +59,10 @@ async function main() {
 	console.log("Friendship status:", pair.status);
 
 	const friendsForUser = await listFriends({ userId: created.users[0].id });
-	if (friendsForUser.length !== 1) {
+	if (friendsForUser.items.length !== 1) {
 		throw new Error("Expected one accepted friendship");
 	}
-	console.log("Friends count:", friendsForUser.length);
+	console.log("Friends count:", friendsForUser.items.length);
 
 	if (process.env.KEEP_TEST_DATA !== "1") {
 		await cleanup(created);
