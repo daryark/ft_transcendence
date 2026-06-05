@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { userCapabilities } from "../../../auth/capabilities";
 import { getSessionUser, subscribeToSession } from "../../../auth/session";
@@ -133,6 +133,9 @@ const DEFAULT_CUSTOM_CONFIG: CustomEditableConfig = {
     },
   },
 };
+
+const customRoomPath = (code: string) =>
+  `/play/multiplayer/custom/${encodeURIComponent(code)}`;
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
@@ -408,22 +411,25 @@ export default function Custom() {
   const { roomCode: roomCodeParam } = useParams<{ roomCode?: string }>();
   const user = useSyncExternalStore(subscribeToSession, getSessionUser);
   const capabilities = userCapabilities(user);
+  const routeRoomCode = useMemo(() => {
+    const room =
+      roomCodeParam ?? new URLSearchParams(location.search).get("room");
+
+    return room?.trim().toUpperCase() ?? "";
+  }, [location.search, roomCodeParam]);
+  const autoJoinAttemptedCodeRef = useRef("");
   const [tab, setTab] = useState<CustomTab>("welcome");
   const [roomId, setRoomId] = useState<string | null>(null);
   const [roomCode, setRoomCode] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState(() =>
+    routeRoomCode ? "JOINING ROOM" : "",
+  );
   const [config, setConfig] = useState<CustomEditableConfig>(() =>
     readCustomEditableConfig(getStoredGameConfig()),
   );
   const [players, setPlayers] = useState<CustomRoomPlayer[]>([]);
   const [chatMessages, setChatMessages] = useState<CustomChatMessage[]>([]);
   const [chatMessage, setChatMessage] = useState("");
-  const [autoJoinCode, setAutoJoinCode] = useState(() => {
-    const room =
-      roomCodeParam ?? new URLSearchParams(location.search).get("room");
-
-    return room?.trim().toUpperCase() ?? "";
-  });
 
   const inRoom = roomId !== null;
   const roomName = config.roomConfig.roomName?.trim() || "CUSTOM ROOM";
@@ -456,14 +462,20 @@ export default function Custom() {
     }
 
     const handleRoomUpdate = (snapshot: CustomRoomSnapshot) => {
+      const nextRoomCode = snapshot.roomCode ?? "";
+
       setRoomId(snapshot.roomId ?? "pending-custom-room");
-      setRoomCode(snapshot.roomCode ?? "");
+      setRoomCode(nextRoomCode);
       setPlayers(snapshot.players ?? (currentPlayer ? [currentPlayer] : []));
       if (snapshot.config) {
         setConfig(snapshot.config);
       }
       setChatMessages(snapshot.chatMessages ?? []);
       setStatus("");
+
+      if (nextRoomCode && location.pathname !== customRoomPath(nextRoomCode)) {
+        navigate(customRoomPath(nextRoomCode), { replace: true });
+      }
     };
 
     const handleChatMessage = (data: { sender?: string; message?: string }) => {
@@ -498,24 +510,27 @@ export default function Custom() {
       socket.off("server:error", handleError);
       socket.off("game:start", handleGameStart);
     };
-  }, [currentPlayer, navigate, roomId]);
+  }, [currentPlayer, location.pathname, navigate, roomId]);
 
   useEffect(() => {
-    if (!autoJoinCode || inRoom) {
+    if (
+      !routeRoomCode ||
+      inRoom ||
+      autoJoinAttemptedCodeRef.current === routeRoomCode
+    ) {
       return;
     }
 
-    setStatus("JOINING ROOM");
+    autoJoinAttemptedCodeRef.current = routeRoomCode;
     getSocket()?.emit("mode:join", {
       mode: "custom",
       payload: {
         roomConfig: {
-          roomName: `JOIN:${autoJoinCode}`, //no need to send on mode:join (only in the room on modification, later!)
+          roomName: `JOIN:${routeRoomCode}`, //no need to send on mode:join (only in the room on modification, later!)
         },
       },
     });
-    setAutoJoinCode("");
-  }, [autoJoinCode, inRoom]);
+  }, [inRoom, routeRoomCode]);
 
   const updateRoom = (nextRoomConfig: Partial<CustomRoomConfig>) => {
     setConfig((current) => ({
@@ -654,6 +669,7 @@ export default function Custom() {
     setPlayers([]);
     setChatMessages([]);
     setStatus("");
+    navigate("/play/multiplayer/custom", { replace: true });
   };
 
   if (!inRoom) {
