@@ -1,17 +1,18 @@
-- fix/rewrite full profile✅
-- add small profile
-- users.country by ip✅
-- change password logic - remove current✅
-- review friends
-    - api
-    - global search
-    - add, remove, block
-    - accept, reject
+- Profile: fix/rewrite full profile ✅
+- Miniprofile: add small profile ✅
+- users.country by ip ✅
+- change password logic - remove current ✅
+- review friends:
+  - api
+  - global search
+  - add, remove, block
+  - accept, reject
 
 
 /////////////////////////////
 
---- API: Profiles
+
+--- API: Profile
 {
   GET /api/users/:username/profile
   Response shape (full profile):
@@ -36,7 +37,10 @@
       zen?: { value: string; achievedAgo?: string } | null;
     };
   }
+}
 
+--- API: MiniProfile
+{
   GET /api/users/:username/miniprofile
   {
     "miniprofile": {

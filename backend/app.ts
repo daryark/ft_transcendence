@@ -19,6 +19,7 @@ const api = express.Router();
 const { registerUser, loginUser, changeUserPassword } = require("./prisma/auth");
 const { getProfileByUsername, updateMyProfile, getMiniProfileByUsername } = require("./prisma/profile");
 const { searchUsers } = require("./prisma/search");
+const { listFriends, createFriendRequest, acceptFriendRequestById, rejectFriendRequestById, removeFriendshipByPair, blockFriendshipByPair, } = require("./prisma/friends");
 const oauthController = require("./auth/oauthController");
 // lightweight helpers
 const { getLeaderboard } = require("./prisma/leaderboard");
@@ -43,6 +44,53 @@ function getOptionalBearerUserId(req: ApiRequest): number | null {
   } catch {
     return null;
   }
+}
+
+function sendOk(res: Response, data: any, status = 200) {
+  return res.status(status).json({ ok: true, data });
+}
+
+function sendError(res: Response, status: number, error: string) {
+  return res.status(status).json({ ok: false, error });
+}
+
+function parsePaginationQuery(req: ApiRequest) {
+  const page = req.query.page ? parseInt(String(req.query.page), 10) : 1;
+  const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 20;
+
+  if (!Number.isInteger(page) || page <= 0) {
+    throw new Error("page must be a positive integer");
+  }
+
+  if (!Number.isInteger(limit) || limit <= 0) {
+    throw new Error("limit must be a positive integer");
+  }
+
+  if (limit > 50) {
+    throw new Error("limit must be 50 or less");
+  }
+
+  return { page, limit };
+}
+
+function parseFriendStatusFilter(req: ApiRequest) {
+  const rawStatus = typeof req.query.status === "string" ? req.query.status : "all";
+
+  if (rawStatus !== "all" && rawStatus !== "pending" && rawStatus !== "accepted" && rawStatus !== "blocked") {
+    throw new Error("status must be all, pending, accepted, or blocked");
+  }
+
+  return rawStatus;
+}
+
+function getFriendActionTargetId(body: any) {
+  const targetId = Number(body?.targetUserId ?? body?.userId);
+
+  if (!Number.isInteger(targetId) || targetId <= 0) {
+    throw new Error("targetUserId must be a positive integer");
+  }
+
+  return targetId;
 }
 
 api.post("/auth/register", async (req: ApiRequest, res: Response) => {
@@ -193,30 +241,153 @@ api.patch("/users/me/password", authenticateToken, async (req: ApiRequest, res: 
 // -----------------------------------------------------------------------------
 
 // GET /api/friends
-api.get("/friends", async (req: ApiRequest, res: Response) => {
+api.get("/friends", authenticateToken, async (req: ApiRequest, res: Response) => {
   try {
-    const requesterUserId = getOptionalBearerUserId(req);
+    const requesterUserId = getAuthenticatedUserId(req);
 
-    // If no bearer token, return empty list rather than 501 to keep UI usable.
     if (!requesterUserId) {
-      return res.json({ friends: [] });
+      return sendError(res, 401, "Unauthorized");
     }
 
-    // Lazy-load friend helper to avoid circular startup ordering.
-    const { listFriends } = require("./prisma/friends");
+    const { page, limit } = parsePaginationQuery(req);
+    const status = parseFriendStatusFilter(req);
 
-    const rows = await listFriends({ userId: requesterUserId });
+    const result = await listFriends({ userId: requesterUserId, status, page, limit });
+    const items = result.items.map((friendship: any) => {
+      const isRequester = friendship.user_id === requesterUserId;
+      const otherUser = isRequester
+        ? friendship.users_friends_friend_idTousers
+        : friendship.users_friends_user_idTousers;
 
-    // Map to a thin shape the frontend `SocialPanels` can consume.
-    const friends = rows.map((r: any) => {
-      const otherId = r.user_id === requesterUserId ? r.friend_id : r.user_id;
-      return { id: otherId, username: r.username ?? `user${otherId}`, status: "offline" };
+      return {
+        id: friendship.id,
+        userId: friendship.user_id,
+        friendId: friendship.friend_id,
+        status: friendship.status,
+        createdAt: friendship.created_at ? friendship.created_at.toISOString() : null,
+        otherUser: {
+          id: otherUser.id,
+          username: otherUser.username,
+        },
+      };
     });
 
-    return res.json({ friends });
+    return sendOk(res, { items, page: result.page, limit: result.limit, total: result.total });
   } catch (error) {
-    // On error, return an empty list to avoid breaking the UI (quick fix).
-    return res.json({ friends: [] });
+    const message = error instanceof Error ? error.message : String(error);
+    return sendError(res, message.includes("Unauthorized") ? 401 : 400, message);
+  }
+});
+
+// POST /api/friends/request
+api.post("/friends/request", authenticateToken, async (req: ApiRequest, res: Response) => {
+  try {
+    const requesterUserId = getAuthenticatedUserId(req);
+    if (!requesterUserId) {
+      return sendError(res, 401, "Unauthorized");
+    }
+
+    const friendId = getFriendActionTargetId(req.body);
+    const friendship = await createFriendRequest({ userId: requesterUserId, friendId });
+
+    return sendOk(res, {
+      friendship: {
+        id: friendship.id,
+        userId: friendship.user_id,
+        friendId: friendship.friend_id,
+        status: friendship.status,
+        createdAt: friendship.created_at ? friendship.created_at.toISOString() : null,
+      },
+    }, 201);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("not be different") || message.includes("positive integer") ? 400 : 409;
+    return sendError(res, status, message);
+  }
+});
+
+// POST /api/friends/respond
+api.post("/friends/respond", authenticateToken, async (req: ApiRequest, res: Response) => {
+  try {
+    const requesterUserId = getAuthenticatedUserId(req);
+    if (!requesterUserId) {
+      return sendError(res, 401, "Unauthorized");
+    }
+
+    const friendshipId = Number(req.body?.requestId);
+    const action = typeof req.body?.action === "string" ? req.body.action : "";
+
+    if (!Number.isInteger(friendshipId) || friendshipId <= 0) {
+      throw new Error("requestId must be a positive integer");
+    }
+
+    if (action !== "accept" && action !== "reject") {
+      throw new Error("action must be accept or reject");
+    }
+
+    const friendship = action === "accept"
+      ? await acceptFriendRequestById(friendshipId, requesterUserId)
+      : await rejectFriendRequestById(friendshipId, requesterUserId);
+
+    return sendOk(res, {
+      friendship: {
+        id: friendship.id,
+        userId: friendship.user_id,
+        friendId: friendship.friend_id,
+        status: friendship.status ?? (action === "reject" ? null : friendship.status),
+        createdAt: friendship.created_at ? friendship.created_at.toISOString() : null,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("not found") ? 404 : message.includes("allowed") ? 403 : 400;
+    return sendError(res, status, message);
+  }
+});
+
+// POST /api/friends/remove
+api.post("/friends/remove", authenticateToken, async (req: ApiRequest, res: Response) => {
+  try {
+    const requesterUserId = getAuthenticatedUserId(req);
+    if (!requesterUserId) {
+      return sendError(res, 401, "Unauthorized");
+    }
+
+    const targetUserId = getFriendActionTargetId(req.body);
+    await removeFriendshipByPair(requesterUserId, targetUserId);
+
+    return sendOk(res, { removed: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("not found") ? 404 : 400;
+    return sendError(res, status, message);
+  }
+});
+
+// POST /api/friends/block
+api.post("/friends/block", authenticateToken, async (req: ApiRequest, res: Response) => {
+  try {
+    const requesterUserId = getAuthenticatedUserId(req);
+    if (!requesterUserId) {
+      return sendError(res, 401, "Unauthorized");
+    }
+
+    const targetUserId = getFriendActionTargetId(req.body);
+    const friendship = await blockFriendshipByPair(requesterUserId, targetUserId);
+
+    return sendOk(res, {
+      friendship: {
+        id: friendship.id,
+        userId: friendship.user_id,
+        friendId: friendship.friend_id,
+        status: friendship.status,
+        createdAt: friendship.created_at ? friendship.created_at.toISOString() : null,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("different") ? 400 : 500;
+    return sendError(res, status, message);
   }
 });
 
