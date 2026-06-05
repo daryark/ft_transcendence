@@ -93,6 +93,18 @@ const asArray = (value: unknown): unknown[] => {
   return Array.isArray(nested) ? nested : [];
 };
 
+const unwrapItems = (value: unknown): unknown[] => {
+  const object = asRecord(value);
+  const payload = asRecord(object.data ?? object.result ?? object.payload ?? object);
+  const items = payload.items;
+
+  if (Array.isArray(items)) {
+    return items;
+  }
+
+  return asArray(payload);
+};
+
 const toNumber = (value: unknown): number | null => {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
@@ -123,12 +135,16 @@ const getAvatarStyle = (avatarId?: number) => {
 
 const toFriend = (value: unknown): Friend | null => {
   const object = asRecord(value);
-  const user = asRecord(object.user ?? object.friend ?? object.player);
+  const user = asRecord(
+    object.otherUser ?? object.user ?? object.friend ?? object.player,
+  );
   const id =
-    toNumber(object.id) ??
-    toNumber(object.userId) ??
+    toNumber(user.id) ??
+    toNumber(object.otherUserId) ??
     toNumber(object.friendId) ??
-    toNumber(user.id);
+    toNumber(object.userId) ??
+    toNumber(object.userId) ??
+    toNumber(object.id);
   const username = String(
     object.username ?? user.username ?? object.name ?? user.name ?? "",
   ).trim();
@@ -143,9 +159,7 @@ const toFriend = (value: unknown): Friend | null => {
     avatarId:
       toNumber(object.avatarId ?? object.avatar_id ?? user.avatarId ?? user.avatar_id) ??
       undefined,
-    status: toStatus(
-      object.status ?? object.presence ?? user.status ?? user.presence,
-    ),
+    status: toStatus(object.status ?? object.presence ?? user.status ?? user.presence),
   };
 };
 
@@ -362,7 +376,7 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
         }
 
         const data = await response.json();
-        setFriends(asArray(data).map(toFriend).filter(Boolean) as Friend[]);
+        setFriends(unwrapItems(data).map(toFriend).filter(Boolean) as Friend[]);
       } catch (error) {
         if (!controller.signal.aborted) {
           setFriends([]);
@@ -404,7 +418,7 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
         }
 
         const data = await response.json();
-        const players = asArray(data)
+        const players = unwrapItems(data)
           .map(toFriend)
           .filter(Boolean) as Friend[];
 
