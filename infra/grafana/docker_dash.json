@@ -36,7 +36,7 @@
                   "hidden": false,
                   "query": {
                     "datasource": {
-                      "name": "cfo8yuc6vgq9se"
+                      "name": "prometheus"
                     },
                     "group": "prometheus",
                     "kind": "DataQuery",
@@ -155,7 +155,7 @@
                   "hidden": false,
                   "query": {
                     "datasource": {
-                      "name": "cfo8yuc6vgq9se"
+                      "name": "prometheus"
                     },
                     "group": "prometheus",
                     "kind": "DataQuery",
@@ -273,7 +273,7 @@
                   "hidden": false,
                   "query": {
                     "datasource": {
-                      "name": "cfo8yuc6vgq9se"
+                      "name": "prometheus"
                     },
                     "group": "prometheus",
                     "kind": "DataQuery",
@@ -391,7 +391,7 @@
                   "hidden": false,
                   "query": {
                     "datasource": {
-                      "name": "cfo8yuc6vgq9se"
+                      "name": "prometheus"
                     },
                     "group": "prometheus",
                     "kind": "DataQuery",
@@ -509,14 +509,14 @@
                   "hidden": false,
                   "query": {
                     "datasource": {
-                      "name": "cfo8yuc6vgq9se"
+                      "name": "prometheus"
                     },
                     "group": "prometheus",
                     "kind": "DataQuery",
                     "spec": {
                       "editorMode": "code",
-                      "expr": "sum by (container_label_com_docker_compose_service) (\n  rate(container_cpu_usage_seconds_total{\n    job=\"cadvisor\",\n    id=~\".*docker.*\",\n    cpu=\"total\",\n    container_label_com_docker_compose_service=~\".+\"\n  }[5m])\n)",
-                      "legendFormat": "__auto",
+                      "expr": "topk(8,\n  sum by (container_label_com_docker_compose_service, id) (\n    rate(container_cpu_usage_seconds_total{\n      job=\"cadvisor\",\n      id=~\".*docker.*\",\n      cpu=\"total\"\n    }[5m])\n  )\n)",
+                      "legendFormat": "{{container_label_com_docker_compose_service}}",
                       "range": true
                     },
                     "version": "v0"
