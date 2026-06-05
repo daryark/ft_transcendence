@@ -9,7 +9,14 @@ import startGame from "../game/domain/match/startGame";
 
 export type ClientToServerEvents = "mode:join" | "mode:leave" | "room:start" | "player:move" | "game:stop";
 
-export type ServerToClientEvents = "game:start" | "game:update" | "game:end" | "room:update" | "server:error";
+export type ServerToClientEvents =
+    | "game:start"
+    | "game:update"
+    | "game:end"
+    | "round:start"
+    | "round:end"
+    | "room:update"
+    | "server:error";
 
 export function emitError(socket: Socket, reason: string) {
     socket.emit("server:error" as ServerToClientEvents, { reason });
@@ -71,8 +78,23 @@ export default function gameHandlers(
         const room = roomService.getRoom(roomId);
         if (!room) return;
 
-        // Stop engine if running
+        room.match?.stop();
         room.engine?.stop();
+
+        if (room.gameConfig.mode === "solo" && room.gameConfig.objective.winCondition === "none") {
+            roomService.broadcast(roomId, "game:end", {
+                roomId,
+                reason: "manual_exit",
+                state: room.state,
+                result: {
+                    outcome: "defeat",
+                    stats: null,
+                },
+            });
+
+            roomService.deleteRoom(roomId);
+            return;
+        }
 
         // If solo mode -> delete entire room and do not persist stats
         if (room.gameConfig.mode === "solo") {

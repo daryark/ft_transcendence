@@ -13,30 +13,26 @@ export default function join(
     { roomService, playerService }: { roomService: RoomService; playerService: PlayerService },
     payload: ConfigPatch = {}
 ): RoomServiceRoomState | null {
-    //     validateModifiers(payload.gameConfig?.modifiers || {});
-
-    // let room = roomService.getRoom('quickplay' as RoomId); //!modify id and type
-    // if (!room) {
     const config: Config = applyConfigPatch(createConfig('quickplay'), payload);
-    const room: Room = roomService.createRoom(config);
-    // }
+    const room: Room = roomService.findRoom((existingRoom) => {
+        return existingRoom.gameConfig.mode === "quickplay" && existingRoom.status === "playing";
+    }) ?? roomService.createRoom(config);
 
-    //!auto add as a spectator, always able to press start (after > 1player - auto start) and change from spectator=>player
-    //!auto become spectator when finished the game
-    //!but in both prev cases => passive spectator! (from lobby seeing players ratings changes and chat)
-    //start
-    //of the identical part in join(s)
     const player = playerService.get(socket.data.identity.id);
     if (!player) return null;
 
-    roomService.addPlayer(room.id, player);
+    if (room.status === "playing") {
+        roomService.addSpectator(room.id, player);
+    } else {
+        roomService.addPlayer(room.id, player);
+    }
+
     socket.join(room.id);
     socket.data.roomId = room.id;
-    socket.data.role = 'player';
+    socket.data.role = room.status === "playing" ? "spectator" : "player";
 
     console.log(`Socket ${socket.id} joined room ${room.id} as player. Game type: ${room.gameConfig?.mode}`);
     console.log('ROOM STATE:', roomService.getRoom(room.id));
-    //end
 
     if (room.players.size === 2) {
         startGame(room, roomService);
@@ -44,11 +40,6 @@ export default function join(
 
     return roomService.getRoomState(room.id);
 }
-
-// function leaveQuickplay(socket) {
-//     const roomId = socket.data.roomId;
-//     if (!roomId) return;
-
 
 module.exports = {
     join,

@@ -52,6 +52,7 @@ describe('solo mode join', () => {
     expect(socket.data.role).toBe('player');
     expect(room.status).toBe('playing');
     expect(room.engine).toBeDefined();
+    room.match?.stop();
     room.engine?.stop();
     expect(state).toEqual({ id: room.id, status: 'playing', players: room.players });
   });

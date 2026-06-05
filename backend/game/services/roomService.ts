@@ -25,6 +25,7 @@ export default class RoomService {
       players: new Map(),
       state: null,
       engine: null,
+      match: null,
       ...config
     };
 
@@ -52,10 +53,19 @@ export default class RoomService {
     return this.rooms.get(roomId);
   }
 
+  findRoom(predicate: (room: Room) => boolean): Room | undefined {
+    for (const room of this.rooms.values()) {
+      if (predicate(room)) return room;
+    }
+
+    return undefined;
+  }
+
   deleteRoom(roomId: RoomId): void {
     const room = this.rooms.get(roomId);
     if (!room) return;
 
+    room.match?.stop();
     room.engine?.stop();
     this.clearRoomSpectators(room);
     this.cleanRoomState(room);
@@ -140,11 +150,13 @@ export default class RoomService {
   private cleanRoomState(room: Room): void {
     room.status = "ended";
     room.engine = null;
+    room.match = null;
     room.state = null;
   }
 
   clearRooms(): void {
     for (const room of this.rooms.values()) {
+      room.match?.stop();
       room.engine?.stop();
       for (const player of room.players.values()) {
         player.roomId = undefined;

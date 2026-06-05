@@ -4,6 +4,12 @@ import Player from "../player";
 import { UserId } from "../../../auth/identity";
 import { Engine } from "../engine/tetrisEngline";
 
+export interface RoomMatchController {
+    start(): void;
+    evaluate(state: GameState): boolean;
+    stop(): void;
+}
+
 export type RoomId = string & { readonly __brand: unique symbol }; // branded type for better type safety
 
 export default interface Room {
@@ -14,7 +20,8 @@ export default interface Room {
     spectators?: Map<UserId, Player>;
 
     state: GameState | null; //createEngine returns state
-    engine: Engine | null; 
+    engine: Engine | null;
+    match: RoomMatchController | null;
 
     roomConfig: Config["roomConfig"];
     gameConfig: Config["gameConfig"];

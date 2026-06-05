@@ -39,6 +39,7 @@ describe('startGame solo flow', () => {
       config: room.gameConfig,
     });
 
+    room.match?.stop();
     room.engine?.stop();
   });
 

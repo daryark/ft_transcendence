@@ -20,11 +20,16 @@ function createRoom(overrides: Partial<Room> = {}): Room {
 }
 
 describe('tetris engine solo runtime loop', () => {
+  const engines: Array<{ stop: () => void }> = [];
+
   beforeEach(() => {
     jest.useFakeTimers();
   });
 
   afterEach(() => {
+    for (const engine of engines.splice(0)) {
+      engine.stop();
+    }
     jest.useRealTimers();
   });
 
@@ -33,10 +38,11 @@ describe('tetris engine solo runtime loop', () => {
     const roomService = { broadcast: jest.fn() };
 
     const engine = createEngine(room, roomService);
+    engines.push(engine);
     jest.advanceTimersByTime(TICK_MS);
-    engine.stop();
 
     expect(roomService.broadcast).toHaveBeenCalledWith(room.id, 'game:update', room.state);
+    engine.stop();
   });
 
   test('queued input is applied on next tick', () => {
@@ -45,11 +51,12 @@ describe('tetris engine solo runtime loop', () => {
     const roomService = { broadcast: jest.fn() };
 
     const engine = createEngine(room, roomService);
+    engines.push(engine);
     engine.pushInput({ type: 'left' });
     jest.advanceTimersByTime(TICK_MS);
-    engine.stop();
 
     expect(room.state!.current.x).toBe(startX - 1);
+    engine.stop();
   });
 
   test('grounded piece locks after lock delay even if rotated repeatedly', () => {
@@ -59,6 +66,7 @@ describe('tetris engine solo runtime loop', () => {
     const roomService = { broadcast: jest.fn() };
 
     const engine = createEngine(room, roomService);
+    engines.push(engine);
 
     for (let elapsed = 0; elapsed < 600; elapsed += 100) {
       engine.pushInput({ type: 'rotate' });
@@ -66,9 +74,8 @@ describe('tetris engine solo runtime loop', () => {
     }
     jest.advanceTimersByTime(TICK_MS * 60);
 
-    engine.stop();
-
     expect(room.state!.board.flat().some((cell) => cell === 1)).toBe(true);
+    engine.stop();
   });
 
   test('unrotated grounded piece locks in half the configured delay', () => {
@@ -78,10 +85,11 @@ describe('tetris engine solo runtime loop', () => {
     const roomService = { broadcast: jest.fn() };
 
     const engine = createEngine(room, roomService);
+    engines.push(engine);
     jest.advanceTimersByTime(TICK_MS * 31);
-    engine.stop();
 
     expect(room.state!.board.flat().some((cell) => cell === 1)).toBe(true);
+    engine.stop();
   });
 
   test('rotation can kick a J piece away from the right wall', () => {
@@ -93,57 +101,11 @@ describe('tetris engine solo runtime loop', () => {
     const roomService = { broadcast: jest.fn() };
 
     const engine = createEngine(room, roomService);
+    engines.push(engine);
     engine.pushInput({ type: 'rotate' });
     jest.advanceTimersByTime(TICK_MS);
-    engine.stop();
 
     expect(room.state!.current.x).toBe(room.state!.cols - 3);
-  });
-
-  test('time objective emits game:end', () => {
-    const config = createConfig('solo');
-    config.gameConfig.objective!.winCondition = 'time';
-    config.gameConfig.objective!.timeLimit = 0;
-    const room = createRoom(config as Partial<Room>);
-    const roomService = { broadcast: jest.fn() };
-
-    createEngine(room, roomService);
-    jest.advanceTimersByTime(TICK_MS);
-
-    expect(room.status).toBe('ended');
-    expect(roomService.broadcast).toHaveBeenCalledWith(room.id, 'game:end', {
-      roomId: room.id,
-      reason: 'objective_complete',
-      state: room.state,
-      result: expect.objectContaining({
-        outcome: 'win',
-        stats: expect.objectContaining({
-          score: room.state!.score,
-          lines: room.state!.lines,
-          round: room.state!.round,
-        }),
-      }),
-    });
-  });
-
-  test('zen solo restarts instead of ending on game over', () => {
-    const config = createConfig('solo');
-    config.gameConfig.objective!.winCondition = 'none';
-    const room = createRoom(config as Partial<Room>);
-    room.state!.gameOver = true;
-    const firstRound = room.state!.round;
-    const roomService = { broadcast: jest.fn() };
-
-    const engine = createEngine(room, roomService);
-    jest.advanceTimersByTime(TICK_MS);
     engine.stop();
-
-    expect(room.status).toBe('playing');
-    expect(room.state!.round).toBe(firstRound + 1);
-    expect(roomService.broadcast).toHaveBeenCalledWith(room.id, 'game:start', {
-      roomId: room.id,
-      state: room.state,
-      config: room.gameConfig,
-    });
   });
 });

@@ -1,6 +1,6 @@
 import { moveFigure, rotate, collision, clearLines, createBag } from "./logic";
 import { createFigure } from "./figures";
-import { buildGameStats, initGame } from "./state";
+import { buildGameStats } from "./state";
 import type { Input, InputType } from "./input";
 import Room from "../room";
 import type { RoomId } from "../room";
@@ -306,99 +306,19 @@ export default function createEngine(room: Room, roomService: RoomService) {
     scheduleLock(state);
   }
 
-  function shouldFinishByObjective(state: GameState): boolean {
-    if (room.gameConfig.mode !== "solo") return false;
-
-    const objective = room.gameConfig.objective;
-    if (objective.winCondition === "none") return false;
-
-    if (objective.winCondition === "score") {
-      return state.score >= (objective.scoreToWin ?? Infinity);
-    }
-
-    if (objective.winCondition === "lines") {
-      return state.lines >= (objective.linesToClear ?? Infinity);
-    }
-
-    if (objective.winCondition === "time") {
-      const elapsedSeconds = (Date.now() - state.startedAt) / 1000;
-      return elapsedSeconds >= (objective.timeLimit ?? Infinity);
-    }
-
-    return false;
-  }
-
-  function restartZenSolo(state: GameState) {
-    room.state = initGame(state.rows, state.cols, state.round + 1);
-    roomService.broadcast(room.id, "game:start", {
-      roomId: room.id,
-      state: room.state,
-      config: room.gameConfig,
-    });
-  }
-
-  function buildGameEndResult(reason: "game_over" | "objective_complete") {
-    const player = Array.from(room.players.values())[0];
-
-    return {
-      outcome: reason === "objective_complete" ? "win" : "defeat",
-      stats: room.state ? buildGameStats(room.state) : null,
-      player: player
-        ? {
-            id: player.id,
-            nickname: player.profile?.nickname,
-            place: 1,
-          }
-        : undefined,
-    };
-  }
-
-  function finishGame(reason: "game_over" | "objective_complete") {
-    room.status = "ended";
-    clearInterval(interval);
-    if (room.state) {
-      broadcastGameUpdate(room.state);
-    }
-    roomService.broadcast(room.id, "game:end", {
-      roomId: room.id,
-      reason,
-      state: room.state,
-      result: buildGameEndResult(reason),
-    });
-  }
-
-  function handleEndConditions(state: GameState): boolean {
-    if (room.gameConfig.mode === "solo" && state.gameOver) {
-      if (room.gameConfig.objective.winCondition === "none") {
-        restartZenSolo(state);
-        return true;
-      }
-
-      finishGame("game_over");
-      return true;
-    }
-
-    if (shouldFinishByObjective(state)) {
-      finishGame("objective_complete");
-      return true;
-    }
-
-    return false;
-  }
-
   function tick() {
     const state = room.state;
     if (!state) return; // Guard: state should not be null during active game
     if (room.status !== "playing") return;
 
-    if (handleEndConditions(state)) return;
+    if (room.match?.evaluate(state)) return;
     const lockedByInput = applyInputs(state);
-    if (handleEndConditions(state)) return;
+    if (room.match?.evaluate(state)) return;
     if (!lockedByInput) {
       applyGravity(state);
     }
     handleLockDelay(state);
-    if (handleEndConditions(state)) return;
+    if (room.match?.evaluate(state)) return;
 
     broadcastGameUpdate(state);
   }
