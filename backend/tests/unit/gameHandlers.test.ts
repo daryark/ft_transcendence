@@ -113,6 +113,8 @@ describe('gameHandlers', () => {
       getRoom: jest.fn(),
       removePlayer: jest.fn(),
       removeSpectator: jest.fn(),
+      isEmpty: jest.fn(() => false),
+      deleteRoom: jest.fn(),
     };
 
     registerGameHandlers(socket, { modeService, roomService });
@@ -122,6 +124,8 @@ describe('gameHandlers', () => {
 
     expect(roomService.removePlayer).toHaveBeenCalledWith('ROOM1', 'user-1');
     expect(roomService.removeSpectator).not.toHaveBeenCalled();
+    expect(roomService.isEmpty).toHaveBeenCalledWith('ROOM1');
+    expect(roomService.deleteRoom).not.toHaveBeenCalled();
   });
 
   test('mode:leave removes spectator from room when socket role is spectator', () => {
@@ -137,6 +141,8 @@ describe('gameHandlers', () => {
       getRoom: jest.fn(),
       removePlayer: jest.fn(),
       removeSpectator: jest.fn(),
+      isEmpty: jest.fn(() => false),
+      deleteRoom: jest.fn(),
     };
 
     registerGameHandlers(socket, { modeService, roomService });
@@ -146,6 +152,34 @@ describe('gameHandlers', () => {
 
     expect(roomService.removeSpectator).toHaveBeenCalledWith('ROOM1', 'user-1');
     expect(roomService.removePlayer).not.toHaveBeenCalled();
+    expect(roomService.isEmpty).toHaveBeenCalledWith('ROOM1');
+    expect(roomService.deleteRoom).not.toHaveBeenCalled();
+  });
+
+  test('mode:leave deletes room after the last player leaves', () => {
+    const socket = createSocket({
+      data: {
+        identity: { id: 'user-1', type: 'anonymous' },
+        roomId: 'ROOM1',
+        role: 'player',
+      },
+    });
+    const modeService = { join: jest.fn() };
+    const roomService = {
+      getRoom: jest.fn(),
+      removePlayer: jest.fn(),
+      removeSpectator: jest.fn(),
+      isEmpty: jest.fn(() => true),
+      deleteRoom: jest.fn(),
+    };
+
+    registerGameHandlers(socket, { modeService, roomService });
+
+    const handler = getRegisteredHandler(socket, 'mode:leave');
+    handler();
+
+    expect(roomService.removePlayer).toHaveBeenCalledWith('ROOM1', 'user-1');
+    expect(roomService.deleteRoom).toHaveBeenCalledWith('ROOM1');
   });
 
   test('player:move pushes input to room engine when socket has roomId', () => {

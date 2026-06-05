@@ -49,6 +49,9 @@ export default function gameHandlers(
                 ? roomService.removePlayer(roomId, identity.id)
                 : roomService.removeSpectator(roomId, identity.id);
         }
+        if (roomId && roomService.isEmpty(roomId)) {
+            roomService.deleteRoom(roomId);
+        }
     });
 
     socket.on("room:start", () => {

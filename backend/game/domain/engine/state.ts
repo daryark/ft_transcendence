@@ -15,6 +15,28 @@ export interface GameState {
   lines: number;
   round: number;
   startedAt: number;
+  update: GameUpdateStats;
+}
+
+export interface GameStats {
+  score: number;
+  lines: number;
+  elapsedMs: number;
+  round: number;
+}
+
+export interface GameUpdateStats extends GameStats {
+  scoreAdded?: number;
+  linesCleared?: number;
+}
+
+export function buildGameStats(state: Pick<GameState, "score" | "lines" | "round" | "startedAt">): GameStats {
+  return {
+    score: state.score,
+    lines: state.lines,
+    round: state.round,
+    elapsedMs: Date.now() - state.startedAt,
+  };
 }
 
 export function initGame(rows: number, cols: number, round = 1): GameState {
@@ -22,8 +44,9 @@ export function initGame(rows: number, cols: number, round = 1): GameState {
   const bag = createBag();
   const nextTypes = [...bag, ...createBag()];
   const next = nextTypes.map((t) => createFigure(t, cols));
+  const startedAt = Date.now();
 
-  return {
+  const state = {
     board,
     current: next.shift()!,
     next,
@@ -35,8 +58,17 @@ export function initGame(rows: number, cols: number, round = 1): GameState {
     score: 0,
     lines: 0,
     round,
-    startedAt: Date.now()
+    startedAt,
+    update: {
+      score: 0,
+      lines: 0,
+      elapsedMs: 0,
+      round,
+    },
   };
+
+  state.update = buildGameStats(state);
+  return state;
 }
 
 

@@ -64,6 +64,7 @@ describe('tetris engine solo runtime loop', () => {
       engine.pushInput({ type: 'rotate' });
       jest.advanceTimersByTime(TICK_MS);
     }
+    jest.advanceTimersByTime(TICK_MS * 60);
 
     engine.stop();
 
@@ -77,7 +78,7 @@ describe('tetris engine solo runtime loop', () => {
     const roomService = { broadcast: jest.fn() };
 
     const engine = createEngine(room, roomService);
-    jest.advanceTimersByTime(300);
+    jest.advanceTimersByTime(TICK_MS * 31);
     engine.stop();
 
     expect(room.state!.board.flat().some((cell) => cell === 1)).toBe(true);
@@ -114,6 +115,14 @@ describe('tetris engine solo runtime loop', () => {
       roomId: room.id,
       reason: 'objective_complete',
       state: room.state,
+      result: expect.objectContaining({
+        outcome: 'win',
+        stats: expect.objectContaining({
+          score: room.state!.score,
+          lines: room.state!.lines,
+          round: room.state!.round,
+        }),
+      }),
     });
   });
 

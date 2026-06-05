@@ -1,10 +1,10 @@
 import { moveFigure, rotate, collision, clearLines, createBag } from "./logic";
 import { createFigure } from "./figures";
-import { initGame } from "./state";
+import { buildGameStats, initGame } from "./state";
 import type { Input, InputType } from "./input";
 import Room from "../room";
 import type { RoomId } from "../room";
-import type { GameState } from "./state";
+import type { GameState, GameUpdateStats } from "./state";
 import type { Figure } from "./figures";
 import type { ServerToClientEvents } from "../../../sockets/gameHandlers";
 
@@ -48,12 +48,35 @@ export default function createEngine(room: Room, roomService: RoomService) {
   let nextGravityIncreaseAt = gravityIncreaseInterval ? gameStartedAt + gravityIncreaseInterval : null;
   let lockTimeoutId: ReturnType<typeof setTimeout> | null = null;
   let currentPieceWasRotated = false;
+  let pendingScoreAdded = 0;
+  let pendingLinesCleared = 0;
 
   function clearLockTimeout() {
     if (lockTimeoutId !== null) {
       clearTimeout(lockTimeoutId);
       lockTimeoutId = null;
     }
+  }
+
+  function buildGameUpdate(state: GameState): GameUpdateStats {
+    const update: GameUpdateStats = buildGameStats(state);
+
+    if (pendingScoreAdded > 0) {
+      update.scoreAdded = pendingScoreAdded;
+    }
+
+    if (pendingLinesCleared > 0) {
+      update.linesCleared = pendingLinesCleared;
+    }
+
+    pendingScoreAdded = 0;
+    pendingLinesCleared = 0;
+    return update;
+  }
+
+  function broadcastGameUpdate(state: GameState) {
+    state.update = buildGameUpdate(state);
+    roomService.broadcast(room.id, "game:update", state);
   }
 
   function scheduleLock(state: GameState) {
@@ -175,6 +198,15 @@ export default function createEngine(room: Room, roomService: RoomService) {
     state.board = newBoard;
     state.lines += cleared;
     state.score += scoreAdd;
+
+    if (cleared > 0) {
+      pendingLinesCleared += cleared;
+    }
+
+    if (scoreAdd > 0) {
+      pendingScoreAdded += scoreAdd;
+    }
+
     spawnPiece(state);
     gravityAccumulator = 0;
     clearLockTimeout();
@@ -190,6 +222,7 @@ export default function createEngine(room: Room, roomService: RoomService) {
 
     while (tryMoveCurrent(state, 0, 1)) {
       state.score += 2;
+      pendingScoreAdded += 2;
     }
 
     lockCurrent(state);
@@ -304,14 +337,33 @@ export default function createEngine(room: Room, roomService: RoomService) {
     });
   }
 
+  function buildGameEndResult(reason: "game_over" | "objective_complete") {
+    const player = Array.from(room.players.values())[0];
+
+    return {
+      outcome: reason === "objective_complete" ? "win" : "defeat",
+      stats: room.state ? buildGameStats(room.state) : null,
+      player: player
+        ? {
+            id: player.id,
+            nickname: player.profile?.nickname,
+            place: 1,
+          }
+        : undefined,
+    };
+  }
+
   function finishGame(reason: "game_over" | "objective_complete") {
     room.status = "ended";
     clearInterval(interval);
-    roomService.broadcast(room.id, "game:update", room.state);
+    if (room.state) {
+      broadcastGameUpdate(room.state);
+    }
     roomService.broadcast(room.id, "game:end", {
       roomId: room.id,
       reason,
       state: room.state,
+      result: buildGameEndResult(reason),
     });
   }
 
@@ -348,7 +400,7 @@ export default function createEngine(room: Room, roomService: RoomService) {
     handleLockDelay(state);
     if (handleEndConditions(state)) return;
 
-    roomService.broadcast(room.id, "game:update", state);
+    broadcastGameUpdate(state);
   }
 
 

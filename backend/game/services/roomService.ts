@@ -54,10 +54,17 @@ export default class RoomService {
 
   deleteRoom(roomId: RoomId): void {
     const room = this.rooms.get(roomId);
-    room?.engine?.stop();
+    if (!room) return;
+
+    room.engine?.stop();
+    this.clearRoomSpectators(room);
+    this.cleanRoomState(room);
     this.rooms.delete(roomId);
   }
 
+  isEmpty(roomId: RoomId): boolean {
+    return this.rooms.get(roomId)?.players.size === 0;
+  }
 
   addPlayer(roomId: RoomId, player: Player): void {
     const room = this.rooms.get(roomId);
@@ -90,29 +97,19 @@ export default class RoomService {
     const player = room.players.get(playerId);
     if (player) {
       player.roomId = undefined; // Clear player's room association
+      player.role = undefined; // and role association
       room.players.delete(playerId);
-    }
-
-    if (room.players.size === 0) {
-      if (room.spectators) {
-        for (const spectator of room.spectators.values()) {
-          this.io.to(spectator.socketId)
-          .emit("server:error", { reason: "EMPTY_ROOM" });
-        }
-        this.clearRoomSpectators(roomId);
-      }
-
-      this.deleteRoom(roomId);
     }
   }
 
   removeSpectator(roomId: RoomId, spectatorId: Player["id"]): void {
-       const room = this.rooms.get(roomId);
+    const room = this.rooms.get(roomId);
     if (!room) return;
 
     const spectator = room.spectators?.get(spectatorId);
     if (spectator) {
       spectator.roomId = undefined; // Clear spectator's room association
+      spectator.role = undefined; // and role association
       room.spectators?.delete(spectatorId);
     }
   }
@@ -132,31 +129,31 @@ export default class RoomService {
     this.io.to(roomId).emit(event, data);
   }
 
-  clearRoom(roomId: RoomId): void {
-    const room = this.rooms.get(roomId);
-    if (!room) return;
-
-    for (const player of room.players.values()) {
-      player.roomId = undefined;
-      player.role = undefined;
-    }
-    room.players.clear();
-
-    this.clearRoomSpectators(roomId);
-  }
-
-  private clearRoomSpectators(roomId: RoomId): void {
-    const room = this.rooms.get(roomId);
-    if (!room || !room.spectators) return;
-
-    for (const spectator of room.spectators.values()) {
+  private clearRoomSpectators(room: Room): void {
+    for (const spectator of room.spectators?.values() || []) {
       spectator.roomId = undefined;
       spectator.role = undefined;
     }
-    room.spectators.clear();
+    room.spectators?.clear();
+  }
+
+  private cleanRoomState(room: Room): void {
+    room.status = "ended";
+    room.engine = null;
+    room.state = null;
   }
 
   clearRooms(): void {
+    for (const room of this.rooms.values()) {
+      room.engine?.stop();
+      for (const player of room.players.values()) {
+        player.roomId = undefined;
+        player.role = undefined;
+      }
+      room.players.clear();
+      this.clearRoomSpectators(room);
+      this.cleanRoomState(room);
+    }
     this.rooms.clear();
   }
 
