@@ -195,22 +195,24 @@ services:
       - trancendence
 
 
-  #nginx-exporter:
-  #  image: nginx/nginx-prometheus-exporter
-  #  container_name: nginx-exporter
-  #  depends_on:
-  #    - nginx
-  #  ports: ["9113:9113"]
-  #  networks:
-  #    - trancendence
-  #  restart: always
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter
+    container_name: nginx-exporter
+    command:
+      - '-nginx.scrape-uri=http://nginx:8080/nginx_status'
+    depends_on:
+      - nginx
+    ports: ["9113:9113"]
+    networks:
+      - trancendence
+    restart: always
   
   #postgres-exporter:
   #  image: prometheuscommunity/postgres-exporter
   #  container_name: postgres-exporter
   #  depends_on:
   #    - database
-  #  ports: ["9187:91187"]
+  #  ports: ["9187:9187"]
   #  networks:
   #    - trancendence
   #  restart: always
