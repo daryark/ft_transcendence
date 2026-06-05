@@ -198,3 +198,16 @@ same game in real-time.
 - Design loosely-coupled services with clear interfaces.  
 - Use REST APIs or message queues for communication.  
 - Each service should have a single responsibility**
+
+
+
+### DevOps
+#### ELK
+- To open kibana dashboard 
+```
+https://localhost/kibana
+```
+- to check policies, archiving and log retention
+```
+make show-policies
+```

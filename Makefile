@@ -1,4 +1,5 @@
 COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || (command -v docker-compose >/dev/null 2>&1 && echo docker-compose || echo "docker compose"))
+ES_AUTH="elastic:${ELASTIC_PASSWORD}"
 
 prep:
 	@docker --version
@@ -57,11 +58,11 @@ slm-check:
 	curl -s "http://localhost:9200/_slm/stats?pretty"
 
 show-policies:
-	curl -s "http://localhost:9200/_slm/policy/daily-nginx-logs?pretty"
-	curl -s "http://localhost:9200/_snapshot/trans_archive?pretty"
-	curl -s "http://localhost:9200/_cat/snapshots/trans_archive?v"
-	curl -s "http://localhost:9200/_ilm/policy/nginx-logs-policy?pretty" 
-	curl -s "http://localhost:9200/_cat/indices/nginx-logs-*?v"
+	docker exec elasticsearch bash -c 'curl -s -u "$(ES_AUTH)" "http://localhost:9200/_slm/policy/daily-nginx-logs?pretty"'
+	docker exec elasticsearch bash -c 'curl -s -u "$(ES_AUTH)" "http://localhost:9200/_snapshot/trans_archive?pretty"'
+	docker exec elasticsearch bash -c 'curl -s -u "$(ES_AUTH)" "http://localhost:9200/_cat/snapshots/trans_archive?v"'
+	docker exec elasticsearch bash -c 'curl -s -u "$(ES_AUTH)" "http://localhost:9200/_ilm/policy/nginx-logs-policy?pretty" '
+	docker exec elasticsearch bash -c 'curl -s -u "$(ES_AUTH)" "http://localhost:9200/_cat/indices/nginx-logs-*?v"'
 
 cert:
 	curl -s https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep browser_download_url  | grep linux-amd64 | cut -d '"' -f 4 | wget -qi -
