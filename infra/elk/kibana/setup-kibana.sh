@@ -17,13 +17,25 @@ curl -X POST "$ES_URL/_security/user/kibana_system/_password" \
   -d "{\"password\":\"${KIBANA_SYSTEM_PASSWORD}\"}"
 echo "Password is set"
 
+echo "Creating logstash role for nginx-logs-*..."
+curl -sS -X PUT "$ES_URL/_security/role/logstash_nginx_writer" \
+  -u "$ES_AUTH" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cluster": ["monitor", "manage_index_templates", "manage_ilm"],
+    "indices": [{
+      "names": ["nginx-logs-*"],
+      "privileges": ["write", "create", "create_index", "manage", "manage_ilm"]
+    }]
+  }'
+
 echo "Creating user for logstash..."
 curl -sS -X PUT "$ES_URL/_security/user/logstash_internal" \
   -u "$ES_AUTH" \
   -H "Content-Type: application/json" \
   -d "{
     \"password\": \"${LOGSTASH_INTERNAL_PASSWORD}\",
-    \"roles\": [\"logstash_writer\"],
+    \"roles\": [\"logstash_nginx_writer\"],
     \"full_name\": \"Logstash internal user\"
   }"
 echo "User created"
