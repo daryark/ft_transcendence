@@ -2,7 +2,7 @@ import { GameState } from "../engine/state";
 import Config from "../../config/config.types";
 import Player from "../player";
 import { UserId } from "../../../auth/identity";
-import { Engine } from "../engine/tetrisEngline";
+import { Engine } from "../engine/tetrisEngine";
 
 export interface RoomMatchController {
     start(): void;

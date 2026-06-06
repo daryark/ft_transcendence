@@ -59,7 +59,9 @@ export default function createEngine(room: Room, roomService: RoomService) {
   }
 
   function buildGameUpdate(state: GameState): GameUpdateStats {
-    const update: GameUpdateStats = buildGameStats(state);
+    const objective =
+      room.gameConfig.mode === "solo" ? room.gameConfig.objective : undefined;
+    const update: GameUpdateStats = buildGameStats(state, objective);
 
     if (pendingScoreAdded > 0) {
       update.scoreAdded = pendingScoreAdded;
@@ -95,7 +97,21 @@ export default function createEngine(room: Room, roomService: RoomService) {
 
   function pushInput(input: Input) {
     if (room.status !== "playing") return;
-    inputs.push(input);
+
+    if (input.phase === "release") {
+      for (let index = inputs.length - 1; index >= 0; index -= 1) {
+        if (inputs[index].type === input.type && inputs[index].repeat) {
+          inputs.splice(index, 1);
+        }
+      }
+      return;
+    }
+
+    inputs.push({
+      type: input.type,
+      phase: "press",
+      repeat: input.repeat ?? false,
+    });
   }
 
   function ensureNextQueue(state: GameState) {
@@ -198,6 +214,7 @@ export default function createEngine(room: Room, roomService: RoomService) {
     state.board = newBoard;
     state.lines += cleared;
     state.score += scoreAdd;
+    state.piecesPlaced += 1;
 
     if (cleared > 0) {
       pendingLinesCleared += cleared;
@@ -310,6 +327,10 @@ export default function createEngine(room: Room, roomService: RoomService) {
     const state = room.state;
     if (!state) return; // Guard: state should not be null during active game
     if (room.status !== "playing") return;
+    if (Date.now() < state.startedAt) {
+      broadcastGameUpdate(state);
+      return;
+    }
 
     if (room.match?.evaluate(state)) return;
     const lockedByInput = applyInputs(state);

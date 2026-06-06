@@ -7,7 +7,12 @@ import RoomService from "../game/services/roomService";
 import { ConfigPatch, ConfigPatchSchema } from "../game/config/config.schema";
 import startGame from "../game/domain/match/startGame";
 
-export type ClientToServerEvents = "mode:join" | "mode:leave" | "room:start" | "player:move" | "game:stop";
+export type ClientToServerEvents =
+    | "mode:join"
+    | "mode:leave"
+    | "room:start"
+    | "player:move"
+    | "game:stop";
 
 export type ServerToClientEvents =
     | "game:start"

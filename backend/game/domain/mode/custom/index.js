@@ -1,6 +1,6 @@
 import { applyConfigPatch, createConfig } from "../../../config/configBase";
 import { ConfigPatchSchema } from "../../../config/config.schema";
-import createEngine, { TICK_MS } from "../../engine/tetrisEngline";
+import createEngine, { TICK_MS } from "../../engine/tetrisEngine";
 import { initGame } from "../../engine/state";
 import { isInput } from "../../engine/input";
 
@@ -118,7 +118,9 @@ function serializeVersusGame(room, engine) {
       username: getPlayerName(player),
       rank: player.profile?.rank,
       state,
-      gameOver: Boolean(state?.gameOver || engine.eliminatedPlayerIds.has(playerId)),
+      gameOver: Boolean(
+        state?.gameOver || engine.eliminatedPlayerIds.has(playerId),
+      ),
     };
   }
 
@@ -225,7 +227,11 @@ function createVersusEngine(room, roomService) {
     room.state = getFirstPlayerState(versusEngine);
     if (maybeEndVersus(room, roomService, versusEngine)) return;
 
-    roomService.broadcast(room.id, "game:update", serializeVersusGame(room, versusEngine));
+    roomService.broadcast(
+      room.id,
+      "game:update",
+      serializeVersusGame(room, versusEngine),
+    );
   }, TICK_MS);
 
   return versusEngine;
@@ -234,7 +240,9 @@ function createVersusEngine(room, roomService) {
 function startCustomVersus(room, roomService) {
   if (room.status === "playing") return;
   if (room.players.size < 2) {
-    roomService.broadcast(room.id, "server:error", { reason: "NEED_TWO_PLAYERS" });
+    roomService.broadcast(room.id, "server:error", {
+      reason: "NEED_TWO_PLAYERS",
+    });
     return;
   }
 
@@ -246,7 +254,11 @@ function startCustomVersus(room, roomService) {
   room.state = getFirstPlayerState(engine);
   customEngines.set(room.id, engine);
 
-  roomService.broadcast(room.id, "game:start", serializeVersusGame(room, engine));
+  roomService.broadcast(
+    room.id,
+    "game:start",
+    serializeVersusGame(room, engine),
+  );
 }
 
 function parseJoinCode(payload) {

@@ -20,8 +20,33 @@ export interface GameState {
   gameOver: boolean;
   score: number;
   lines: number;
+  piecesPlaced: number;
   round: number;
   startedAt: number;
+  update: GameUpdateStats;
+}
+
+export interface GameStats {
+  score: number;
+  lines: number;
+  piecesPlaced: number;
+  elapsedMs: number;
+  remainingMs: number | null;
+  piecesPerSecond: number;
+  round: number;
+  serverNow: number;
+  objective: {
+    type: "score" | "lines" | "time" | "none";
+    current: number;
+    target: number | null;
+    remaining: number | null;
+    complete: boolean;
+  } | null;
+}
+
+export interface GameUpdateStats extends GameStats {
+  scoreAdded?: number;
+  linesCleared?: number;
 }
 
 export interface GameStartPayload {
@@ -33,9 +58,24 @@ export interface GameStartPayload {
 
 export interface GameEndPayload {
   roomId: string;
-  reason: "game_over" | "objective_complete";
+  reason:
+    | "game_over"
+    | "objective_complete"
+    | "round_timeout"
+    | "manual_exit";
   state: GameState;
   players?: Record<string, VersusPlayerState>;
+  result?: {
+    outcome: "win" | "defeat";
+    stats: GameStats;
+    progression?: Array<{
+      playerId: string;
+      xpDelta: number;
+      rankXpDelta: number;
+      level: number;
+      xp: number;
+    }>;
+  };
 }
 
 export interface VersusPlayerState {
@@ -54,6 +94,8 @@ export type PlayerMove =
   | "rotate180"
   | "drop"
   | "hold";
+
+export type PlayerMovePhase = "press" | "release";
 
 export const figureColors: Record<FigureType, string> = {
   I: "#00e5ff",

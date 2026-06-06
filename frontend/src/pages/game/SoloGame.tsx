@@ -10,9 +10,11 @@ import { getSessionUser } from "../../auth/session";
 import type { GameConfig } from "../../../shared/types/config.types";
 import type {
   GameEndPayload,
+  GameStats,
   GameStartPayload,
   GameState,
   PlayerMove,
+  PlayerMovePhase,
   VersusPlayerState,
 } from "./types";
 import "./SoloGame.scss";
@@ -47,9 +49,7 @@ type CountdownStep =
 
 type SoloResult = {
   reason: GameEndPayload["reason"];
-  endedAt: number;
-  runStartedAt: number;
-  state: GameState;
+  stats: GameStats;
 };
 
 const toActiveGamePayload = (value: unknown): Partial<ActiveGamePayload> => {
@@ -221,7 +221,6 @@ export default function SoloGame() {
 
     return payload.players ?? {};
   });
-  const [now, setNow] = useState(() => Date.now());
   const [socket, setSocket] = useState(() => getSocket());
   const [connectionStatus, setConnectionStatus] = useState(() =>
     getSocket() ? "CONNECTING" : "OFFLINE",
@@ -248,17 +247,19 @@ export default function SoloGame() {
   const isZen = gameConfig?.mode === "solo" && gameConfig.preset === "zen";
   const targetLines =
     objective?.winCondition === "lines" ? objective.linesToClear ?? 40 : 40;
-  const elapsedMs = runStartedAt ? Math.max(0, now - runStartedAt) : 0;
+  const liveStats = gameState?.update;
+  const elapsedMs = liveStats?.elapsedMs ?? 0;
   const displayTimeMs =
-    objective?.winCondition === "time"
-      ? Math.max(0, (objective.timeLimit ?? 0) * 1000 - elapsedMs)
-      : elapsedMs;
-  const elapsedSeconds = elapsedMs / 1000;
-  const linesPerMinute =
-    gameState && elapsedSeconds > 0 ? (gameState.lines / elapsedSeconds) * 60 : 0;
-  const lineProgress = gameState && objective?.winCondition === "lines"
-    ? `${gameState.lines}/${targetLines}`
-    : `${gameState?.lines ?? 0}`;
+    liveStats?.remainingMs ?? elapsedMs;
+  const piecesPerSecond = liveStats?.piecesPerSecond ?? 0;
+  const lineProgress =
+    liveStats?.objective?.type === "lines"
+      ? `${liveStats.objective.current}/${liveStats.objective.target ?? targetLines}`
+      : `${liveStats?.lines ?? 0}`;
+  const primaryStat =
+    objective?.key === "score"
+      ? { label: "SCORE", value: `${liveStats?.score ?? 0}` }
+      : { label: "LINES", value: lineProgress };
 
   const modeLabel = getSoloModeLabel(gameConfig);
   const isVersus = gameConfig?.mode === "custom" && Object.keys(versusPlayers).length > 0;
@@ -323,7 +324,6 @@ export default function SoloGame() {
         const startedAt = Date.now();
 
         setRunStartedAt(startedAt);
-        setNow(startedAt);
         try {
           const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
           const saved = toActiveGamePayload(savedRaw ? JSON.parse(savedRaw) : null);
@@ -339,18 +339,6 @@ export default function SoloGame() {
 
     return () => window.clearTimeout(timeoutId);
   }, [countdownStep, gameConfig]);
-
-  useEffect(() => {
-    if (objective?.winCondition !== "time" || !gameState || gameState.gameOver) {
-      return undefined;
-    }
-
-    const intervalId = window.setInterval(() => {
-      setNow(Date.now());
-    }, 250);
-
-    return () => window.clearInterval(intervalId);
-  }, [gameState, objective?.winCondition]);
 
   useEffect(() => {
     if (!socket) {
@@ -376,7 +364,6 @@ export default function SoloGame() {
       if (!state) return;
 
       setGameState(state);
-      setNow(Date.now());
       try {
         const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
         const saved = toActiveGamePayload(
@@ -415,12 +402,10 @@ export default function SoloGame() {
       setVersusPlayers(payload.players ?? {});
       setSoloResult(null);
       const countdownSequence = getCountdownSequence(payload.config ?? null);
-      const needsCountdown = countdownSequence.length > 0;
-      const startedAt = needsCountdown ? null : Date.now();
+      const startedAt = state.startedAt;
 
       setRunStartedAt(startedAt);
       setCountdownStep(countdownSequence[0] ?? null);
-      setNow(startedAt ?? Date.now());
 
       try {
         const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
@@ -458,12 +443,9 @@ export default function SoloGame() {
       setGameState(state);
       setSoloResult({
         reason: payload.reason,
-        endedAt: Date.now(), //! check or add game.endedAt in payload
-        runStartedAt: runStartedAtRef.current ?? state.startedAt, //! check or add game.startedAt in payload
-        state,
+        stats: payload.result?.stats ?? state.update,
       });
       setCountdownStep(null);
-      setNow(Date.now());//!
       try {
         const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
         const saved = toActiveGamePayload(
@@ -565,7 +547,16 @@ export default function SoloGame() {
   useEffect(() => {
     if (!socket) return undefined;
 
-    const emitMove = (move: PlayerMove) => {
+    const emitMove = (
+      move: PlayerMove,
+      phase: PlayerMovePhase = "press",
+      repeat = false,
+    ) => {
+      if (phase === "release") {
+        socket.emit("player:move", { type: move, phase });
+        return;
+      }
+
       if (inputLockedRef.current) return;
 
       const cooldown = INPUT_COOLDOWNS[move] ?? 0;
@@ -575,12 +566,14 @@ export default function SoloGame() {
       if (now - lastAt < cooldown) return;
 
       lastInputAt.current[move] = now;
-      socket.emit("player:move", { type: move });
+      socket.emit("player:move", { type: move, phase, repeat });
     };
 
-    const stopHorizontalRepeat = () => {
+    const stopHorizontalRepeat = (release = false) => {
       if (!horizontalRepeat.current) return;
 
+      const move =
+        horizontalRepeat.current.key === "ArrowLeft" ? "left" : "right";
       window.clearTimeout(horizontalRepeat.current.timeoutId);
 
       if (horizontalRepeat.current.intervalId !== null) {
@@ -588,6 +581,10 @@ export default function SoloGame() {
       }
 
       horizontalRepeat.current = null;
+
+      if (release) {
+        emitMove(move, "release");
+      }
     };
 
     const startHorizontalRepeat = (
@@ -596,12 +593,12 @@ export default function SoloGame() {
     ) => {
       if (horizontalRepeat.current?.key === key) return;
 
-      stopHorizontalRepeat();
+      stopHorizontalRepeat(true);
       emitMove(move);
 
       const timeoutId = window.setTimeout(() => {
         const intervalId = window.setInterval(() => {
-          emitMove(move);
+          emitMove(move, "press", true);
         }, HORIZONTAL_REPEAT_MS);
 
         if (horizontalRepeat.current?.key === key) {
@@ -642,7 +639,7 @@ export default function SoloGame() {
 
       if (move === "drop" && event.repeat) return;
 
-      emitMove(move);
+      emitMove(move, "press", event.repeat);
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
@@ -650,12 +647,18 @@ export default function SoloGame() {
         horizontalRepeat.current &&
         event.key === horizontalRepeat.current.key
       ) {
-        stopHorizontalRepeat();
+        stopHorizontalRepeat(true);
+        return;
+      }
+
+      if (event.key === "ArrowDown") {
+        emitMove("down", "release");
       }
     };
 
     const handleBlur = () => {
-      stopHorizontalRepeat();
+      stopHorizontalRepeat(true);
+      emitMove("down", "release");
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -663,7 +666,7 @@ export default function SoloGame() {
     window.addEventListener("blur", handleBlur);
 
     return () => {
-      stopHorizontalRepeat();
+      stopHorizontalRepeat(true);
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", handleBlur);
@@ -803,7 +806,7 @@ export default function SoloGame() {
   }
 
   if (isFortyLines && soloResult) {
-    const runTime = formatRunTime(soloResult.endedAt - soloResult.runStartedAt);
+    const runTime = formatRunTime(soloResult.stats.elapsedMs);
     const returnPath = getReturnPath(location.state);
 
     return (
@@ -814,9 +817,16 @@ export default function SoloGame() {
             <span>SOCKET</span>
             <strong>{connectionStatus}</strong>
           </div>
-          <Link className="solo-game-results__back" to={returnPath}>
+          <button
+            className="solo-game-results__back"
+            onClick={() => {
+              socket?.emit("mode:leave");
+              navigate(returnPath);
+            }}
+            type="button"
+          >
             BACK
-          </Link>
+          </button>
         </header>
 
         <section className="solo-game-results__card" aria-label="40 Lines results">
@@ -830,23 +840,27 @@ export default function SoloGame() {
           <div className="solo-game-results__stats">
             <div>
               <span>LINES</span>
-              <strong>{soloResult.state.lines}</strong>
+              <strong>{soloResult.stats.lines}</strong>
             </div>
             <div>
               <span>SCORE</span>
-              <strong>{soloResult.state.score}</strong>
+              <strong>{soloResult.stats.score}</strong>
             </div>
             <div>
               <span>ROUND</span>
-              <strong>{soloResult.state.round}</strong>
+              <strong>{soloResult.stats.round}</strong>
             </div>
           </div>
         </section>
 
         <nav className="solo-game-results__actions" aria-label="Result actions">
-          <Link className="solo-game-results__again" to="/play/solo/40lines">
+          <button
+            className="solo-game-results__again"
+            onClick={() => socket?.emit("room:start")}
+            type="button"
+          >
             AGAIN
-          </Link>
+          </button>
         </nav>
       </main>
     );
@@ -880,13 +894,13 @@ export default function SoloGame() {
         {!isZen && (
           <aside className="solo-game__live-stats" aria-label="Run stats">
             <div>
-              <span>SPEED</span>
-              <strong>{linesPerMinute.toFixed(2)}</strong>
-              <small>LINES/MIN</small>
+              <span>PPS</span>
+              <strong>{piecesPerSecond.toFixed(2)}</strong>
+              <small>PIECES/SECOND</small>
             </div>
             <div>
-              <span>LINES</span>
-              <strong>{lineProgress}</strong>
+              <span>{primaryStat.label}</span>
+              <strong>{primaryStat.value}</strong>
             </div>
             <div>
               <span>TIME</span>

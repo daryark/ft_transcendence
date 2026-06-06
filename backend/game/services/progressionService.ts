@@ -20,7 +20,11 @@ export interface PlayerProgressionSnapshot {
     outcome: "win" | "defeat";
     xpDelta: number;
     rankXpDelta: number;
+    level: number;
+    xp: number;
 }
+
+const XP_PER_LEVEL = 100;
 
 export default function createProgressionService(room: Room) {
     let startProfiles = new Map<string, boolean>();
@@ -36,16 +40,28 @@ export default function createProgressionService(room: Room) {
 
         return Array.from(input.room.players.values())
             .filter((player) => Boolean(player.profile))
-            .map((player) => ({
-                playerId: player.id,
-                hasProfile: startProfiles.get(player.id) ?? Boolean(player.profile),
-                score: input.state?.score ?? 0,
-                lines: input.state?.lines ?? 0,
-                round: input.state?.round ?? 1,
-                outcome,
-                xpDelta: outcome === "win" ? 100 : 25,
-                rankXpDelta: outcome === "win" ? 10 : -5,
-            }));
+            .map((player) => {
+                const profile = player.profile!;
+                const xpDelta = outcome === "win" ? 100 : 25;
+                const totalXp = profile.xp + xpDelta;
+                const levelsGained = Math.floor(totalXp / XP_PER_LEVEL);
+
+                profile.level += levelsGained;
+                profile.xp = totalXp % XP_PER_LEVEL;
+
+                return {
+                    playerId: player.id,
+                    hasProfile: startProfiles.get(player.id) ?? true,
+                    score: input.state?.score ?? 0,
+                    lines: input.state?.lines ?? 0,
+                    round: input.state?.round ?? 1,
+                    outcome,
+                    xpDelta,
+                    rankXpDelta: outcome === "win" ? 10 : -5,
+                    level: profile.level,
+                    xp: profile.xp,
+                };
+            });
     }
 
     return {

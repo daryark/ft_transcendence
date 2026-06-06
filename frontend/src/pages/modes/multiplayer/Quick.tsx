@@ -8,7 +8,11 @@ export default function Quick() {
 
   return (
     <section className="mp-page mp-page--quick">
-      <button className="mp-back" type="button" onClick={() => navigate(-1)}>
+      <button
+        className="mp-back"
+        type="button"
+        onClick={() => navigate("/play/multiplayer")}
+      >
         EXIT
       </button>
 

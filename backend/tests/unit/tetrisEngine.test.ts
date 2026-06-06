@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
-import createEngine from '../../game/domain/engine/tetrisEngline';
-import { TICK_MS } from '../../game/domain/engine/tetrisEngline';
+import createEngine from '../../game/domain/engine/tetrisEngine';
+import { TICK_MS } from '../../game/domain/engine/tetrisEngine';
 import { createFigure, figures } from '../../game/domain/engine/figures';
 import { initGame } from '../../game/domain/engine/state';
 import { createConfig } from '../../game/config/configBase';
@@ -57,6 +57,35 @@ describe('tetris engine solo runtime loop', () => {
 
     expect(room.state!.current.x).toBe(startX - 1);
     engine.stop();
+  });
+
+  test('release removes queued repeats but preserves the initial tap', () => {
+    const room = createRoom();
+    const startX = room.state!.current.x;
+    const roomService = { broadcast: jest.fn() };
+
+    const engine = createEngine(room, roomService);
+    engines.push(engine);
+    engine.pushInput({ type: 'left' });
+    engine.pushInput({ type: 'left', repeat: true });
+    engine.pushInput({ type: 'left', repeat: true });
+    engine.pushInput({ type: 'left', phase: 'release' });
+    jest.advanceTimersByTime(TICK_MS);
+
+    expect(room.state!.current.x).toBe(startX - 1);
+  });
+
+  test('counts a piece only when it locks', () => {
+    const room = createRoom();
+    const roomService = { broadcast: jest.fn() };
+
+    const engine = createEngine(room, roomService);
+    engines.push(engine);
+    engine.pushInput({ type: 'drop' });
+    jest.advanceTimersByTime(TICK_MS);
+
+    expect(room.state!.piecesPlaced).toBe(1);
+    expect(room.state!.update.piecesPlaced).toBe(1);
   });
 
   test('grounded piece locks after lock delay even if rotated repeatedly', () => {

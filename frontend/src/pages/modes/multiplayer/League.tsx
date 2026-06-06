@@ -11,7 +11,11 @@ export default function League() {
 
   return (
     <section className="mp-page mp-page--league">
-      <button className="mp-back" type="button" onClick={() => navigate(-1)}>
+      <button
+        className="mp-back"
+        type="button"
+        onClick={() => navigate("/play/multiplayer")}
+      >
         BACK
       </button>
 

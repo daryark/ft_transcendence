@@ -675,7 +675,11 @@ export default function Custom() {
   if (!inRoom) {
     return (
       <section className="mp-page mp-page--custom-select">
-        <button className="mp-back" onClick={() => navigate(-1)} type="button">
+        <button
+          className="mp-back"
+          onClick={() => navigate("/play/multiplayer")}
+          type="button"
+        >
           BACK
         </button>
 
