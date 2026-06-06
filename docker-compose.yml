@@ -158,7 +158,7 @@ services:
       - nginx
     ports: ["9090:9090"]
     volumes:
-      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./infra/prometheus:/etc/prometheus
       - prometheus_data:/prometheus
     networks:
       - trancendence
@@ -172,6 +172,8 @@ services:
     ports: ["3001:3000"]
     volumes:
       - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     networks:
