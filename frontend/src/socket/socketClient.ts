@@ -1,7 +1,8 @@
 import { io, type Socket } from "socket.io-client";
 
-export const SOCKET_URL =
-  import.meta.env.VITE_SOCKET_URL ?? "http://localhost:3000";
+export const SOCKET_URL = "/";
+  // import.meta.env.VITE_SOCKET_URL ?? "http://localhost:3000";
+
 
 const SOCKET_EVENT = "tetra-socket-change";
 const ANONYMOUS_SOCKET_KEY = "__anonymous__";
@@ -24,7 +25,10 @@ export const connectSocket = (token?: string) => {
 
   if (!socket) {
     socket = io(SOCKET_URL, {
-      auth: token ? { token } : {},
+       path: "/socket.io",
+      auth: {
+        ...(token ? { token } : {}),
+      },
       transports: ["websocket", "polling"],
     });
     socketToken = nextSocketToken;

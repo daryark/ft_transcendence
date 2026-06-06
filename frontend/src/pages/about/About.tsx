@@ -3,12 +3,17 @@ import "./About.scss";
 
 const About = () => {
   return (
-    <>
+    <main className="about-page">
       <BackButton />
-      <div className="about">
-        <h1 className="about-">About Tetra</h1>
-      </div>
-    </>
+      <section className="about-page__panel">
+        <p className="about-page__eyebrow">Project</p>
+        <h1>About Tetra</h1>
+        <p>
+          A fast multiplayer block-stacking experience with solo challenges,
+          rooms, leaderboards, profiles, and social tools.
+        </p>
+      </section>
+    </main>
   );
 };
 

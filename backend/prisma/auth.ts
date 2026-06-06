@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "./prisma";
+import { resolveCountryFromRequest, type RequestLike } from "./ip";
 
 /**
  * Public user shape returned by auth functions
@@ -37,8 +38,17 @@ export type AuthResult = {
   token: string;
 };
 
+export type OAuthUserInput = {
+  provider: string;
+  providerId: string;
+  email?: string | null;
+  username?: string | null;
+  request?: RequestLike;
+};
+
+const UNKNOWN_COUNTRY = "Undefined";
+
 const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1),
   newPassword: z.string().min(8).max(128),
 });
 
@@ -76,7 +86,7 @@ export function createAuthToken(user: PublicUser): string {
  * Example:
  * const user = await registerUser({ email: 'a@b.com', username: 'foo', password: 'longpass' });
  */
-export async function registerUser(rawInput: RegisterInput): Promise<AuthResult> {
+export async function registerUser(rawInput: RegisterInput, request?: RequestLike): Promise<AuthResult> {
   const input = registerSchema.parse(rawInput);
 
   const existing = await prisma.users.findFirst({
@@ -91,12 +101,14 @@ export async function registerUser(rawInput: RegisterInput): Promise<AuthResult>
   }
 
   const password_hash = await bcrypt.hash(input.password, 10);
+  const country = (await resolveCountryFromRequest(request)) ?? UNKNOWN_COUNTRY;
 
   const user = await prisma.users.create({
     data: {
       email: input.email,
       username: input.username,
       password_hash,
+      country,
     },
     select: {
       id: true,
@@ -123,9 +135,18 @@ export async function registerUser(rawInput: RegisterInput): Promise<AuthResult>
  */
 export async function loginUser(rawInput: LoginInput): Promise<AuthResult | null> {
   const input = loginSchema.parse(rawInput);
+  const loginData = input.email
+    ? { email: input.email }
+    : input.username
+      ? { username: input.username }
+      : null;
+
+  if (!loginData) {
+    return null;
+  }
 
   const user = await prisma.users.findUnique({
-    where: { email: input.email },
+    where: loginData,
     select: {
       id: true,
       email: true,
@@ -164,26 +185,16 @@ export async function changeUserPassword(userId: number, rawInput: unknown): Pro
 
   const input = changePasswordSchema.parse(rawInput);
 
-  const user = await prisma.users.findUnique({
-    where: { id: userId },
-    select: { password_hash: true },
-  });
-
-  if (!user) {
-    throw new Error("User not found");
-  }
-
-  const ok = await bcrypt.compare(input.currentPassword, user.password_hash);
-  if (!ok) {
-    throw new Error("Current password is incorrect");
-  }
-
   const password_hash = await bcrypt.hash(input.newPassword, 10);
 
-  await prisma.users.update({
+  const result = await prisma.users.updateMany({
     where: { id: userId },
     data: { password_hash },
   });
+
+  if (result.count === 0) {
+    throw new Error("User not found");
+  }
 }
 
 /**
@@ -191,12 +202,8 @@ export async function changeUserPassword(userId: number, rawInput: unknown): Pro
  * Since the current `users` model requires a `password_hash`, a random
  * password is generated for accounts created via OAuth.
  */
-export async function findOrCreateOAuthUser(
-  provider: string,
-  providerId: string,
-  email?: string | null,
-  username?: string | null
-): Promise<AuthResult> {
+export async function findOrCreateOAuthUser(rawInput: OAuthUserInput): Promise<AuthResult> {
+  const { provider, providerId, email, username, request } = rawInput;
   // 1) Check if this oauth account is already linked
   const existingLink: Array<{ user_id: number }> = (await prisma.$queryRaw`
     SELECT user_id FROM oauth_accounts WHERE provider = ${provider} AND provider_user_id = ${providerId} LIMIT 1
@@ -251,12 +258,14 @@ export async function findOrCreateOAuthUser(
 
   const randomPassword = (await import("crypto")).randomBytes(16).toString("hex");
   const password_hash = await bcrypt.hash(randomPassword, 10);
+  const country = (await resolveCountryFromRequest(request)) ?? UNKNOWN_COUNTRY;
 
   const created = await prisma.users.create({
     data: {
       email: email ?? `${provider}_${providerId}@noemail.local`,
       username: candidate,
       password_hash,
+      country,
     },
     select: { id: true, email: true, username: true, created_at: true },
   });

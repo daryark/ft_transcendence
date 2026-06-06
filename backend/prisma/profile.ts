@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { prisma } from "./prisma";
+import type { Prisma } from "@prisma/client";
 
-const updateProfileSchema = z
+const profileUpdateSchema = z
 	.object({
 		avatarId: z.number().int().min(0).optional(),
 		country: z.string().trim().min(1).max(100).optional(),
@@ -10,7 +11,7 @@ const updateProfileSchema = z
 		nextLevelXp: z.number().int().min(1).optional(),
 		playTimeHours: z.number().int().min(0).optional(),
 	})
-	.refine((value) => Object.keys(value).length > 0, {
+	.refine((value) => Object.values(value).some((field) => field !== undefined), {
 		message: "At least one profile field is required",
 	});
 
@@ -22,7 +23,7 @@ export type ProfileModeStats = {
 export type ProfileResponse = {
 	id: number;
 	username: string;
-	country: string | null;
+	country?: string;
 	avatarId: number;
 	created_at: Date | null;
 	level: number;
@@ -40,18 +41,12 @@ export type ProfileResponse = {
 	};
 };
 
-export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
+export type UpdateProfileInput = z.infer<typeof profileUpdateSchema>;
 
-function assertPositiveInteger(value: number, label: string) {
-	if (!Number.isInteger(value) || value <= 0) {
-		throw new Error(`${label} must be a positive integer`);
-	}
-}
-
-function toProfileResponse(user: {
+type ProfileUserRecord = {
 	id: number;
 	username: string;
-	country: string | null;
+	country?: string | null;
 	avatar_id: number | null;
 	created_at: Date | null;
 	level: number | null;
@@ -59,31 +54,42 @@ function toProfileResponse(user: {
 	next_level_xp: number | null;
 	play_time_seconds: number | null;
 	wins: number | null;
-}, stats: {
-	onlineGames: number;
-	wins: number;
-	modeStats: Record<string, ProfileModeStats>;
-}): ProfileResponse {
-	return {
-		id: user.id,
-		username: user.username,
-		country: user.country ?? null,
-		avatarId: user.avatar_id ?? 0,
-		created_at: user.created_at ?? null,
-		level: user.level ?? 1,
-		xp: user.xp ?? 0,
-		nextLevelXp: user.next_level_xp ?? 100,
-		playTimeHours: Math.floor((user.play_time_seconds ?? 0) / 3600),
-		onlineGames: stats.onlineGames,
-		wins: stats.wins,
-		modes: {
-			league: null,
-			quickPlay: stats.modeStats.quickPlay ?? null,
-			fortyLines: stats.modeStats.fortyLines ?? null,
-			blitz: stats.modeStats.blitz ?? null,
-			zen: stats.modeStats.zen ?? null,
-		},
-	};
+};
+
+type ProfileModeRow = {
+	score: number | null;
+	result: string | null;
+	matches: {
+		gamemode: string | null;
+		created_at: Date | null;
+	} | null;
+};
+
+const modeAliases: Record<string, keyof ProfileResponse["modes"]> = {
+	quickPlay: "quickPlay",
+	fortyLines: "fortyLines",
+	blitz: "blitz",
+	zen: "zen",
+};
+
+function isMissingCountryFieldError(error: unknown): boolean {
+	const message = error instanceof Error ? error.message : String(error);
+	return message.includes("Unknown field `country`") || message.includes("Unknown arg `country`");
+}
+
+function assertPositiveInteger(value: number, label: string) {
+	if (!Number.isInteger(value) || value <= 0) {
+		throw new Error(`${label} must be a positive integer`);
+	}
+}
+
+function normalizeCountry(country: string | null | undefined): string | undefined {
+	if (!country) {
+		return undefined;
+	}
+
+	const trimmed = country.trim();
+	return trimmed.length > 0 ? trimmed : undefined;
 }
 
 function formatAchievedAgo(achievedAt: Date | null): string | undefined {
@@ -96,33 +102,101 @@ function formatAchievedAgo(achievedAt: Date | null): string | undefined {
 	return days > 0 ? `${days} days ago` : "recently";
 }
 
-function modeKeyFromDbMode(mode: string | null | undefined): string | null {
-	switch (mode) {
-		case "quickPlay":
-			return "quickPlay";
-		case "fortyLines":
-			return "fortyLines";
-		case "blitz":
-			return "blitz";
-		case "zen":
-			return "zen";
-		default:
-			return null;
+function toModeStats(score: number | null, achievedAt: Date | null): ProfileModeStats {
+	if (score === null || score === undefined) {
+		return null;
 	}
+
+	return {
+		value: String(score),
+		achievedAgo: formatAchievedAgo(achievedAt),
+	};
 }
 
-/**
- * Fetch a user's public profile and game stats by username.
- */
-export async function getProfileByUsername(username: string): Promise<ProfileResponse> {
-	const normalizedUsername = z.string().trim().min(1).max(100).parse(username);
+function buildProfileResponse(
+	user: ProfileUserRecord,
+	matchRows: ProfileModeRow[],
+): ProfileResponse {
+	const bestModeStats: Partial<Record<keyof ProfileResponse["modes"], { score: number; achievedAt: Date | null }>> = {};
+	let wins = 0;
 
-	const user = await prisma.users.findUnique({
-		where: { username: normalizedUsername },
-		select: {
+	for (const row of matchRows) {
+		if (row.result === "win") {
+			wins += 1;
+		}
+
+		const mode = row.matches?.gamemode;
+		if (!mode || !(mode in modeAliases)) {
+			continue;
+		}
+
+		const key = modeAliases[mode as keyof typeof modeAliases];
+		const score = row.score ?? 0;
+		const current = bestModeStats[key];
+
+		if (!current || score > current.score) {
+			bestModeStats[key] = {
+				score,
+				achievedAt: row.matches?.created_at ?? null,
+			};
+		}
+	}
+
+	return {
+		id: user.id,
+		username: user.username,
+		country: normalizeCountry(user.country),
+		avatarId: user.avatar_id ?? 0,
+		created_at: user.created_at,
+		level: user.level ?? 1,
+		xp: user.xp ?? 0,
+		nextLevelXp: user.next_level_xp ?? 100,
+		playTimeHours: Math.floor((user.play_time_seconds ?? 0) / 3600),
+		onlineGames: matchRows.length,
+		wins: user.wins ?? wins,
+		modes: {
+			league: null,
+			quickPlay: toModeStats(bestModeStats.quickPlay?.score ?? null, bestModeStats.quickPlay?.achievedAt ?? null),
+			fortyLines: toModeStats(bestModeStats.fortyLines?.score ?? null, bestModeStats.fortyLines?.achievedAt ?? null),
+			blitz: toModeStats(bestModeStats.blitz?.score ?? null, bestModeStats.blitz?.achievedAt ?? null),
+			zen: toModeStats(bestModeStats.zen?.score ?? null, bestModeStats.zen?.achievedAt ?? null),
+		},
+	};
+}
+
+async function findUserByField(
+	field: "id" | "username",
+	value: string | number,
+): Promise<ProfileUserRecord | null> {
+	const where = field === "id" ? { id: value as number } : { username: value as string };
+	const select = {
+		id: true,
+		username: true,
+		country: true,
+		avatar_id: true,
+		created_at: true,
+		level: true,
+		xp: true,
+		next_level_xp: true,
+		play_time_seconds: true,
+		wins: true,
+	} as const;
+
+	try {
+		const result = await prisma.users.findUnique({
+			where: where as any,
+			select: select as any,
+		});
+
+		return result as Prisma.usersGetPayload<{ select: typeof select }> | null;
+	} catch (error) {
+		if (!isMissingCountryFieldError(error)) {
+			throw error;
+		}
+
+		const fallbackSelect = {
 			id: true,
 			username: true,
-			country: true,
 			avatar_id: true,
 			created_at: true,
 			level: true,
@@ -130,16 +204,23 @@ export async function getProfileByUsername(username: string): Promise<ProfileRes
 			next_level_xp: true,
 			play_time_seconds: true,
 			wins: true,
-		},
-	});
+		} as const;
 
-	if (!user) {
-		throw new Error("User not found");
+		const fallbackResult = await prisma.users.findUnique({
+			where: where as any,
+			select: fallbackSelect as any,
+		});
+
+		return fallbackResult as Prisma.usersGetPayload<{ select: typeof fallbackSelect }> | null;
 	}
+}
 
-	const matchPlayers = await prisma.match_players.findMany({
-		where: { user_id: user.id },
-		include: {
+async function loadUserProfileRows(userId: number): Promise<ProfileModeRow[]> {
+	return await prisma.match_players.findMany({
+		where: { user_id: userId },
+		select: {
+			score: true,
+			result: true,
 			matches: {
 				select: {
 					gamemode: true,
@@ -148,80 +229,124 @@ export async function getProfileByUsername(username: string): Promise<ProfileRes
 			},
 		},
 	});
+}
 
-	const wins = await prisma.match_players.count({
-		where: { user_id: user.id, result: "win" },
-	});
+export async function getProfileByUsername(username: string): Promise<ProfileResponse> {
+	const normalizedUsername = z.string().trim().min(1).max(100).parse(username);
+	const user = await findUserByField("username", normalizedUsername);
 
-	const modeStats: Record<string, { score: number; achievedAt: Date | null }> = {};
+	if (!user) {
+		throw new Error("User not found");
+	}
 
-	for (const matchPlayer of matchPlayers) {
-		const key = modeKeyFromDbMode(matchPlayer.matches?.gamemode);
-		if (!key) {
+	const matchRows = await loadUserProfileRows(user.id);
+	return buildProfileResponse(user, matchRows);
+}
+
+export type MiniProfileResponse = {
+	miniprofile: {
+		id: number;
+		username: string;
+		avatarId: number;
+		level: number;
+		modes: {
+			league?: { tr: number; rank?: string } | null;
+			quickPlay?: ProfileModeStats;
+			fortyLines?: ProfileModeStats;
+			blitz?: ProfileModeStats;
+			zen?: ProfileModeStats;
+		};
+	};
+};
+
+function buildMiniProfileResponse(user: ProfileUserRecord, matchRows: ProfileModeRow[]): MiniProfileResponse {
+	const bestModeStats: Partial<Record<keyof ProfileResponse["modes"], { score: number; achievedAt: Date | null }>> = {};
+
+	for (const row of matchRows) {
+		const mode = row.matches?.gamemode;
+		if (!mode || !(mode in modeAliases)) {
 			continue;
 		}
 
-		const score = typeof matchPlayer.score === "number" ? matchPlayer.score : 0;
-		const existing = modeStats[key];
-		if (!existing || score > existing.score) {
-			modeStats[key] = {
+		const key = modeAliases[mode as keyof typeof modeAliases];
+		const score = row.score ?? 0;
+		const current = bestModeStats[key];
+
+		if (!current || score > current.score) {
+			bestModeStats[key] = {
 				score,
-				achievedAt: matchPlayer.matches?.created_at ?? null,
+				achievedAt: row.matches?.created_at ?? null,
 			};
 		}
 	}
 
-	return toProfileResponse(user, {
-		onlineGames: matchPlayers.length,
-		wins,
-		modeStats: {
-			quickPlay: modeStats.quickPlay ? { value: String(modeStats.quickPlay.score), achievedAgo: formatAchievedAgo(modeStats.quickPlay.achievedAt) } : null,
-			fortyLines: modeStats.fortyLines ? { value: String(modeStats.fortyLines.score), achievedAgo: formatAchievedAgo(modeStats.fortyLines.achievedAt) } : null,
-			blitz: modeStats.blitz ? { value: String(modeStats.blitz.score), achievedAgo: formatAchievedAgo(modeStats.blitz.achievedAt) } : null,
-			zen: modeStats.zen ? { value: String(modeStats.zen.score), achievedAgo: formatAchievedAgo(modeStats.zen.achievedAt) } : null,
+	return {
+		miniprofile: {
+			id: user.id,
+			username: user.username,
+			avatarId: user.avatar_id ?? 0,
+			level: user.level ?? 1,
+			modes: {
+				league: bestModeStats.league ? { tr: bestModeStats.league.score } : null,
+				quickPlay: toModeStats(bestModeStats.quickPlay?.score ?? null, bestModeStats.quickPlay?.achievedAt ?? null),
+				fortyLines: toModeStats(bestModeStats.fortyLines?.score ?? null, bestModeStats.fortyLines?.achievedAt ?? null),
+				blitz: toModeStats(bestModeStats.blitz?.score ?? null, bestModeStats.blitz?.achievedAt ?? null),
+				zen: toModeStats(bestModeStats.zen?.score ?? null, bestModeStats.zen?.achievedAt ?? null),
+			},
 		},
-	});
+	};
 }
 
-/**
- * Update the authenticated user's profile fields.
- */
-export async function updateMyProfile(userId: number, rawInput: unknown): Promise<ProfileResponse> {
-	assertPositiveInteger(userId, "userId");
-	const input = updateProfileSchema.parse(rawInput);
+export async function getMiniProfileByUsername(username: string): Promise<MiniProfileResponse> {
+	const normalizedUsername = z.string().trim().min(1).max(100).parse(username);
+	const user = await findUserByField("username", normalizedUsername);
 
-	const data: Record<string, number | string> = {};
-	if (typeof input.avatarId === "number") data.avatar_id = input.avatarId;
-	if (typeof input.country === "string") data.country = input.country;
-	if (typeof input.level === "number") data.level = input.level;
-	if (typeof input.xp === "number") data.xp = input.xp;
-	if (typeof input.nextLevelXp === "number") data.next_level_xp = input.nextLevelXp;
-	if (typeof input.playTimeHours === "number") data.play_time_seconds = input.playTimeHours * 3600;
-
-	if (Object.keys(data).length === 0) {
-		throw new Error("No valid fields to update");
+	if (!user) {
+		throw new Error("User not found");
 	}
 
-	const updated = await prisma.users.update({
+	const matchRows = await loadUserProfileRows(user.id);
+	return buildMiniProfileResponse(user, matchRows);
+}
+
+export async function updateMyProfile(userId: number, rawInput: unknown): Promise<ProfileResponse> {
+	assertPositiveInteger(userId, "userId");
+	const input = profileUpdateSchema.parse(rawInput);
+
+	const data: Record<string, string | number> = {};
+
+	if (input.avatarId !== undefined) {
+		data.avatar_id = input.avatarId;
+	}
+	if (input.country !== undefined) {
+		data.country = input.country.trim();
+	}
+	if (input.level !== undefined) {
+		data.level = input.level;
+	}
+	if (input.xp !== undefined) {
+		data.xp = input.xp;
+	}
+	if (input.nextLevelXp !== undefined) {
+		data.next_level_xp = input.nextLevelXp;
+	}
+	if (input.playTimeHours !== undefined) {
+		data.play_time_seconds = input.playTimeHours * 3600;
+	}
+
+	if (Object.keys(data).length === 0) {
+		throw new Error("At least one profile field is required");
+	}
+
+	await prisma.users.update({
 		where: { id: userId },
-		select: {
-			id: true,
-			username: true,
-			country: true,
-			avatar_id: true,
-			created_at: true,
-			level: true,
-			xp: true,
-			next_level_xp: true,
-			play_time_seconds: true,
-			wins: true,
-		},
 		data,
 	});
 
-	return toProfileResponse(updated, {
-		onlineGames: 0,
-		wins: updated.wins ?? 0,
-		modeStats: {},
-	});
+	const refreshedUser = await findUserByField("id", userId);
+	if (!refreshedUser) {
+		throw new Error("User not found");
+	}
+
+	return buildProfileResponse(refreshedUser, await loadUserProfileRows(userId));
 }

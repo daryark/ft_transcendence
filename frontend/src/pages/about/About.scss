@@ -1,6 +1,39 @@
-.about{
-  padding-left: 25rem;
-  // display: none;
+.about-page {
+  width: min(var(--app-page-max), calc(100vw - 2rem));
+  min-height: calc(100vh - var(--app-header-height));
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2rem) 0;
+  display: grid;
+  align-content: start;
+  gap: 1rem;
 }
 
+.about-page__panel {
+  padding: clamp(1.25rem, 4vw, 2rem);
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  background: linear-gradient(135deg, rgba(24, 34, 47, 0.94), rgba(10, 15, 22, 0.96));
+  box-shadow: var(--app-shadow-panel);
+}
 
+.about-page__eyebrow {
+  margin: 0 0 0.5rem;
+  color: var(--app-accent);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.about-page h1 {
+  margin: 0;
+  font-family: var(--app-font-display);
+  font-size: clamp(2.4rem, 8vw, 5rem);
+  line-height: 0.95;
+  text-transform: uppercase;
+}
+
+.about-page p {
+  max-width: 42rem;
+  color: var(--app-muted);
+  font-size: 1rem;
+  font-weight: 700;
+}

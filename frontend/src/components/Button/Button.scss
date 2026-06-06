@@ -1,72 +1,182 @@
 .button {
-  // position: relative;
-  background: #00ff00;
+  --mode-a: #777;
+  --mode-b: #999;
+  --mode-bg: rgba(34, 34, 38, 0.82);
+  position: relative;
+  justify-self: end;
+  width: calc(100% - 3.2rem);
+  min-height: 5.7rem;
+  display: grid;
+  grid-template-columns: 9.6rem minmax(0, 1fr);
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--mode-a) 38%, transparent);
   background:
-    linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
-    linear-gradient(
-      90deg,
-      rgba(255, 0, 0, 0.06),
-      rgba(0, 255, 0, 0.02),
-      rgba(0, 0, 255, 0.06)
-    );
-  background-size:
-    100% 2px,
-    3px 100%;
-  z-index: 50;
+    linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0 16%, transparent 16% 50%, rgba(0, 0, 0, 0.11) 50% 66%, transparent 66%),
+    linear-gradient(90deg, color-mix(in srgb, var(--mode-bg) 82%, black), var(--mode-bg));
+  background-size: 5.5rem 5.5rem, 100% 100%;
+  box-shadow:
+    0 0.22rem 0 rgba(0, 0, 0, 0.78),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  opacity: 0.88;
+  transition:
+    width 120ms ease,
+    opacity 120ms ease,
+    filter 120ms ease;
+}
 
-  display: flex;
-  margin: 0rem 0rem 0rem 0rem;
-  cursor: pointer;
-  transition: all 0.25s ease;
-
-  // text-align: right;
-  // display: block;
+.button:hover {
   width: 100%;
-  transform: translateX(15rem);
-  // box-sizing: border-box;
+  opacity: 1;
+  filter: brightness(1.16) saturate(1.08);
+}
 
-  img {
-    width: 48px;
-    height: 48px;
-    object-fit: contain;
-    flex-shrink: 0;
-    pointer-events: none;
+.button--disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+  filter: grayscale(0.28) brightness(0.78);
+}
+
+.button--disabled:hover {
+  width: calc(100% - 3.2rem);
+  opacity: 0.56;
+  filter: grayscale(0.2) brightness(0.9);
+}
+
+.button::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0.3rem;
+  content: "";
+  background: var(--mode-a);
+  box-shadow: 0 0 1.2rem color-mix(in srgb, var(--mode-a) 70%, transparent);
+}
+
+.button img {
+  width: 7.4rem;
+  height: 4.7rem;
+  margin-left: 1rem;
+  object-fit: contain;
+  opacity: 0.95;
+  filter:
+    drop-shadow(0.8rem 0.8rem 0 rgba(0, 0, 0, 0.28))
+    saturate(1.22);
+}
+
+.button__text {
+  min-width: 0;
+  padding: 0.65rem 1rem 0.65rem 0;
+}
+
+.button__text h1 {
+  margin: 0;
+  color: color-mix(in srgb, var(--mode-a) 42%, #fff);
+  font-size: clamp(2rem, 4.6vw, 3.15rem);
+  font-weight: 900;
+  line-height: 0.92;
+  text-transform: uppercase;
+  text-shadow: 0 0.08rem 0 rgba(0, 0, 0, 0.72);
+}
+
+.button__text p {
+  margin: 0.35rem 0 0;
+  color: color-mix(in srgb, var(--mode-b) 56%, #c8c8cf);
+  font-size: clamp(0.8rem, 1.4vw, 1rem);
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.button__disabledReason {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-items: center;
+  padding: 0.75rem 1.6rem;
+  background: rgba(20, 0, 0, 0.76);
+  color: #fff;
+  font-size: clamp(1.25rem, 2.5vw, 2rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.05;
+  text-shadow: 0 0.08rem 0 #000;
+  text-transform: uppercase;
+}
+
+.button--mode-multiplayer {
+  --mode-a: var(--app-pink);
+  --mode-b: var(--app-red);
+  --mode-bg: rgba(62, 30, 50, 0.88);
+}
+
+.button--mode-solo {
+  --mode-a: #6b88d5;
+  --mode-b: #9f73bd;
+  --mode-bg: rgba(27, 29, 50, 0.88);
+}
+
+.button--mode-tetra_channel {
+  --mode-a: var(--app-green);
+  --mode-b: #3cad54;
+  --mode-bg: rgba(24, 70, 39, 0.9);
+}
+
+.button--mode-about {
+  --mode-a: #9a9a9a;
+  --mode-b: #696969;
+  --mode-bg: rgba(34, 34, 34, 0.88);
+}
+
+.button--mode-quick {
+  --mode-a: #ff8b38;
+  --mode-b: #ff3aa8;
+  --mode-bg: rgba(108, 43, 25, 0.9);
+}
+
+.button--mode-league,
+.button--mode-blitz {
+  --mode-a: #ff6858;
+  --mode-b: #ff9762;
+  --mode-bg: rgba(88, 25, 28, 0.9);
+}
+
+.button--mode-custom,
+.button--mode-rooms {
+  --mode-a: #87d9de;
+  --mode-b: #9d90ff;
+  --mode-bg: rgba(45, 63, 67, 0.9);
+}
+
+.button--mode-40lines {
+  --mode-a: #f2a12b;
+  --mode-b: #e6ef53;
+  --mode-bg: rgba(48, 36, 25, 0.9);
+}
+
+.button--mode-zen {
+  --mode-a: #e34fd1;
+  --mode-b: #8f66ff;
+  --mode-bg: rgba(66, 24, 67, 0.9);
+}
+
+@media (max-width: 700px) {
+  .button {
+    width: calc(100% - 0.8rem);
+    grid-template-columns: 6.2rem minmax(0, 1fr);
+    min-height: 4.75rem;
   }
 
-  &:hover {
-    transform: translateX(10rem);
-    background: linear-gradient(135deg, #1f1f3a 0%, #1a2745 100%);
-    border-color: rgba(255, 255, 255, 0.3);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  .button:hover {
+    width: 100%;
   }
 
-  &:active {
-    transform: translateX(9rem);
-    background: linear-gradient(135deg, #1f1f3a 0%, #1a2745 100%);
-    border-color: rgba(255, 255, 255, 0.3);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+  .button--disabled:hover {
+    width: calc(100% - 0.8rem);
   }
 
-  &__text {
-    text-align: left;
-    flex: 1;
-  }
-
-  h1 {
-    // padding: 0;
-    // margin: 0;
-    // margin: 0 0 8px 0;
-    font-size: 18px;
-    font-weight: 700;
-    color: #fff;
-    letter-spacing: 1px;
-  }
-
-  p {
-    padding: 0;
-    margin: 0;
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.6);
-    line-height: 1.4;
+  .button img {
+    width: 5rem;
+    height: 3.4rem;
+    margin-left: 0.75rem;
   }
 }

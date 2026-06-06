@@ -1,0 +1,258 @@
+import { useEffect, useState, type CSSProperties } from "react";
+import { Link } from "react-router-dom";
+
+import { authFetch } from "../../auth/authFetch";
+import { type SessionUser } from "../../auth/session";
+import "./ProfileHeader.scss";
+
+type LeagueStats = {
+  tr?: number;
+  rank?: string;
+};
+
+type SimpleModeStats = {
+  value?: string;
+  achievedAgo?: string;
+};
+
+type ProfileModes = {
+  league?: LeagueStats | null;
+  fortyLines?: SimpleModeStats | null;
+  quickPlay?: SimpleModeStats | null;
+};
+
+type ProfileDetails = {
+  level?: number;
+  modes?: ProfileModes;
+};
+
+type ApiProfileResponse = ProfileDetails | { profile: ProfileDetails };
+
+const avatarColors = [
+  "#d6cc1e",
+  "#8ed053",
+  "#6ec6ff",
+  "#ff7f50",
+  "#c986ff",
+  "#ffcc66",
+  "#6ee7b7",
+  "#ef6f8f",
+  "#a7f3d0",
+  "#f97316",
+  "#93c5fd",
+  "#f0abfc",
+  "#fde047",
+  "#34d399",
+  "#fb7185",
+  "#60a5fa",
+  "#c4b5fd",
+  "#facc15",
+  "#5eead4",
+  "#e879f9",
+];
+
+export const getAvatarStyle = (avatarId?: number) => {
+  const index =
+    avatarId && avatarId >= 1 && avatarId <= avatarColors.length
+      ? avatarId - 1
+      : 0;
+
+  return { "--avatar-color": avatarColors[index] } as CSSProperties;
+};
+
+const getJoinedText = (user: SessionUser) => {
+  if (!user.created_at) {
+    return "JOINED TODAY";
+  }
+
+  const createdAt = new Date(user.created_at).getTime();
+
+  if (Number.isNaN(createdAt)) {
+    return "JOINED TODAY";
+  }
+
+  const days = Math.max(
+    0,
+    Math.floor((Date.now() - createdAt) / (1000 * 60 * 60 * 24)),
+  );
+
+  return days === 0 ? "JOINED TODAY" : `JOINED ${days} DAYS AGO`;
+};
+
+const unwrapProfile = (payload: ApiProfileResponse): ProfileDetails =>
+  "profile" in payload && typeof payload.profile === "object"
+    ? payload.profile
+    : payload;
+
+const formatNumber = (value: number | undefined) =>
+  typeof value === "number" && Number.isFinite(value) ? value.toLocaleString() : "0";
+
+type ProfileHeaderProps = {
+  user: SessionUser;
+  isOwnProfile?: boolean;
+  onClose: () => void;
+  onLogout?: () => void;
+};
+
+const ProfileHeader = ({
+  user,
+  isOwnProfile = false,
+  onClose,
+  onLogout,
+}: ProfileHeaderProps) => {
+  const [profileDetails, setProfileDetails] = useState<ProfileDetails | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (user.isAnonymous) {
+      setProfileDetails(null);
+      setError("");
+      setIsLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadProfileDetails = async () => {
+      setIsLoading(true);
+      setError("");
+
+      try {
+        const response = await authFetch(
+          `/api/users/${encodeURIComponent(user.username)}/miniprofile`,
+          { signal: controller.signal },
+        );
+
+        if (!response.ok) {
+          throw new Error("FAILED TO LOAD PROFILE STATS");
+        }
+
+        const payload = (await response.json()) as ApiProfileResponse;
+        setProfileDetails(unwrapProfile(payload));
+      } catch (nextError) {
+        if (!controller.signal.aborted) {
+          setProfileDetails(null);
+          setError(
+            nextError instanceof Error
+              ? nextError.message
+              : "FAILED TO LOAD PROFILE STATS",
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadProfileDetails();
+
+    return () => controller.abort();
+  }, [user.isAnonymous, user.username]);
+
+  const modes = profileDetails?.modes ?? {};
+  const leagueStats = modes.league;
+  const fortyLinesStats = modes.fortyLines;
+  const quickPlayStats = modes.quickPlay;
+
+  return (
+    <section
+      className={`profileModal ${user.isAnonymous ? "anonymousProfile" : ""}`}
+      aria-label="Profile"
+      onMouseDown={(event) => event.stopPropagation()}
+    >
+      <button className="closeProfile" type="button" onClick={onClose}>
+        CLOSE
+      </button>
+
+      <div className="profileHeader">
+        <div className="profileAvatar" style={getAvatarStyle(user.avatarId)}>
+          {user.isAnonymous ? "?" : ""}
+        </div>
+        <div>
+          <h2>{user.username}</h2>
+          {!user.isAnonymous && <p>{getJoinedText(user)} - HEARTS 0</p>}
+        </div>
+      </div>
+
+      {user.isAnonymous ? (
+        <div className="anonymousNotice">THIS USER IS PLAYING ANONYMOUSLY</div>
+      ) : (
+        <>
+          <div className="profileLevel">
+            <span className="levelBadge">{profileDetails?.level ?? 0}</span>
+          </div>
+
+          {error && <div className="profileStatsNotice">{error}</div>}
+
+          <div className="profileStats">
+            <article>
+              <span>TETRA LEAGUE</span>
+              {isLoading ? (
+                <strong>LOADING...</strong>
+              ) : leagueStats ? (
+                <>
+                  <strong>{formatNumber(leagueStats.tr)} TR</strong>
+                  <small>{leagueStats.rank ?? "UNRANKED"}</small>
+                </>
+              ) : (
+                <>
+                  <strong>0 TR</strong>
+                  <small>NO RECORD</small>
+                </>
+              )}
+            </article>
+            <article>
+              <span>40 LINES</span>
+              {isLoading ? (
+                <strong>LOADING...</strong>
+              ) : fortyLinesStats ? (
+                <>
+                  <strong>{fortyLinesStats.value ?? "0:00.000"}</strong>
+                  <small>{fortyLinesStats.achievedAgo ?? "NO RECORD"}</small>
+                </>
+              ) : (
+                <>
+                  <strong>0:00.000</strong>
+                  <small>NO RECORD</small>
+                </>
+              )}
+            </article>
+            <article>
+              <span>QUICK PLAY</span>
+              {isLoading ? (
+                <strong>LOADING...</strong>
+              ) : quickPlayStats ? (
+                <>
+                  <strong>{quickPlayStats.value ?? "0 M"}</strong>
+                  <small>{quickPlayStats.achievedAgo ?? "NO RECORD"}</small>
+                </>
+              ) : (
+                <>
+                  <strong>0 M</strong>
+                  <small>NO RECORD</small>
+                </>
+              )}
+            </article>
+          </div>
+          <Link
+            className="fullProfile"
+            to={`/profile/${encodeURIComponent(user.username)}`}
+            onClick={onClose}
+          >
+            VIEW FULL PROFILE
+          </Link>
+        </>
+      )}
+
+      {isOwnProfile && onLogout && (
+        <button className="logoutButton" type="button" onClick={onLogout}>
+          LOG OUT
+        </button>
+      )}
+    </section>
+  );
+};
+
+export default ProfileHeader;

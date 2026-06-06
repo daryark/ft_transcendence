@@ -76,6 +76,14 @@ export default function App() {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="play/multiplayer/custom/:roomCode"
+            element={
+              <ProtectedRoute>
+                <Custom />
+              </ProtectedRoute>
+            }
+          />
 
 
           {/* <Route path="channel/*" element={<TetraChannel />} /> */}

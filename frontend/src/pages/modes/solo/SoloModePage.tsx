@@ -5,15 +5,43 @@ import {
   getSocket,
   subscribeToSocket,
 } from "../../../socket/socketClient";
-import { getStoredGameConfig } from "../../../socket/gameConfigStorage";
+import {
+  getStoredGameConfig,
+  type SoloBackendPreset,
+  type SoloPresetKey,
+} from "../../../socket/gameConfigStorage";
 import NotFound from "../../notFound/NotFound";
 import type { GameStartPayload } from "../../game/types";
 import { MODES_CONFIG } from "./config/modes.config";
 
-function buildSoloPayload(modeId: string) {
+type SoloModeId = "40lines" | "blitz" | "zen";
+
+const SOLO_PRESET_BY_MODE_ID: Record<SoloModeId, {
+  dtoKey: SoloPresetKey;
+  backendPreset: SoloBackendPreset;
+}> = {
+  "40lines": {
+    dtoKey: "40lines",
+    backendPreset: "40Lines",
+  },
+  blitz: {
+    dtoKey: "blitz",
+    backendPreset: "blitz",
+  },
+  zen: {
+    dtoKey: "zen",
+    backendPreset: "zen",
+  },
+};
+
+function isSoloModeId(value: string | undefined): value is SoloModeId {
+  return value === "40lines" || value === "blitz" || value === "zen";
+}
+
+function buildSoloPayload(modeId: SoloModeId) {
   const storedConfig = getStoredGameConfig();
-  const presetKey = modeId === "40lines" ? "40lines" : modeId;
-  const preset = storedConfig?.solo.presets[presetKey];
+  const presetConfig = SOLO_PRESET_BY_MODE_ID[modeId];
+  const preset = storedConfig?.solo.presets[presetConfig.dtoKey];
 
   if (!preset) {
     throw new Error("Game config is not loaded yet");
@@ -21,7 +49,7 @@ function buildSoloPayload(modeId: string) {
   return {
     gameConfig: {
       mode: "solo",
-      preset: modeId === "40lines" ? "40Lines" : modeId,
+      preset: presetConfig.backendPreset,
       objective: preset.objective,
     },
   };
@@ -29,7 +57,7 @@ function buildSoloPayload(modeId: string) {
 
 export default function SoloModePage() {
   const { modeId } = useParams<{ modeId: string }>();
-  const config = modeId ? MODES_CONFIG[modeId] : undefined;
+  const config = isSoloModeId(modeId) ? MODES_CONFIG[modeId] : undefined;
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [startError, setStartError] = useState("");
@@ -41,7 +69,7 @@ export default function SoloModePage() {
     });
   }, []);
 
-  if (!config || !modeId) return <NotFound />;
+  if (!config || !isSoloModeId(modeId)) return <NotFound />;
 
   const handleStart = () => {
     setStartError("");
@@ -54,7 +82,7 @@ export default function SoloModePage() {
     setIsLoading(true);
 
     const handleGameStart = (payload: GameStartPayload) => {
-      socket.off("mode_error", handleModeError);
+      socket.off("server:error", handleModeError);
       setIsLoading(false);
       // include return path so the game can navigate back if aborted
       navigate(`/game/${payload.roomId}`, { state: { ...payload, from: `/play/solo/${modeId}` } });
@@ -67,9 +95,9 @@ export default function SoloModePage() {
     };
 
     socket.off("game:start", handleGameStart);
-    socket.off("mode_error", handleModeError);
+    socket.off("server:error", handleModeError);
     socket.once("game:start", handleGameStart);
-    socket.once("mode_error", handleModeError);
+    socket.once("server:error", handleModeError);
 
     try {
       const payload = buildSoloPayload(modeId);
@@ -90,7 +118,7 @@ export default function SoloModePage() {
       });
     } catch (error) {
       socket.off("game:start", handleGameStart);
-      socket.off("mode_error", handleModeError);
+      socket.off("server:error", handleModeError);
       setIsLoading(false);
       setStartError(
         error instanceof Error ? error.message : "Game config is not loaded yet.",

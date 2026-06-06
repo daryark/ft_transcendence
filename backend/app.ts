@@ -8,6 +8,7 @@ import { getJwtSecret } from "./auth/jwt";
 const app = express();
 export default app;
 
+app.set("trust proxy", true);
 app.use(cors()); //#2
 app.use(express.json());
 
@@ -16,7 +17,9 @@ export type ApiRequest = Request & { user?: any }; //! consider defining a prope
 // All routes here are under /api/... (matches nginx proxy_pass to this app)
 const api = express.Router();
 const { registerUser, loginUser, changeUserPassword } = require("./prisma/auth");
-const { getProfileByUsername, updateMyProfile } = require("./prisma/profile");
+const { getProfileByUsername, updateMyProfile, getMiniProfileByUsername } = require("./prisma/profile");
+const { searchUsers } = require("./prisma/search");
+const { listFriends, createFriendRequest, acceptFriendRequestById, rejectFriendRequestById, removeFriendshipByPair, blockFriendshipByPair, } = require("./prisma/friends");
 const oauthController = require("./auth/oauthController");
 // lightweight helpers
 const { getLeaderboard } = require("./prisma/leaderboard");
@@ -43,9 +46,56 @@ function getOptionalBearerUserId(req: ApiRequest): number | null {
   }
 }
 
+function sendOk(res: Response, data: any, status = 200) {
+  return res.status(status).json({ ok: true, data });
+}
+
+function sendError(res: Response, status: number, error: string) {
+  return res.status(status).json({ ok: false, error });
+}
+
+function parsePaginationQuery(req: ApiRequest) {
+  const page = req.query.page ? parseInt(String(req.query.page), 10) : 1;
+  const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 20;
+
+  if (!Number.isInteger(page) || page <= 0) {
+    throw new Error("page must be a positive integer");
+  }
+
+  if (!Number.isInteger(limit) || limit <= 0) {
+    throw new Error("limit must be a positive integer");
+  }
+
+  if (limit > 50) {
+    throw new Error("limit must be 50 or less");
+  }
+
+  return { page, limit };
+}
+
+function parseFriendStatusFilter(req: ApiRequest) {
+  const rawStatus = typeof req.query.status === "string" ? req.query.status : "all";
+
+  if (rawStatus !== "all" && rawStatus !== "pending" && rawStatus !== "accepted" && rawStatus !== "blocked") {
+    throw new Error("status must be all, pending, accepted, or blocked");
+  }
+
+  return rawStatus;
+}
+
+function getFriendActionTargetId(body: any) {
+  const targetId = Number(body?.targetUserId ?? body?.userId);
+
+  if (!Number.isInteger(targetId) || targetId <= 0) {
+    throw new Error("targetUserId must be a positive integer");
+  }
+
+  return targetId;
+}
+
 api.post("/auth/register", async (req: ApiRequest, res: Response) => {
   try {
-    const auth = await registerUser(req.body);
+    const auth = await registerUser(req.body, req);
     res.status(201).json({ message: "User registered!", ...auth });
   } catch (error) {
     res
@@ -138,6 +188,18 @@ api.get("/users/:username/profile", async (req: ApiRequest, res: Response) => {
   }
 });
 
+// GET /api/users/:username/miniprofile
+api.get("/users/:username/miniprofile", async (req: ApiRequest, res: Response) => {
+  try {
+    const mini = await getMiniProfileByUsername(req.params.username);
+    res.json(mini);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message === "User not found" ? 404 : 400;
+    res.status(status).json({ message: "Failed to load miniprofile", error: message });
+  }
+});
+
 // PATCH /api/users/me/profile
 api.patch("/users/me/profile", authenticateToken, async (req: ApiRequest, res: Response) => {
   try {
@@ -167,9 +229,211 @@ api.patch("/users/me/password", authenticateToken, async (req: ApiRequest, res: 
     return res.json({ message: "Password updated" });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const status = message === "User not found" ? 404 : message === "Current password is incorrect" ? 403 : 400;
+    const status = message === "User not found" ? 404 : 400;
     return res.status(status).json({ message: "Failed to update password", error: message });
   }
+});
+
+// -----------------------------------------------------------------------------
+// TODO: API route stubs — add real logic later (placeholders return 501)
+// These endpoints were noted in `backend/prisma/todo.txt` and should be
+// implemented when wiring actual services/DB logic.
+// -----------------------------------------------------------------------------
+
+// GET /api/friends
+api.get("/friends", authenticateToken, async (req: ApiRequest, res: Response) => {
+  try {
+    const requesterUserId = getAuthenticatedUserId(req);
+
+    if (!requesterUserId) {
+      return sendError(res, 401, "Unauthorized");
+    }
+
+    const { page, limit } = parsePaginationQuery(req);
+    const status = parseFriendStatusFilter(req);
+
+    const result = await listFriends({ userId: requesterUserId, status, page, limit });
+    const items = result.items.map((friendship: any) => {
+      const isRequester = friendship.user_id === requesterUserId;
+      const otherUser = isRequester
+        ? friendship.users_friends_friend_idTousers
+        : friendship.users_friends_user_idTousers;
+
+      return {
+        id: friendship.id,
+        userId: friendship.user_id,
+        friendId: friendship.friend_id,
+        status: friendship.status,
+        createdAt: friendship.created_at ? friendship.created_at.toISOString() : null,
+        otherUser: {
+          id: otherUser.id,
+          username: otherUser.username,
+        },
+      };
+    });
+
+    return sendOk(res, { items, page: result.page, limit: result.limit, total: result.total });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return sendError(res, message.includes("Unauthorized") ? 401 : 400, message);
+  }
+});
+
+// POST /api/friends/request
+api.post("/friends/request", authenticateToken, async (req: ApiRequest, res: Response) => {
+  try {
+    const requesterUserId = getAuthenticatedUserId(req);
+    if (!requesterUserId) {
+      return sendError(res, 401, "Unauthorized");
+    }
+
+    const friendId = getFriendActionTargetId(req.body);
+    const friendship = await createFriendRequest({ userId: requesterUserId, friendId });
+
+    return sendOk(res, {
+      friendship: {
+        id: friendship.id,
+        userId: friendship.user_id,
+        friendId: friendship.friend_id,
+        status: friendship.status,
+        createdAt: friendship.created_at ? friendship.created_at.toISOString() : null,
+      },
+    }, 201);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("not be different") || message.includes("positive integer") ? 400 : 409;
+    return sendError(res, status, message);
+  }
+});
+
+// POST /api/friends/respond
+api.post("/friends/respond", authenticateToken, async (req: ApiRequest, res: Response) => {
+  try {
+    const requesterUserId = getAuthenticatedUserId(req);
+    if (!requesterUserId) {
+      return sendError(res, 401, "Unauthorized");
+    }
+
+    const friendshipId = Number(req.body?.requestId);
+    const action = typeof req.body?.action === "string" ? req.body.action : "";
+
+    if (!Number.isInteger(friendshipId) || friendshipId <= 0) {
+      throw new Error("requestId must be a positive integer");
+    }
+
+    if (action !== "accept" && action !== "reject") {
+      throw new Error("action must be accept or reject");
+    }
+
+    const friendship = action === "accept"
+      ? await acceptFriendRequestById(friendshipId, requesterUserId)
+      : await rejectFriendRequestById(friendshipId, requesterUserId);
+
+    return sendOk(res, {
+      friendship: {
+        id: friendship.id,
+        userId: friendship.user_id,
+        friendId: friendship.friend_id,
+        status: friendship.status ?? (action === "reject" ? null : friendship.status),
+        createdAt: friendship.created_at ? friendship.created_at.toISOString() : null,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("not found") ? 404 : message.includes("allowed") ? 403 : 400;
+    return sendError(res, status, message);
+  }
+});
+
+// POST /api/friends/remove
+api.post("/friends/remove", authenticateToken, async (req: ApiRequest, res: Response) => {
+  try {
+    const requesterUserId = getAuthenticatedUserId(req);
+    if (!requesterUserId) {
+      return sendError(res, 401, "Unauthorized");
+    }
+
+    const targetUserId = getFriendActionTargetId(req.body);
+    await removeFriendshipByPair(requesterUserId, targetUserId);
+
+    return sendOk(res, { removed: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("not found") ? 404 : 400;
+    return sendError(res, status, message);
+  }
+});
+
+// POST /api/friends/block
+api.post("/friends/block", authenticateToken, async (req: ApiRequest, res: Response) => {
+  try {
+    const requesterUserId = getAuthenticatedUserId(req);
+    if (!requesterUserId) {
+      return sendError(res, 401, "Unauthorized");
+    }
+
+    const targetUserId = getFriendActionTargetId(req.body);
+    const friendship = await blockFriendshipByPair(requesterUserId, targetUserId);
+
+    return sendOk(res, {
+      friendship: {
+        id: friendship.id,
+        userId: friendship.user_id,
+        friendId: friendship.friend_id,
+        status: friendship.status,
+        createdAt: friendship.created_at ? friendship.created_at.toISOString() : null,
+      },
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("different") ? 400 : 500;
+    return sendError(res, status, message);
+  }
+});
+
+// GET /api/notifications
+api.get("/notifications", (req: ApiRequest, res: Response) => {
+  res.status(501).json({ message: "TODO: implement GET /api/notifications" });
+});
+
+// GET /api/users/search?nickname=...&query=...
+api.get("/users/search", async (req: ApiRequest, res: Response) => {
+  try {
+    const term = typeof req.query.q === "string" && req.query.q.trim().length > 0
+      ? req.query.q
+      : typeof req.query.nickname === "string" && req.query.nickname.trim().length > 0
+        ? req.query.nickname
+        : typeof req.query.query === "string" && req.query.query.trim().length > 0
+          ? req.query.query
+          : "";
+    const page = req.query.page ? parseInt(String(req.query.page), 10) : 1;
+    const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 20;
+    const requesterUserId = getOptionalBearerUserId(req);
+
+    const results = await searchUsers({
+      term,
+      page,
+      limit,
+      requesterUserId: requesterUserId ?? undefined,
+    });
+
+    res.json(results);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("required") || message.includes("must") || message.includes("range") ? 400 : 500;
+    res.status(status).json({ message: "Failed to search users", error: message });
+  }
+});
+
+// GET /api/messages/conversation/:friendId
+api.get("/messages/conversation/:friendId", (req: ApiRequest, res: Response) => {
+  res.status(501).json({ message: "TODO: implement GET /api/messages/conversation/:friendId", friendId: req.params.friendId });
+});
+
+// POST /api/messages
+api.post("/messages", (req: ApiRequest, res: Response) => {
+  // expected body will be validated/implemented later
+  res.status(501).json({ message: "TODO: implement POST /api/messages", received: req.body ?? null });
 });
 
 // POST /api/items  (example)

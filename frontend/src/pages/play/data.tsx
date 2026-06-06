@@ -23,6 +23,8 @@ export interface Mode {
   title: string;
   description: string;
   route: string;
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
 // Все режимы игры

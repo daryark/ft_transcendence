@@ -1,23 +1,106 @@
 .leaderboard {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
+  width: min(var(--app-page-max), calc(100vw - 2rem));
+  min-height: calc(100vh - var(--app-header-height));
+  margin: 0 auto;
+  padding: clamp(1rem, 3vw, 2rem) 0;
+  display: grid;
+  align-content: start;
+  gap: 1rem;
 }
 
 .leaderboard__row {
   display: flex;
-  justify-content: center;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.leaderboard__row button {
+  min-height: 2.75rem;
+  padding: 0 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: rgba(17, 24, 33, 0.86);
+  color: var(--app-soft);
+  font-family: var(--app-font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.leaderboard__row button:hover,
+.leaderboard__row button.active {
+  transform: translateX(-4px);
+  border-color: var(--app-accent);
+  background: rgba(79, 209, 197, 0.12);
+  color: var(--app-text);
+}
+
+.leaderboard__row button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.leaderboard__row button:disabled:hover {
+  transform: none;
+  border-color: var(--app-border);
+  background: rgba(17, 24, 33, 0.86);
+  color: var(--app-soft);
+}
+
+.leaderboard > p {
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-md);
+  background: rgba(12, 17, 24, 0.72);
+  color: var(--app-muted);
+  font-weight: 800;
 }
 
 .leaderboard__table {
   width: 100%;
   border-collapse: collapse;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius-lg);
+  background: rgba(12, 17, 24, 0.82);
+  box-shadow: var(--app-shadow-panel);
 }
 
 .leaderboard__table th,
 .leaderboard__table td {
-  border: 1px solid #ccc;
-  padding: 10px;
-  text-align: center;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--app-border);
+  text-align: left;
+}
+
+.leaderboard__table th {
+  color: var(--app-accent);
+  font-family: var(--app-font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.leaderboard__table td {
+  color: var(--app-soft);
+  font-weight: 700;
+}
+
+.leaderboard__table tr:last-child td {
+  border-bottom: 0;
+}
+
+@media (max-width: 680px) {
+  .leaderboard__row button {
+    flex: 1;
+  }
+
+  .leaderboard__table {
+    display: block;
+    overflow-x: auto;
+  }
 }

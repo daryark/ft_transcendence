@@ -1,4 +1,6 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useNavigate } from "react-router-dom";
+
 import { authFetch } from "../../auth/authFetch";
 import { getSessionUser } from "../../auth/session";
 import "./SocialPanels.scss";
@@ -10,12 +12,7 @@ type Friend = {
   id: number;
   username: string;
   status: FriendStatus;
-};
-
-type Notification = {
-  id: number;
-  title: string;
-  text: string;
+  avatarId?: number;
 };
 
 type Message = {
@@ -26,6 +23,25 @@ type Message = {
   createdAt: string | null;
 };
 
+type ModeStats = {
+  value?: string;
+  achievedAgo?: string;
+};
+
+type MiniProfile = {
+  id: number;
+  username: string;
+  avatarId: number;
+  level: number;
+  modes: {
+    league?: { tr?: number; rank?: string } | null;
+    quickPlay?: ModeStats | null;
+    fortyLines?: ModeStats | null;
+    blitz?: ModeStats | null;
+    zen?: ModeStats | null;
+  };
+};
+
 type Props = {
   isOpen: boolean;
   onClose: () => void;
@@ -33,8 +49,30 @@ type Props = {
 
 const FRIENDS_ENDPOINT = "/api/friends";
 const PLAYERS_SEARCH_ENDPOINT = "/api/users/search";
-const NOTIFICATIONS_ENDPOINT = "/api/notifications";
 const MESSAGES_ENDPOINT = "/api/messages";
+
+const avatarColors = [
+  "#d6cc1e",
+  "#8ed053",
+  "#6ec6ff",
+  "#ff7f50",
+  "#c986ff",
+  "#ffcc66",
+  "#6ee7b7",
+  "#ef6f8f",
+  "#a7f3d0",
+  "#f97316",
+  "#93c5fd",
+  "#f0abfc",
+  "#fde047",
+  "#34d399",
+  "#fb7185",
+  "#60a5fa",
+  "#c4b5fd",
+  "#facc15",
+  "#5eead4",
+  "#e879f9",
+];
 
 const asRecord = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -50,10 +88,21 @@ const asArray = (value: unknown): unknown[] => {
     object.players ??
     object.users ??
     object.items ??
-    object.notifications ??
     object.messages;
 
   return Array.isArray(nested) ? nested : [];
+};
+
+const unwrapItems = (value: unknown): unknown[] => {
+  const object = asRecord(value);
+  const payload = asRecord(object.data ?? object.result ?? object.payload ?? object);
+  const items = payload.items;
+
+  if (Array.isArray(items)) {
+    return items;
+  }
+
+  return asArray(payload);
 };
 
 const toNumber = (value: unknown): number | null => {
@@ -75,10 +124,27 @@ const toStatus = (value: unknown): FriendStatus => {
   return "offline";
 };
 
+const getAvatarStyle = (avatarId?: number) => {
+  const index =
+    avatarId && avatarId >= 1 && avatarId <= avatarColors.length
+      ? avatarId - 1
+      : 0;
+
+  return { "--avatar-color": avatarColors[index] } as CSSProperties;
+};
+
 const toFriend = (value: unknown): Friend | null => {
   const object = asRecord(value);
-  const user = asRecord(object.user ?? object.friend ?? object.player);
-  const id = toNumber(object.id) ?? toNumber(user.id);
+  const user = asRecord(
+    object.otherUser ?? object.user ?? object.friend ?? object.player,
+  );
+  const id =
+    toNumber(user.id) ??
+    toNumber(object.otherUserId) ??
+    toNumber(object.friendId) ??
+    toNumber(object.userId) ??
+    toNumber(object.userId) ??
+    toNumber(object.id);
   const username = String(
     object.username ?? user.username ?? object.name ?? user.name ?? "",
   ).trim();
@@ -90,26 +156,10 @@ const toFriend = (value: unknown): Friend | null => {
   return {
     id,
     username,
-    status: toStatus(
-      object.status ?? object.presence ?? user.status ?? user.presence,
-    ),
-  };
-};
-
-const toNotification = (value: unknown): Notification | null => {
-  const object = asRecord(value);
-  const id = toNumber(object.id);
-  const title = String(object.title ?? object.type ?? "").trim();
-  const text = String(object.text ?? object.message ?? object.content ?? "").trim();
-
-  if (!id || (!title && !text)) {
-    return null;
-  }
-
-  return {
-    id,
-    title: title || "NOTIFICATION",
-    text,
+    avatarId:
+      toNumber(object.avatarId ?? object.avatar_id ?? user.avatarId ?? user.avatar_id) ??
+      undefined,
+    status: toStatus(object.status ?? object.presence ?? user.status ?? user.presence),
   };
 };
 
@@ -118,7 +168,7 @@ const toMessage = (value: unknown): Message | null => {
   const id = toNumber(object.id);
   const senderId = toNumber(object.senderId ?? object.sender_id);
   const receiverId = toNumber(object.receiverId ?? object.receiver_id);
-  const content = String(object.content ?? "").trim();
+  const content = String(object.content ?? object.message ?? "").trim();
 
   if (!id || !senderId || !receiverId || !content) {
     return null;
@@ -129,11 +179,31 @@ const toMessage = (value: unknown): Message | null => {
     senderId,
     receiverId,
     content,
-    createdAt: typeof object.createdAt === "string"
-      ? object.createdAt
-      : typeof object.created_at === "string"
-        ? object.created_at
-        : null,
+    createdAt:
+      typeof object.createdAt === "string"
+        ? object.createdAt
+        : typeof object.created_at === "string"
+          ? object.created_at
+          : null,
+  };
+};
+
+const unwrapMiniProfile = (payload: unknown): MiniProfile | null => {
+  const object = asRecord(payload);
+  const profile = asRecord(object.miniprofile ?? object.profile ?? object);
+  const id = toNumber(profile.id);
+  const username = String(profile.username ?? "").trim();
+
+  if (!id || !username) {
+    return null;
+  }
+
+  return {
+    id,
+    username,
+    avatarId: toNumber(profile.avatarId ?? profile.avatar_id) ?? 1,
+    level: toNumber(profile.level) ?? 1,
+    modes: asRecord(profile.modes) as MiniProfile["modes"],
   };
 };
 
@@ -147,60 +217,172 @@ const mergeById = (left: Friend[], right: Friend[]) => {
   );
 };
 
+const formatModeValue = (value: unknown) => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value.toLocaleString();
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return value;
+  }
+
+  return "NO DATA";
+};
+
+const ProfileModal = ({
+  friend,
+  profile,
+  isLoading,
+  error,
+  onClose,
+  onOpenChat,
+  onOpenFullProfile,
+}: {
+  friend: Friend;
+  profile: MiniProfile | null;
+  isLoading: boolean;
+  error: string;
+  onClose: () => void;
+  onOpenChat: () => void;
+  onOpenFullProfile: () => void;
+}) => {
+  const modes = profile?.modes ?? {};
+  const league = modes.league;
+  const fortyLines = modes.fortyLines;
+  const blitz = modes.blitz;
+  const quickPlay = modes.quickPlay;
+  const displayAvatarId = profile?.avatarId ?? friend.avatarId ?? 1;
+  const displayUsername = profile?.username ?? friend.username;
+
+  return (
+    <div className="miniProfileLayer" onMouseDown={onClose}>
+      <section
+        className="miniProfileCard"
+        aria-label={`${displayUsername} mini profile`}
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="miniProfileTop">
+          <div className="miniProfileAvatar" style={getAvatarStyle(displayAvatarId)} />
+
+          <div className="miniProfileIdentity">
+            <h2>{displayUsername}</h2>
+            <p>
+              LEVEL {profile?.level ?? "-"} <span>◇</span> {friend.status}
+            </p>
+          </div>
+
+          <div className="miniProfileActions">
+            <button type="button" onClick={onClose}>
+              CLOSE
+            </button>
+            <button type="button" onClick={onOpenChat}>
+              MESSAGE
+            </button>
+          </div>
+        </div>
+
+        {isLoading && <div className="miniProfileState">LOADING PROFILE...</div>}
+        {!isLoading && error && <div className="miniProfileState errorState">{error}</div>}
+
+        {!isLoading && !error && (
+          <>
+            <div className="miniProfileLevel">
+              <span>{profile?.level ?? "-"}</span>
+              <div className="miniProfileLevelBar">
+                <i style={{ width: `${Math.min((profile?.level ?? 1) % 100, 100)}%` }} />
+              </div>
+            </div>
+
+            <div className="miniStatsGrid">
+              <article>
+                <span>TETRA LEAGUE</span>
+                <strong>
+                  {league?.rank ? `${league.rank.toUpperCase()} ` : ""}
+                  {league?.tr ? `${formatModeValue(league.tr)}TR` : "NO DATA"}
+                </strong>
+              </article>
+
+              <article>
+                <span>40 LINES</span>
+                <strong>{formatModeValue(fortyLines?.value)}</strong>
+                {fortyLines?.achievedAgo && <small>{fortyLines.achievedAgo}</small>}
+              </article>
+
+              <article>
+                <span>BLITZ</span>
+                <strong>{formatModeValue(blitz?.value)}</strong>
+                {blitz?.achievedAgo && <small>{blitz.achievedAgo}</small>}
+              </article>
+
+              <article className="miniStatsWide">
+                <span>QUICK PLAY</span>
+                <strong>{formatModeValue(quickPlay?.value)}</strong>
+                {quickPlay?.achievedAgo && <small>{quickPlay.achievedAgo}</small>}
+              </article>
+            </div>
+          </>
+        )}
+
+        <button className="fullProfileButton" type="button" onClick={onOpenFullProfile}>
+          VIEW FULL PROFILE
+        </button>
+      </section>
+    </div>
+  );
+};
+
 const SocialPanels = ({ isOpen, onClose }: Props) => {
+  const navigate = useNavigate();
   const currentUser = getSessionUser();
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<Filter>("online");
+  const [filter, setFilter] = useState<Filter>("all");
   const [friends, setFriends] = useState<Friend[]>([]);
   const [searchResults, setSearchResults] = useState<Friend[]>([]);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
+  const [profileFriend, setProfileFriend] = useState<Friend | null>(null);
+  const [miniProfile, setMiniProfile] = useState<MiniProfile | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [friendsError, setFriendsError] = useState("");
   const [messagesError, setMessagesError] = useState("");
+  const [profileError, setProfileError] = useState("");
   const [isFriendsLoading, setIsFriendsLoading] = useState(false);
   const [isMessagesLoading, setIsMessagesLoading] = useState(false);
+  const [isProfileLoading, setIsProfileLoading] = useState(false);
   const trimmedSearch = search.trim();
 
   useEffect(() => {
     if (!isOpen) {
       setSelectedFriend(null);
+      setProfileFriend(null);
+      setMiniProfile(null);
+      setSearch("");
       return;
     }
 
     const controller = new AbortController();
 
-    const loadSocialData = async () => {
+    const loadFriends = async () => {
       setIsFriendsLoading(true);
       setFriendsError("");
 
       try {
-        const [friendsResponse, notificationsResponse] = await Promise.all([
-          authFetch(FRIENDS_ENDPOINT, { signal: controller.signal }),
-          authFetch(NOTIFICATIONS_ENDPOINT, { signal: controller.signal }),
-        ]);
+        const response = await authFetch(FRIENDS_ENDPOINT, {
+          signal: controller.signal,
+        });
 
-        if (!friendsResponse.ok) {
-          throw new Error("Failed to load friends");
+        if (!response.ok) {
+          throw new Error("FAILED TO LOAD FRIENDS");
         }
 
-        const friendsData = await friendsResponse.json();
-        setFriends(asArray(friendsData).map(toFriend).filter(Boolean) as Friend[]);
-
-        if (notificationsResponse.ok) {
-          const notificationsData = await notificationsResponse.json();
-          setNotifications(
-            asArray(notificationsData).map(toNotification).filter(Boolean) as Notification[],
-          );
-        } else {
-          setNotifications([]);
-        }
+        const data = await response.json();
+        setFriends(unwrapItems(data).map(toFriend).filter(Boolean) as Friend[]);
       } catch (error) {
         if (!controller.signal.aborted) {
           setFriends([]);
-          setNotifications([]);
-          setFriendsError(error instanceof Error ? error.message : "Failed to load social data");
+          setFriendsError(
+            error instanceof Error ? error.message : "FAILED TO LOAD FRIENDS",
+          );
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -209,7 +391,7 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
       }
     };
 
-    loadSocialData();
+    loadFriends();
 
     return () => controller.abort();
   }, [isOpen]);
@@ -226,7 +408,7 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
       try {
         const encodedSearch = encodeURIComponent(trimmedSearch);
         const response = await authFetch(
-          `${PLAYERS_SEARCH_ENDPOINT}?nickname=${encodedSearch}&query=${encodedSearch}`,
+          `${PLAYERS_SEARCH_ENDPOINT}?q=${encodedSearch}&limit=20`,
           { signal: controller.signal },
         );
 
@@ -236,7 +418,7 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
         }
 
         const data = await response.json();
-        const players = asArray(data)
+        const players = unwrapItems(data)
           .map(toFriend)
           .filter(Boolean) as Friend[];
 
@@ -260,6 +442,7 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
     if (!selectedFriend) {
       setMessages([]);
       setMessagesError("");
+      setDraft("");
       return;
     }
 
@@ -276,7 +459,7 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
         );
 
         if (!response.ok) {
-          throw new Error("Failed to load messages");
+          throw new Error("MESSAGES API IS NOT READY YET");
         }
 
         const data = await response.json();
@@ -284,7 +467,9 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
       } catch (error) {
         if (!controller.signal.aborted) {
           setMessages([]);
-          setMessagesError(error instanceof Error ? error.message : "Failed to load messages");
+          setMessagesError(
+            error instanceof Error ? error.message : "FAILED TO LOAD MESSAGES",
+          );
         }
       } finally {
         if (!controller.signal.aborted) {
@@ -298,16 +483,65 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
     return () => controller.abort();
   }, [selectedFriend]);
 
+  useEffect(() => {
+    if (!profileFriend) {
+      setMiniProfile(null);
+      setProfileError("");
+      return;
+    }
+
+    const controller = new AbortController();
+
+    const loadMiniProfile = async () => {
+      setIsProfileLoading(true);
+      setProfileError("");
+
+      try {
+        const response = await authFetch(
+          `/api/users/${encodeURIComponent(profileFriend.username)}/miniprofile`,
+          { signal: controller.signal },
+        );
+
+        if (!response.ok) {
+          throw new Error("FAILED TO LOAD PROFILE");
+        }
+
+        const data = await response.json();
+        const parsedProfile = unwrapMiniProfile(data);
+
+        if (!parsedProfile) {
+          throw new Error("PROFILE RESPONSE IS EMPTY");
+        }
+
+        setMiniProfile(parsedProfile);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          setMiniProfile(null);
+          setProfileError(
+            error instanceof Error ? error.message : "FAILED TO LOAD PROFILE",
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsProfileLoading(false);
+        }
+      }
+    };
+
+    loadMiniProfile();
+
+    return () => controller.abort();
+  }, [profileFriend]);
+
   const filteredFriends = useMemo(() => {
     const isSearching = trimmedSearch.length >= 2;
-    const list = trimmedSearch.length >= 2
-      ? mergeById(friends, searchResults)
-      : friends;
+    const list = isSearching ? mergeById(friends, searchResults) : friends;
+    const normalizedSearch = trimmedSearch.toLowerCase();
 
     return list.filter((friend) => {
       const matchesSearch =
-        !trimmedSearch ||
-        friend.username.toLowerCase().includes(trimmedSearch.toLowerCase());
+        !normalizedSearch ||
+        friend.username.toLowerCase().includes(normalizedSearch);
 
       if (!matchesSearch) {
         return false;
@@ -344,7 +578,7 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to send message");
+        throw new Error("MESSAGES API IS NOT READY YET");
       }
 
       const data = await response.json();
@@ -355,8 +589,26 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
       }
     } catch (error) {
       setDraft(content);
-      setMessagesError(error instanceof Error ? error.message : "Failed to send message");
+      setMessagesError(
+        error instanceof Error ? error.message : "FAILED TO SEND MESSAGE",
+      );
     }
+  };
+
+  const openProfile = (friend: Friend) => {
+    setProfileFriend(friend);
+  };
+
+  const openFullProfile = () => {
+    const username = miniProfile?.username ?? profileFriend?.username;
+
+    if (!username) {
+      return;
+    }
+
+    setProfileFriend(null);
+    onClose();
+    navigate(`/profile/${encodeURIComponent(username)}`);
   };
 
   return (
@@ -366,170 +618,202 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
         onClick={onClose}
       />
 
-      <aside className={`friendsPanel ${isOpen ? "open" : ""}`}>
-        <div className="peopleHeader">
-          <h2>PEOPLE</h2>
-          <span className="presenceLabel">
-            In Menus <span className="presenceDot" />
-          </span>
-        </div>
-
-        <div className="peopleSearchWrap">
-          <span className="searchGlyph" />
-          <input
-            className="searchInput peopleSearch"
-            placeholder="FIND SOMEONE..."
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-          />
-        </div>
-
-        <div className="filterButtons peopleTabs">
-          <button
-            className={filter === "online" ? "active" : ""}
-            onClick={() => setFilter("online")}
-            type="button"
-          >
-            ONLINE
-          </button>
-
-          <button
-            className={filter === "all" ? "active" : ""}
-            onClick={() => setFilter("all")}
-            type="button"
-          >
-            ALL
-          </button>
-
-          <button
-            className={filter === "blocked" ? "active" : ""}
-            onClick={() => setFilter("blocked")}
-            type="button"
-          >
-            BLOCKED
-          </button>
-        </div>
-
-        <div className="friendsList peopleList">
-          {isFriendsLoading && <div className="panelState">LOADING...</div>}
-          {!isFriendsLoading && friendsError && (
-            <div className="panelState errorState">{friendsError}</div>
-          )}
-          {!isFriendsLoading && !friendsError && filteredFriends.length === 0 && (
-            <div className="panelState">NO PLAYERS FOUND</div>
-          )}
-
-          {filteredFriends.map((friend) => (
-            <button
-              key={friend.id}
-              className={`friendCard ${selectedFriend?.id === friend.id ? "active" : ""}`}
-              onClick={() => setSelectedFriend(friend)}
-              type="button"
-            >
-              <div className={`statusDot ${friend.status}`} />
-
-              <div className="friendInfo">
-                <span className="friendName">{friend.username}</span>
-                <span className="friendStatus">
-                  <>◇ {friend.status}</>
-                </span>
-              </div>
-            </button>
-          ))}
-        </div>
-      </aside>
-
-      <aside className={`chatPanel ${isOpen && selectedFriend ? "open" : ""}`}>
-        {selectedFriend && (
+      <aside
+        className={`socialPanel ${isOpen ? "open" : ""} ${
+          selectedFriend ? "chatMode" : "peopleMode"
+        }`}
+      >
+        {!selectedFriend ? (
           <>
-            <div className="chatHeader">
+            <div className="peopleHeader">
+              <h2>PEOPLE</h2>
+              <span className="presenceLabel">
+                In Menus <span className="presenceDiamond" />
+              </span>
+            </div>
+
+            <label className="peopleSearchWrap">
+              <span className="searchGlyph" />
+              <input
+                className="peopleSearch"
+                placeholder="FIND SOMEONE..."
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+              />
+            </label>
+
+            <div className="peopleTabs">
               <button
-                className="backChat"
+                className={filter === "online" ? "active" : ""}
+                onClick={() => setFilter("online")}
+                type="button"
+              >
+                ONLINE
+              </button>
+
+              <button
+                className={filter === "all" ? "active" : ""}
+                onClick={() => setFilter("all")}
+                type="button"
+              >
+                ALL
+              </button>
+
+              <button
+                className={filter === "blocked" ? "active" : ""}
+                onClick={() => setFilter("blocked")}
+                type="button"
+              >
+                BLOCKED
+              </button>
+            </div>
+
+            <div className="peopleList">
+              {isFriendsLoading && <div className="panelState">LOADING...</div>}
+              {!isFriendsLoading && friendsError && (
+                <div className="panelState errorState">{friendsError}</div>
+              )}
+              {!isFriendsLoading && !friendsError && filteredFriends.length === 0 && (
+                <div className="panelState">NO PLAYERS FOUND</div>
+              )}
+
+              {filteredFriends.map((friend) => (
+                <button
+                  key={friend.id}
+                  className="friendRow"
+                  onClick={() => setSelectedFriend(friend)}
+                  type="button"
+                >
+                  <span className="friendAvatar" style={getAvatarStyle(friend.avatarId)} />
+
+                  <span className="friendInfo">
+                    <span className="friendName">{friend.username}</span>
+                    <span className={`friendStatus ${friend.status}`}>
+                      ◇ {friend.status}
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div className="chatLayout">
+            <nav className="chatRail" aria-label="Conversation tools">
+              <button
+                className="railBack"
+                aria-label="Back to people"
                 onClick={() => setSelectedFriend(null)}
                 type="button"
               >
-                BACK
+                ←
               </button>
-              <div>
-                <h2>{selectedFriend.username}</h2>
-                <span className={`chatStatus ${selectedFriend.status}`}>
-                  {selectedFriend.status}
-                </span>
-              </div>
-            </div>
 
-            <div className="messagesList">
-              {isMessagesLoading && <div className="panelState">LOADING...</div>}
-              {!isMessagesLoading && messagesError && (
-                <div className="panelState errorState">{messagesError}</div>
-              )}
-              {!isMessagesLoading && !messagesError && messages.length === 0 && (
-                <div className="panelState">NO MESSAGES YET</div>
-              )}
+              <button className="railSearch" aria-label="Search" type="button">
+                <span className="searchGlyph" />
+              </button>
 
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`messageBubble ${
-                    message.senderId === currentUser?.id ? "mine" : "theirs"
-                  }`}
-                >
-                  <p>{message.content}</p>
-                  {message.createdAt && (
-                    <time>
-                      {new Date(message.createdAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </time>
-                  )}
+              <button
+                className="railFriend active"
+                aria-label={selectedFriend.username}
+                onClick={() => openProfile(selectedFriend)}
+                type="button"
+              >
+                <span
+                  className="friendAvatar"
+                  style={getAvatarStyle(selectedFriend.avatarId)}
+                />
+              </button>
+            </nav>
+
+            <section className="directChat" aria-label={`${selectedFriend.username} chat`}>
+              <header className="directChatHeader">
+                <span
+                  className="chatFriendAvatar"
+                  style={getAvatarStyle(selectedFriend.avatarId)}
+                />
+
+                <div className="chatFriendTitle">
+                  <h2>{selectedFriend.username}</h2>
+                  <button
+                    className="profileAction"
+                    type="button"
+                    onClick={() => openProfile(selectedFriend)}
+                  >
+                    PROFILE
+                  </button>
+                  <span className={`friendStatus ${selectedFriend.status}`}>
+                    ◇ {selectedFriend.status}
+                  </span>
                 </div>
-              ))}
-            </div>
+              </header>
 
-            <form
-              className="messageForm"
-              onSubmit={(event) => {
-                event.preventDefault();
-                sendMessage();
-              }}
-            >
-              <input
-                className="messageInput"
-                placeholder="MESSAGE..."
-                value={draft}
-                onChange={(event) => setDraft(event.target.value)}
-                maxLength={5000}
-              />
-              <button type="submit" disabled={!draft.trim()}>
-                SEND
-              </button>
-            </form>
-          </>
+              <div className="chatNotice">
+                Please be civil. Staff will never ask for your credentials.
+              </div>
+
+              <div className="messagesList">
+                {isMessagesLoading && <div className="panelState">LOADING...</div>}
+                {!isMessagesLoading && messagesError && (
+                  <div className="panelState errorState">{messagesError}</div>
+                )}
+                {!isMessagesLoading && !messagesError && messages.length === 0 && (
+                  <div className="panelState">NO MESSAGES YET</div>
+                )}
+
+                {messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`messageBubble ${
+                      message.senderId === currentUser?.id ? "mine" : "theirs"
+                    }`}
+                  >
+                    <p>{message.content}</p>
+                    {message.createdAt && (
+                      <time>
+                        {new Date(message.createdAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </time>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <form
+                className="messageForm"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  sendMessage();
+                }}
+              >
+                <input
+                  className="messageInput"
+                  placeholder="message..."
+                  value={draft}
+                  onChange={(event) => setDraft(event.target.value)}
+                  maxLength={5000}
+                />
+              </form>
+            </section>
+          </div>
         )}
       </aside>
 
-      <aside className={`notificationsPanel ${isOpen ? "open" : ""}`}>
-        <div className="panelHeader">
-          <h2>NOTIFICATIONS</h2>
-        </div>
-
-        <div className="notificationsList">
-          {notifications.length === 0 && (
-            <div className="panelState">NO NOTIFICATIONS</div>
-          )}
-
-          {notifications.map((notification) => (
-            <div key={notification.id} className="notificationCard">
-              <span className="notificationTitle">
-                {notification.title}
-              </span>
-
-              <p>{notification.text}</p>
-            </div>
-          ))}
-        </div>
-      </aside>
+      {profileFriend && (
+        <ProfileModal
+          friend={profileFriend}
+          profile={miniProfile}
+          isLoading={isProfileLoading}
+          error={profileError}
+          onClose={() => setProfileFriend(null)}
+          onOpenChat={() => {
+            setSelectedFriend(profileFriend);
+            setProfileFriend(null);
+          }}
+          onOpenFullProfile={openFullProfile}
+        />
+      )}
     </>
   );
 };

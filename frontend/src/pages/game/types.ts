@@ -1,3 +1,5 @@
+import type { GameConfig } from "../../../shared/types/config.types";
+
 export type FigureType = "I" | "O" | "T" | "S" | "Z" | "J" | "L";
 
 export interface Figure {
@@ -18,12 +20,29 @@ export interface GameState {
   gameOver: boolean;
   score: number;
   lines: number;
+  round: number;
+  startedAt: number;
 }
 
 export interface GameStartPayload {
   roomId: string;
   state: GameState;
-  config?: unknown;
+  config?: GameConfig;
+  players?: Record<string, VersusPlayerState>;
+}
+
+export interface GameEndPayload {
+  roomId: string;
+  reason: "game_over" | "objective_complete";
+  state: GameState;
+  players?: Record<string, VersusPlayerState>;
+}
+
+export interface VersusPlayerState {
+  id: number | string;
+  username: string;
+  rank?: string;
+  state: GameState;
 }
 
 export type PlayerMove =

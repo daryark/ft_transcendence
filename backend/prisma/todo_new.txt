@@ -1,0 +1,139 @@
+- Profile: fix/rewrite full profile ✅
+- Miniprofile: add small profile ✅
+- users.country by ip ✅
+- change password logic - remove current ✅
+- review friends:
+  - api
+  - global search
+  - add, remove, block
+  - accept, reject
+
+
+/////////////////////////////
+
+
+--- API: Profile
+{
+  GET /api/users/:username/profile
+  Response shape (full profile):
+  {
+    id: number;
+    username: string;
+    country?: string;
+    avatarId: number;   # internal: keep, but prefer avatarUrl for public APIs
+    avatarUrl?: string; # public-facing signed URL or CDN path
+    createdAt: string | null; # ISO timestamp
+    level: number;
+    xp: number;
+    nextLevelXp: number;
+    playTimeHours: number;
+    onlineGames: number;
+    wins: number;
+    modes: {
+      league?: { tr: number; glicko: number; rank: string } | null;
+      quickPlay?: { value: string; achievedAgo?: string } | null;
+      fortyLines?: { value: string; achievedAgo?: string } | null;
+      blitz?: { value: string; achievedAgo?: string } | null;
+      zen?: { value: string; achievedAgo?: string } | null;
+    };
+  }
+}
+
+--- API: MiniProfile
+{
+  GET /api/users/:username/miniprofile
+  {
+    "miniprofile": {
+      "level": 12,
+      "modes": {
+        "league": {
+          "tr": 14523,
+          "rank": "A+"
+        },
+        "fortyLines": {
+          "value": "0:42.123",
+          "achievedAgo": "2 DAYS AGO"
+        },
+        "quickPlay": {
+          "value": "124 M",
+          "achievedAgo": "TODAY"
+        }
+      }
+    }
+  }
+}
+
+--- API: Friends
+- GET /api/friends?status=all|pending|accepted&page=&limit=
+- POST /api/friends/request  { targetUserId }
+- POST /api/friends/respond  { requestId, action: accept|reject }
+- POST /api/friends/remove   { userId }
+- POST /api/friends/block    { userId }
+
+Notes: server must verify authenticated user for all friend actions, return standard envelope { ok, data?, error? } and include pagination metadata { items, page, limit, total }.
+
+--- API: Notifications
+- GET /api/notifications?page=&limit=
+- PATCH /api/notifications/:id/read
+WebSocket: `notifications` channel for real-time pushes (friend requests, message receipts, invites).
+
+--- API: Messages
+- GET /api/messages/conversation/:friendId?page=&limit=&cursor=  # paginated, cursor recommended for long conversations
+- POST /api/messages  { toUserId, body, replyTo? }
+- PATCH /api/messages/:id/read  (or bulk read endpoint)
+
+Notes: enforce message size limits, content sanitization, block checks, and rate-limiting. Add read receipts / statuses.
+
+--- API: Search
+{
+  - GET /api/users/search?q=...&nickname=...&page=&limit=  # prefer single `q` param; server can match nickname & full-text
+
+  Client snippet fix (use template string properly):
+  const searchPlayers = async () => {
+    try {
+      const encodedSearch = encodeURIComponent(trimmedSearch);
+      const response = await authFetch(`${PLAYERS_SEARCH_ENDPOINT}?nickname=${encodedSearch}&query=${encodedSearch}`, { signal: controller.signal });
+    } catch (err) { /* handle */ }
+  };
+}
+
+--- Misc / Operational TODOs (add / prioritize)
+- API: pagination & limits — add `page`/`limit` or cursor to all list endpoints (friends, messages, notifications, search).
+- API: auth & authorization checks — ensure every friend/message endpoint checks authenticated user and ownership.
+- API: consistent responses — standardize { ok: boolean, data?, error? }.
+- API: notifications WS support — push friend status and new messages.
+- Profile: implement `small-profile` endpoint for public usage.
+- Avatar: add endpoint for `avatarUrl`/signed CDN URLs and fallback handling.
+- Messages: add read receipts, message statuses, and soft-delete/block behavior.
+- Friends: finalize add/remove/block/accept/reject semantics and edge-cases (duplicate requests, race conditions).
+- Search: single canonical search endpoint; server-side debounce & rate-limit.
+- Tests: add integration tests for friends, messages, search, profile endpoints.
+- Docs: add a short OpenAPI skeleton or README describing user/friends/messages APIs.
+- Monitoring: logging/tracing for message delivery failures and failed friend operations.
+- Security/privacy: GDPR/PII review for IP→country lookup and retention policy; ensure IP lookup caching and TTL.
+- Performance: cache frequently requested profile lookups and leaderboard snapshots.
+
+--- Quick priorities (order to implement)
+1. Auth checks + rate-limits for friend/message endpoints.
+2. Add pagination to conversation/friends/notifications/search endpoints.
+3. Implement friend request/response/block APIs and tests.
+4. Messages: paginate conversation endpoint + read receipts.
+5. Add small-profile endpoint and avatar URL support.
+6. Write OpenAPI skeleton and integration tests.
+
+--- Quick client/server notes
+- Prefer `avatarUrl` on public APIs; keep `avatarId` internal.
+- Use ISO timestamps for `createdAt` and `achievedAgo` as relative strings only in UI layer.
+- Always return pagination metadata: { items, page, limit, total }.
+- Sanitize user input on search and limit length.
+- Consider rate-limiting endpoints that accept free text (`/search`, `/messages`).
+
+--- Example response envelope
+{
+  ok: true,
+  data: { ... },
+  meta?: { page, limit, total }
+}
+
+--- Client fix summary
+- The original `authFetch` call missed template string quotes — fixed above.
