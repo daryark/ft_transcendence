@@ -59,7 +59,7 @@ describe('RoomService solo room flow', () => {
     expect(room.players.size).toBe(1);
   });
 
-  test('removePlayer clears player room fields and deletes empty room', () => {
+  test('removePlayer clears player room fields without deleting the room', () => {
     const service = new RoomService(createIo() as any);
     const room = service.createRoom(createConfig('solo'));
     const player = createPlayer();
@@ -68,19 +68,76 @@ describe('RoomService solo room flow', () => {
     service.removePlayer(room.id, player.id);
 
     expect(player.roomId).toBeUndefined();
-    expect(service.getRoom(room.id)).toBeUndefined();
+    expect(player.role).toBeUndefined();
+    expect(room.players.size).toBe(0);
+    expect(service.getRoom(room.id)).toBe(room);
+    expect(service.isEmpty(room.id)).toBe(true);
   });
 
-  test('deleteRoom stops engine before deleting room', () => {
+  test('removeSpectator clears spectator room fields without deleting the room', () => {
     const service = new RoomService(createIo() as any);
-    const room = service.createRoom(createConfig('solo'));
+    const room = service.createRoom(createConfig('quickplay'));
+    const spectator = createPlayer();
+
+    service.addSpectator(room.id, spectator);
+    service.removeSpectator(room.id, spectator.id);
+
+    expect(spectator.roomId).toBeUndefined();
+    expect(spectator.role).toBeUndefined();
+    expect(room.spectators?.size).toBe(0);
+    expect(service.getRoom(room.id)).toBe(room);
+  });
+
+  test('deleteRoom clears room object, spectators and stops engine before deleting room', () => {
+    const service = new RoomService(createIo() as any);
+    const room = service.createRoom(createConfig('quickplay'));
+    const spectator = createPlayer('user-2');
     const stop = jest.fn();
+    const roomId = room.id;
+
+    service.addSpectator(roomId, spectator);
+    room.state = {} as any;
     room.engine = { stop, pushInput: jest.fn() };
 
-    service.deleteRoom(room.id);
+    service.deleteRoom(roomId);
 
+    expect(spectator.roomId).toBeUndefined();
+    expect(spectator.role).toBeUndefined();
+    expect(room.status).toBe('ended');
+    expect(room.state).toBeNull();
+    expect(room.engine).toBeNull();
+    expect(room.players.size).toBe(0);
+    expect(room.spectators?.size).toBe(0);
     expect(stop).toHaveBeenCalledTimes(1);
-    expect(service.getRoom(room.id)).toBeUndefined();
+    expect(service.getRoom(roomId)).toBeUndefined();
+  });
+
+  test('clearRooms cleans each room object before clearing the service map', () => {
+    const service = new RoomService(createIo() as any);
+    const room = service.createRoom(createConfig('quickplay'));
+    const player = createPlayer('user-1');
+    const spectator = createPlayer('user-2');
+    const stop = jest.fn();
+    const roomId = room.id;
+
+    service.addPlayer(roomId, player);
+    service.addSpectator(roomId, spectator);
+    room.state = {} as any;
+    room.engine = { stop, pushInput: jest.fn() };
+
+    service.clearRooms();
+
+    expect(player.roomId).toBeUndefined();
+    expect(player.role).toBeUndefined();
+    expect(spectator.roomId).toBeUndefined();
+    expect(spectator.role).toBeUndefined();
+    expect(room.status).toBe('ended');
+    expect(room.state).toBeNull();
+    expect(room.engine).toBeNull();
+    expect(room.players.size).toBe(0);
+    expect(room.spectators?.size).toBe(0);
+    expect(stop).toHaveBeenCalledTimes(1);
+    expect(service.getRoom(roomId)).toBeUndefined();
   });
 
   test('broadcast emits to existing room id', () => {

@@ -26,7 +26,7 @@ export const connectSocket = (token?: string) => {
 
   if (!socket) {
     socket = io(SOCKET_URL, {
-       path: "/socket.io",
+      path: "/socket.io",
       auth: {
         ...(token ? { token } : {}),
       },

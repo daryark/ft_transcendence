@@ -7,12 +7,18 @@ import {
   subscribeToSocket,
 } from "../../socket/socketClient";
 import { getSessionUser } from "../../auth/session";
-import type { GameConfig } from "../../../shared/types/config.types";
+import MultiplayerGameOver from "./MultiplayerGameOver";
+import type {
+  GameConfig,
+  ObjectiveConfig,
+} from "../../../shared/types/config.types";
 import type {
   GameEndPayload,
+  GameStats,
   GameStartPayload,
   GameState,
   PlayerMove,
+  PlayerMovePhase,
   VersusPlayerState,
 } from "./types";
 import "./SoloGame.scss";
@@ -31,6 +37,7 @@ const INPUT_COOLDOWNS: Partial<Record<PlayerMove, number>> = {
 const ESC_HOLD_MS = 2000;
 const COUNTDOWN_NUMBERS = ["3", "2", "1", "GO"] as const;
 const COUNTDOWN_STEP_MS = 900;
+const TIME_WARNING_SECONDS = new Set([30, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
 
 type ActiveGamePayload = GameStartPayload & {
   from?: string;
@@ -47,10 +54,35 @@ type CountdownStep =
 
 type SoloResult = {
   reason: GameEndPayload["reason"];
-  endedAt: number;
-  runStartedAt: number;
-  state: GameState;
+  stats: GameStats;
+  winnerId?: GameEndPayload["winnerId"];
 };
+
+type SoloCountdownOverlayProps = {
+  value: string;
+  extension?: "number" | "warning";
+};
+
+function SoloCountdownOverlay({
+  value,
+  extension,
+}: SoloCountdownOverlayProps) {
+  const extensionClass =
+    extension === "warning"
+      ? " solo-game__countdown--number solo-game__countdown--warning"
+      : extension === "number"
+        ? " solo-game__countdown--number"
+        : "";
+
+  return (
+    <div
+      className={`solo-game__countdown${extensionClass}`}
+      aria-live="polite"
+    >
+      {value}
+    </div>
+  );
+}
 
 const toActiveGamePayload = (value: unknown): Partial<ActiveGamePayload> => {
   if (!value || typeof value !== "object") {
@@ -186,11 +218,86 @@ function formatRunTime(milliseconds: number) {
   const safeMilliseconds = Math.max(0, milliseconds);
   const minutes = Math.floor(safeMilliseconds / 60000);
   const seconds = Math.floor((safeMilliseconds % 60000) / 1000);
-  const millis = safeMilliseconds % 1000;
+  const centiseconds = Math.floor((safeMilliseconds % 1000) / 10);
 
-  return `${minutes}:${seconds.toString().padStart(2, "0")}.${millis
+  return `${minutes}:${seconds.toString().padStart(2, "0")}.${centiseconds
     .toString()
-    .padStart(3, "0")}`;
+    .padStart(2, "0")}`;
+}
+
+function getResultObjectiveStat(
+  stats: GameStats,
+  objectiveKey: ObjectiveConfig["key"] | undefined,
+) {
+  if (objectiveKey === "score") {
+    return { label: "FINAL SCORE", value: `${stats.score}` };
+  }
+
+  if (objectiveKey === "lines") {
+    return { label: "FINAL LINES", value: `${stats.lines}` };
+  }
+
+  return { label: "FINAL TIME", value: formatRunTime(stats.elapsedMs) };
+}
+
+function getResultBanner(
+  reason: GameEndPayload["reason"],
+  objective: ObjectiveConfig | null,
+  modeLabel: string,
+) {
+  if (reason !== "objective_complete") return "RUN ENDED";
+
+  if (objective?.winCondition === "lines") {
+    return `${objective.linesToClear ?? 40} LINES CLEAR`;
+  }
+
+  if (objective?.winCondition === "time") {
+    return "TIME UP";
+  }
+
+  if (objective?.winCondition === "score") {
+    return `${objective.scoreToWin ?? "TARGET"} SCORE`;
+  }
+
+  return `${modeLabel} COMPLETE`;
+}
+
+function getObjectiveWarning(
+  objective: ObjectiveConfig | null,
+  stats: GameStats | undefined,
+) {
+  if (!objective || !stats?.objective) return null;
+
+  if (objective.winCondition === "time") {
+    const remainingMs = stats.objective.remaining ?? stats.remainingMs;
+    if (remainingMs === null || remainingMs <= 0) return null;
+
+    const remainingSeconds = Math.ceil(remainingMs / 1000);
+
+    return TIME_WARNING_SECONDS.has(remainingSeconds)
+      ? `${remainingSeconds}`
+      : null;
+  }
+
+  if (objective.winCondition === "lines") {
+    const target = stats.objective.target ?? objective.linesToClear ?? null;
+    if (!target) return null;
+
+    const remainingLines = Math.max(0, target - stats.objective.current);
+    const lineWarnings = new Set([
+      Math.ceil(target / 4),
+      Math.ceil(target / 8),
+      5,
+      4,
+      3,
+      2,
+      1,
+    ]);
+
+    return lineWarnings.has(remainingLines) ? `${remainingLines}` : null;
+  }
+
+  return null;
 }
 
 function getReturnPath(locationState: unknown) {
@@ -249,7 +356,6 @@ export default function SoloGame() {
 
     return readStoredActiveGame(gameId)?.players ?? {};
   });
-  const [now, setNow] = useState(() => Date.now());
   const [socket, setSocket] = useState(() => getSocket());
   const [connectionStatus, setConnectionStatus] = useState(() =>
     getSocket() ? "CONNECTING" : "OFFLINE",
@@ -287,21 +393,23 @@ export default function SoloGame() {
   }, [gameId, location.state]);
 
   const objective = gameConfig?.mode === "solo" ? gameConfig.objective : null;
-  const isFortyLines = gameConfig?.mode === "solo" && gameConfig.preset === "40Lines";
   const isZen = gameConfig?.mode === "solo" && gameConfig.preset === "zen";
   const targetLines =
     objective?.winCondition === "lines" ? objective.linesToClear ?? 40 : 40;
-  const elapsedMs = runStartedAt ? Math.max(0, now - runStartedAt) : 0;
+  const liveStats = gameState?.update;
+  const elapsedMs = liveStats?.elapsedMs ?? 0;
   const displayTimeMs =
-    objective?.winCondition === "time"
-      ? Math.max(0, (objective.timeLimit ?? 0) * 1000 - elapsedMs)
-      : elapsedMs;
-  const elapsedSeconds = elapsedMs / 1000;
-  const linesPerMinute =
-    gameState && elapsedSeconds > 0 ? (gameState.lines / elapsedSeconds) * 60 : 0;
-  const lineProgress = gameState && objective?.winCondition === "lines"
-    ? `${gameState.lines}/${targetLines}`
-    : `${gameState?.lines ?? 0}`;
+    liveStats?.remainingMs ?? elapsedMs;
+  const piecesPerSecond = liveStats?.piecesPerSecond ?? 0;
+  const lineProgress =
+    liveStats?.objective?.type === "lines"
+      ? `${liveStats.objective.current}/${liveStats.objective.target ?? targetLines}`
+      : `${liveStats?.lines ?? 0}`;
+  const primaryStat =
+    objective?.key === "score"
+      ? { label: "SCORE", value: `${liveStats?.score ?? 0}` }
+      : { label: "LINES", value: lineProgress };
+  const objectiveWarning = getObjectiveWarning(objective, liveStats);
 
   const modeLabel = getSoloModeLabel(gameConfig);
   const isVersus = gameConfig?.mode === "custom" && Object.keys(versusPlayers).length > 0;
@@ -366,7 +474,6 @@ export default function SoloGame() {
         const startedAt = Date.now();
 
         setRunStartedAt(startedAt);
-        setNow(startedAt);
         try {
           const saved = readStoredActiveGame(gameId);
           window.sessionStorage.setItem(
@@ -383,18 +490,6 @@ export default function SoloGame() {
   }, [countdownStep, gameConfig, gameId]);
 
   useEffect(() => {
-    if (objective?.winCondition !== "time" || !gameState || gameState.gameOver) {
-      return undefined;
-    }
-
-    const intervalId = window.setInterval(() => {
-      setNow(Date.now());
-    }, 250);
-
-    return () => window.clearInterval(intervalId);
-  }, [gameState, objective?.winCondition]);
-
-  useEffect(() => {
     if (!socket) {
       return undefined;
     }
@@ -407,7 +502,7 @@ export default function SoloGame() {
 
       const state = isVersusPayload(payload)
         ? payload.players[currentUserId ?? ""]?.state ??
-          Object.values(payload.players)[0]?.state
+        Object.values(payload.players)[0]?.state
         : payload;
 
       if (isVersusPayload(payload)) {
@@ -418,7 +513,6 @@ export default function SoloGame() {
       if (!state) return;
 
       setGameState(state);
-      setNow(Date.now());
       try {
         const saved = readStoredActiveGame(gameId);
         window.sessionStorage.setItem(
@@ -446,7 +540,7 @@ export default function SoloGame() {
       setConnectionStatus("LIVE");
       const state = payload.players
         ? payload.players[currentUserId ?? ""]?.state ??
-          Object.values(payload.players)[0]?.state
+        Object.values(payload.players)[0]?.state
         : payload.state;
 
       setGameState(state);
@@ -454,12 +548,10 @@ export default function SoloGame() {
       setVersusPlayers(payload.players ?? {});
       setSoloResult(null);
       const countdownSequence = getCountdownSequence(payload.config ?? null);
-      const needsCountdown = countdownSequence.length > 0;
-      const startedAt = needsCountdown ? null : Date.now();
+      const startedAt = state.startedAt;
 
       setRunStartedAt(startedAt);
       setCountdownStep(countdownSequence[0] ?? null);
-      setNow(startedAt ?? Date.now());
 
       try {
         const saved = readStoredActiveGame(gameId);
@@ -487,20 +579,43 @@ export default function SoloGame() {
       setConnectionStatus("ENDED");
       const state = payload.players
         ? payload.players[currentUserId ?? ""]?.state ??
-          Object.values(payload.players)[0]?.state
+        Object.values(payload.players)[0]?.state
         : payload.state;
+      const nextState = state ?? gameStateRef.current;
+      const stats = payload.result?.stats ?? nextState?.update;
+
+      if (!nextState || !stats) return;
 
       setVersusPlayers(payload.players ?? {});
-      setGameState(state);
+      setGameState(nextState);
       setSoloResult({
         reason: payload.reason,
-        endedAt: Date.now(),
-        runStartedAt: runStartedAtRef.current ?? state.startedAt,
-        state,
+        stats,
+        winnerId: payload.winnerId,
       });
       setCountdownStep(null);
-      setNow(Date.now());
-      clearStoredActiveGame(gameId);
+      try {
+        const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
+        const saved = toActiveGamePayload(
+          savedRaw ? JSON.parse(savedRaw) : null,
+        );
+        window.sessionStorage.setItem(
+          ACTIVE_GAME_KEY,
+          JSON.stringify({
+            roomId: gameId,
+            state: nextState,
+            config: saved?.config ?? gameConfigRef.current,
+            players: payload.players ?? saved?.players,
+            runStartedAt: saved?.runStartedAt ?? runStartedAtRef.current,
+            from: saved?.from,
+          }),
+        );
+      } catch {
+        window.sessionStorage.setItem(
+          ACTIVE_GAME_KEY,
+          JSON.stringify({ roomId: gameId, state: nextState }),
+        );
+      }
     };
 
     if (socket.connected) {
@@ -582,7 +697,16 @@ export default function SoloGame() {
   useEffect(() => {
     if (!socket) return undefined;
 
-    const emitMove = (move: PlayerMove) => {
+    const emitMove = (
+      move: PlayerMove,
+      phase: PlayerMovePhase = "press",
+      repeat = false,
+    ) => {
+      if (phase === "release") {
+        socket.emit("player:move", { type: move, phase });
+        return;
+      }
+
       if (inputLockedRef.current) return;
 
       const cooldown = INPUT_COOLDOWNS[move] ?? 0;
@@ -592,12 +716,14 @@ export default function SoloGame() {
       if (now - lastAt < cooldown) return;
 
       lastInputAt.current[move] = now;
-      socket.emit("player:move", { type: move });
+      socket.emit("player:move", { type: move, phase, repeat });
     };
 
-    const stopHorizontalRepeat = () => {
+    const stopHorizontalRepeat = (release = false) => {
       if (!horizontalRepeat.current) return;
 
+      const move =
+        horizontalRepeat.current.key === "ArrowLeft" ? "left" : "right";
       window.clearTimeout(horizontalRepeat.current.timeoutId);
 
       if (horizontalRepeat.current.intervalId !== null) {
@@ -605,6 +731,10 @@ export default function SoloGame() {
       }
 
       horizontalRepeat.current = null;
+
+      if (release) {
+        emitMove(move, "release");
+      }
     };
 
     const startHorizontalRepeat = (
@@ -613,12 +743,12 @@ export default function SoloGame() {
     ) => {
       if (horizontalRepeat.current?.key === key) return;
 
-      stopHorizontalRepeat();
+      stopHorizontalRepeat(true);
       emitMove(move);
 
       const timeoutId = window.setTimeout(() => {
         const intervalId = window.setInterval(() => {
-          emitMove(move);
+          emitMove(move, "press", true);
         }, HORIZONTAL_REPEAT_MS);
 
         if (horizontalRepeat.current?.key === key) {
@@ -659,7 +789,7 @@ export default function SoloGame() {
 
       if (move === "drop" && event.repeat) return;
 
-      emitMove(move);
+      emitMove(move, "press", event.repeat);
     };
 
     const handleKeyUp = (event: KeyboardEvent) => {
@@ -667,12 +797,18 @@ export default function SoloGame() {
         horizontalRepeat.current &&
         event.key === horizontalRepeat.current.key
       ) {
-        stopHorizontalRepeat();
+        stopHorizontalRepeat(true);
+        return;
+      }
+
+      if (event.key === "ArrowDown") {
+        emitMove("down", "release");
       }
     };
 
     const handleBlur = () => {
-      stopHorizontalRepeat();
+      stopHorizontalRepeat(true);
+      emitMove("down", "release");
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -680,7 +816,7 @@ export default function SoloGame() {
     window.addEventListener("blur", handleBlur);
 
     return () => {
-      stopHorizontalRepeat();
+      stopHorizontalRepeat(true);
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
       window.removeEventListener("blur", handleBlur);
@@ -698,6 +834,20 @@ export default function SoloGame() {
     );
   }
 
+  if (isVersus && soloResult) {
+    const returnPath = getReturnPath(location.state);
+    return (
+      <MultiplayerGameOver
+        connectionStatus={connectionStatus}
+        onNext={() => navigate(returnPath)}
+        players={versusPlayers}
+        reason={soloResult.reason}
+        stats={soloResult.stats}
+        winnerId={soloResult.winnerId}
+      />
+    );
+  }
+
   if (isVersus) {
     const selfState = selfVersusPlayer?.state ?? gameState;
     const opponentState = primaryOpponent?.state ?? null;
@@ -705,9 +855,9 @@ export default function SoloGame() {
       player:
         | VersusPlayerState
         | {
-            username: string;
-            state: GameState;
-          },
+          username: string;
+          state: GameState;
+        },
       fallbackName: string,
       modifier: "self" | "opponent",
     ) => {
@@ -820,8 +970,12 @@ export default function SoloGame() {
     );
   }
 
-  if (isFortyLines && soloResult) {
-    const runTime = formatRunTime(soloResult.endedAt - soloResult.runStartedAt);
+  if (gameConfig?.mode === "solo" && objective?.key !== "none" && soloResult) {
+    const resultObjective = gameConfig.objective;
+    const resultObjectiveStat = getResultObjectiveStat(
+      soloResult.stats,
+      resultObjective.key,
+    );
     const returnPath = getReturnPath(location.state);
 
     return (
@@ -832,39 +986,50 @@ export default function SoloGame() {
             <span>SOCKET</span>
             <strong>{connectionStatus}</strong>
           </div>
-          <Link className="solo-game-results__back" to={returnPath}>
+          <button
+            className="solo-game-results__back"
+            onClick={() => {
+              socket?.emit("mode:leave");
+              navigate(returnPath);
+            }}
+            type="button"
+          >
             BACK
-          </Link>
+          </button>
         </header>
 
-        <section className="solo-game-results__card" aria-label="40 Lines results">
-          <span className="solo-game-results__eyebrow">FINAL TIME</span>
-          <strong className="solo-game-results__time">{runTime}</strong>
+        <section className="solo-game-results__card" aria-label={`${modeLabel} results`}>
+          <span className="solo-game-results__eyebrow">{resultObjectiveStat.label}</span>
+          <strong className="solo-game-results__time">{resultObjectiveStat.value}</strong>
 
           <div className="solo-game-results__banner">
-            {soloResult.reason === "objective_complete" ? "40 LINES CLEAR" : "RUN ENDED"}
+            {getResultBanner(soloResult.reason, resultObjective, modeLabel)}
           </div>
 
           <div className="solo-game-results__stats">
             <div>
               <span>LINES</span>
-              <strong>{soloResult.state.lines}</strong>
+              <strong>{soloResult.stats.lines}</strong>
             </div>
             <div>
               <span>SCORE</span>
-              <strong>{soloResult.state.score}</strong>
+              <strong>{soloResult.stats.score}</strong>
             </div>
             <div>
               <span>ROUND</span>
-              <strong>{soloResult.state.round}</strong>
+              <strong>{soloResult.stats.round}</strong>
             </div>
           </div>
         </section>
 
         <nav className="solo-game-results__actions" aria-label="Result actions">
-          <Link className="solo-game-results__again" to="/play/solo/40lines">
+          <button
+            className="solo-game-results__again"
+            onClick={() => socket?.emit("room:start")}
+            type="button"
+          >
             AGAIN
-          </Link>
+          </button>
         </nav>
       </main>
     );
@@ -898,13 +1063,13 @@ export default function SoloGame() {
         {!isZen && (
           <aside className="solo-game__live-stats" aria-label="Run stats">
             <div>
-              <span>SPEED</span>
-              <strong>{linesPerMinute.toFixed(2)}</strong>
-              <small>LINES/MIN</small>
+              <span>PPS</span>
+              <strong>{piecesPerSecond.toFixed(2)}</strong>
+              <small>PIECES/SECOND</small>
             </div>
             <div>
-              <span>LINES</span>
-              <strong>{lineProgress}</strong>
+              <span>{primaryStat.label}</span>
+              <strong>{primaryStat.value}</strong>
             </div>
             <div>
               <span>TIME</span>
@@ -928,14 +1093,19 @@ export default function SoloGame() {
       </section>
 
       {countdownStep && (
-        <div
-          className={`solo-game__countdown ${
-            countdownStep.length <= 2 ? "solo-game__countdown--number" : ""
-          }`}
-          aria-live="polite"
-        >
-          {countdownStep}
-        </div>
+        <SoloCountdownOverlay
+          key={`countdown-${countdownStep}`}
+          value={countdownStep}
+          extension={countdownStep.length <= 2 ? "number" : undefined}
+        />
+      )}
+
+      {!countdownStep && !soloResult && objectiveWarning && (
+        <SoloCountdownOverlay
+          key={`warning-${objectiveWarning}`}
+          value={objectiveWarning}
+          extension="warning"
+        />
       )}
 
       {/* ESC hold abort UI */}

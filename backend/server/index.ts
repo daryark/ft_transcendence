@@ -14,7 +14,7 @@ const io = new IOServer(server, {
 
 socketSetup(io);
 
-server.listen(PORT, () => {
+server.listen(Number(PORT), "0.0.0.0", () => {
   console.log(`Server listening on port ${PORT}`);
 });
 

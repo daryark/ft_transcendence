@@ -1,5 +1,12 @@
-import { describe, expect, jest, test } from '@jest/globals';
+import { beforeEach, describe, expect, jest, test } from '@jest/globals';
 import gameHandlers from '../../sockets/gameHandlers';
+
+jest.mock('../../game/domain/match/startGame', () => ({
+  __esModule: true,
+  default: jest.fn(),
+}));
+
+import startGame from '../../game/domain/match/startGame';
 
 type GameHandlersSocket = Parameters<typeof gameHandlers>[0];
 type GameHandlersDeps = Parameters<typeof gameHandlers>[1];
@@ -14,6 +21,10 @@ type TestSocket = {
 };
 
 describe('gameHandlers', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
   function createSocket(overrides: Partial<TestSocket> = {}): TestSocket {
     return {
       id: 'socket-1',
@@ -100,6 +111,56 @@ describe('gameHandlers', () => {
     expect(socket.on).toHaveBeenCalledWith('player:move', expect.any(Function));
   });
 
+  test.each(['anonymous', 'registered'])(
+    'room:start restarts an ended solo room for a %s player',
+    (identityType) => {
+      const playerId = 'user-1';
+      const room = {
+        status: 'ended',
+        gameConfig: { mode: 'solo' },
+        players: new Map([[playerId, { id: playerId }]]),
+      };
+      const socket = createSocket({
+        data: {
+          identity: { id: playerId, type: identityType },
+          roomId: 'ROOM1',
+          role: 'player',
+        },
+      });
+      const modeService = { join: jest.fn() };
+      const roomService = { getRoom: jest.fn(() => room) };
+
+      registerGameHandlers(socket, { modeService, roomService });
+      getRegisteredHandler(socket, 'room:start')();
+
+      expect(startGame).toHaveBeenCalledWith(room, roomService);
+    },
+  );
+
+  test('room:start ignores a room that is already playing', () => {
+    const playerId = 'user-1';
+    const socket = createSocket({
+      data: {
+        identity: { id: playerId, type: 'anonymous' },
+        roomId: 'ROOM1',
+        role: 'player',
+      },
+    });
+    const modeService = { join: jest.fn() };
+    const roomService = {
+      getRoom: jest.fn(() => ({
+        status: 'playing',
+        gameConfig: { mode: 'solo' },
+        players: new Map([[playerId, { id: playerId }]]),
+      })),
+    };
+
+    registerGameHandlers(socket, { modeService, roomService });
+    getRegisteredHandler(socket, 'room:start')();
+
+    expect(startGame).not.toHaveBeenCalled();
+  });
+
   test('mode:leave removes player from room when socket role is player', () => {
     const socket = createSocket({
       data: {
@@ -113,6 +174,8 @@ describe('gameHandlers', () => {
       getRoom: jest.fn(),
       removePlayer: jest.fn(),
       removeSpectator: jest.fn(),
+      isEmpty: jest.fn(() => false),
+      deleteRoom: jest.fn(),
     };
 
     registerGameHandlers(socket, { modeService, roomService });
@@ -122,6 +185,8 @@ describe('gameHandlers', () => {
 
     expect(roomService.removePlayer).toHaveBeenCalledWith('ROOM1', 'user-1');
     expect(roomService.removeSpectator).not.toHaveBeenCalled();
+    expect(roomService.isEmpty).toHaveBeenCalledWith('ROOM1');
+    expect(roomService.deleteRoom).not.toHaveBeenCalled();
   });
 
   test('mode:leave removes spectator from room when socket role is spectator', () => {
@@ -137,6 +202,8 @@ describe('gameHandlers', () => {
       getRoom: jest.fn(),
       removePlayer: jest.fn(),
       removeSpectator: jest.fn(),
+      isEmpty: jest.fn(() => false),
+      deleteRoom: jest.fn(),
     };
 
     registerGameHandlers(socket, { modeService, roomService });
@@ -146,6 +213,34 @@ describe('gameHandlers', () => {
 
     expect(roomService.removeSpectator).toHaveBeenCalledWith('ROOM1', 'user-1');
     expect(roomService.removePlayer).not.toHaveBeenCalled();
+    expect(roomService.isEmpty).toHaveBeenCalledWith('ROOM1');
+    expect(roomService.deleteRoom).not.toHaveBeenCalled();
+  });
+
+  test('mode:leave deletes room after the last player leaves', () => {
+    const socket = createSocket({
+      data: {
+        identity: { id: 'user-1', type: 'anonymous' },
+        roomId: 'ROOM1',
+        role: 'player',
+      },
+    });
+    const modeService = { join: jest.fn() };
+    const roomService = {
+      getRoom: jest.fn(),
+      removePlayer: jest.fn(),
+      removeSpectator: jest.fn(),
+      isEmpty: jest.fn(() => true),
+      deleteRoom: jest.fn(),
+    };
+
+    registerGameHandlers(socket, { modeService, roomService });
+
+    const handler = getRegisteredHandler(socket, 'mode:leave');
+    handler();
+
+    expect(roomService.removePlayer).toHaveBeenCalledWith('ROOM1', 'user-1');
+    expect(roomService.deleteRoom).toHaveBeenCalledWith('ROOM1');
   });
 
   test('player:move pushes input to room engine when socket has roomId', () => {
@@ -165,6 +260,26 @@ describe('gameHandlers', () => {
 
     expect(roomService.getRoom).toHaveBeenCalledWith('ROOM1');
     expect(pushInput).toHaveBeenCalledWith({ type: 'left' });
+  });
+
+  test('player:move forwards held-input release to the room engine', () => {
+    const pushInput = jest.fn();
+    const socket = createSocket({ data: { roomId: 'ROOM1' } });
+    const modeService = { join: jest.fn() };
+    const roomService = {
+      getRoom: jest.fn(() => ({ engine: { pushInput } })),
+    };
+
+    registerGameHandlers(socket, { modeService, roomService });
+    getRegisteredHandler(socket, 'player:move')({
+      type: 'down',
+      phase: 'release',
+    });
+
+    expect(pushInput).toHaveBeenCalledWith({
+      type: 'down',
+      phase: 'release',
+    });
   });
 
   test('player:move does nothing when socket has no roomId', () => {

@@ -37,6 +37,8 @@ type CustomRoomPlayer = {
   country?: string;
   rank?: string;
   isHost?: boolean;
+  matchWins?: number;
+  matchTotalGames?: number;
 };
 
 type CustomChatMessage = {
@@ -494,8 +496,12 @@ export default function Custom() {
     };
 
     const handleGameStart = (payload: { roomId?: string }) => {
-      navigate(`/game/${payload.roomId ?? roomId}`, {
-        state: { from: "/play/multiplayer/custom" },
+      const nextRoomId = payload.roomId ?? roomId;
+
+      if (!nextRoomId) return;
+
+      navigate(`/game/${nextRoomId}`, {
+        state: { from: customRoomPath(nextRoomId) },
       });
     };
 
@@ -675,7 +681,11 @@ export default function Custom() {
   if (!inRoom) {
     return (
       <section className="mp-page mp-page--custom-select">
-        <button className="mp-back" onClick={() => navigate(-1)} type="button">
+        <button
+          className="mp-back"
+          onClick={() => navigate("/play/multiplayer")}
+          type="button"
+        >
           BACK
         </button>
 
@@ -735,7 +745,9 @@ export default function Custom() {
           {players.map((player) => (
             <div className="mp-custom-player" key={player.id}>
               <strong>{player.username}</strong>
-              <span>{player.rank ?? "-"}</span>
+              <span>
+                {player.matchWins ?? 0}/{player.matchTotalGames ?? 0}
+              </span>
               {player.isHost && <em>HOST</em>}
             </div>
           ))}

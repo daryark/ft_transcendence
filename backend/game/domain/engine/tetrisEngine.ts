@@ -1,10 +1,10 @@
 import { moveFigure, rotate, collision, clearLines, createBag } from "./logic";
 import { createFigure } from "./figures";
-import { initGame } from "./state";
+import { buildGameStats } from "./state";
 import type { Input, InputType } from "./input";
 import Room from "../room";
 import type { RoomId } from "../room";
-import type { GameState } from "./state";
+import type { GameState, GameUpdateStats } from "./state";
 import type { Figure } from "./figures";
 import type { ServerToClientEvents } from "../../../sockets/gameHandlers";
 
@@ -48,12 +48,37 @@ export default function createEngine(room: Room, roomService: RoomService) {
   let nextGravityIncreaseAt = gravityIncreaseInterval ? gameStartedAt + gravityIncreaseInterval : null;
   let lockTimeoutId: ReturnType<typeof setTimeout> | null = null;
   let currentPieceWasRotated = false;
+  let pendingScoreAdded = 0;
+  let pendingLinesCleared = 0;
 
   function clearLockTimeout() {
     if (lockTimeoutId !== null) {
       clearTimeout(lockTimeoutId);
       lockTimeoutId = null;
     }
+  }
+
+  function buildGameUpdate(state: GameState): GameUpdateStats {
+    const objective =
+      room.gameConfig.mode === "solo" ? room.gameConfig.objective : undefined;
+    const update: GameUpdateStats = buildGameStats(state, objective);
+
+    if (pendingScoreAdded > 0) {
+      update.scoreAdded = pendingScoreAdded;
+    }
+
+    if (pendingLinesCleared > 0) {
+      update.linesCleared = pendingLinesCleared;
+    }
+
+    pendingScoreAdded = 0;
+    pendingLinesCleared = 0;
+    return update;
+  }
+
+  function broadcastGameUpdate(state: GameState) {
+    state.update = buildGameUpdate(state);
+    roomService.broadcast(room.id, "game:update", state);
   }
 
   function scheduleLock(state: GameState) {
@@ -72,7 +97,21 @@ export default function createEngine(room: Room, roomService: RoomService) {
 
   function pushInput(input: Input) {
     if (room.status !== "playing") return;
-    inputs.push(input);
+
+    if (input.phase === "release") {
+      for (let index = inputs.length - 1; index >= 0; index -= 1) {
+        if (inputs[index].type === input.type && inputs[index].repeat) {
+          inputs.splice(index, 1);
+        }
+      }
+      return;
+    }
+
+    inputs.push({
+      type: input.type,
+      phase: "press",
+      repeat: input.repeat ?? false,
+    });
   }
 
   function ensureNextQueue(state: GameState) {
@@ -175,6 +214,16 @@ export default function createEngine(room: Room, roomService: RoomService) {
     state.board = newBoard;
     state.lines += cleared;
     state.score += scoreAdd;
+    state.piecesPlaced += 1;
+
+    if (cleared > 0) {
+      pendingLinesCleared += cleared;
+    }
+
+    if (scoreAdd > 0) {
+      pendingScoreAdded += scoreAdd;
+    }
+
     spawnPiece(state);
     gravityAccumulator = 0;
     clearLockTimeout();
@@ -190,6 +239,7 @@ export default function createEngine(room: Room, roomService: RoomService) {
 
     while (tryMoveCurrent(state, 0, 1)) {
       state.score += 2;
+      pendingScoreAdded += 2;
     }
 
     lockCurrent(state);
@@ -273,82 +323,25 @@ export default function createEngine(room: Room, roomService: RoomService) {
     scheduleLock(state);
   }
 
-  function shouldFinishByObjective(state: GameState): boolean {
-    if (room.gameConfig.mode !== "solo") return false;
-
-    const objective = room.gameConfig.objective;
-    if (objective.winCondition === "none") return false;
-
-    if (objective.winCondition === "score") {
-      return state.score >= (objective.scoreToWin ?? Infinity);
-    }
-
-    if (objective.winCondition === "lines") {
-      return state.lines >= (objective.linesToClear ?? Infinity);
-    }
-
-    if (objective.winCondition === "time") {
-      const elapsedSeconds = (Date.now() - state.startedAt) / 1000;
-      return elapsedSeconds >= (objective.timeLimit ?? Infinity);
-    }
-
-    return false;
-  }
-
-  function restartZenSolo(state: GameState) {
-    room.state = initGame(state.rows, state.cols, state.round + 1);
-    roomService.broadcast(room.id, "game:start", {
-      roomId: room.id,
-      state: room.state,
-      config: room.gameConfig,
-    });
-  }
-
-  function finishGame(reason: "game_over" | "objective_complete") {
-    room.status = "ended";
-    clearInterval(interval);
-    roomService.broadcast(room.id, "game:update", room.state);
-    roomService.broadcast(room.id, "game:end", {
-      roomId: room.id,
-      reason,
-      state: room.state,
-    });
-  }
-
-  function handleEndConditions(state: GameState): boolean {
-    if (room.gameConfig.mode === "solo" && state.gameOver) {
-      if (room.gameConfig.objective.winCondition === "none") {
-        restartZenSolo(state);
-        return true;
-      }
-
-      finishGame("game_over");
-      return true;
-    }
-
-    if (shouldFinishByObjective(state)) {
-      finishGame("objective_complete");
-      return true;
-    }
-
-    return false;
-  }
-
   function tick() {
     const state = room.state;
     if (!state) return; // Guard: state should not be null during active game
     if (room.status !== "playing") return;
+    if (Date.now() < state.startedAt) {
+      broadcastGameUpdate(state);
+      return;
+    }
 
-    if (handleEndConditions(state)) return;
+    if (room.match?.evaluate(state)) return;
     const lockedByInput = applyInputs(state);
-    if (handleEndConditions(state)) return;
+    if (room.match?.evaluate(state)) return;
     if (!lockedByInput) {
       applyGravity(state);
     }
     handleLockDelay(state);
-    if (handleEndConditions(state)) return;
+    if (room.match?.evaluate(state)) return;
 
-    roomService.broadcast(room.id, "game:update", state);
+    broadcastGameUpdate(state);
   }
 
 

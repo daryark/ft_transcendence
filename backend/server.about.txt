@@ -138,3 +138,6 @@ Resources:
 
 -> check logs on back
 -> docker logs backend --tail 200 > backend/backend-container.log 2>&1
+
+-> build only specific container
+-> docker compose up -d --no-deps --build <service_name>

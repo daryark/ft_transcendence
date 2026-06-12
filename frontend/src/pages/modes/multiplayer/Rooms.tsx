@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import "./MultiplayerMode.scss";
 
+//!
 const rooms = [
   ["24/7 | STACKING TIME", "INGAME - KIMJOOHYEON", "6+5"],
   ["4W NOOB JOIN, PRO BAN. STRICTER.", "LOBBY - JKUG", "9"],
@@ -20,7 +21,11 @@ export default function Rooms() {
 
   return (
     <section className="mp-page mp-page--rooms">
-      <button className="mp-back" type="button" onClick={() => navigate(-1)}>
+      <button
+        className="mp-back"
+        type="button"
+        onClick={() => navigate("/play/multiplayer")}
+      >
         BACK
       </button>
 

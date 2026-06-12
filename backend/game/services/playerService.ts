@@ -13,7 +13,7 @@ export default class PlayerService {
     this.reconnectTimers = new Map();
   }
 
-  get (playerId: UserId): Player | undefined {
+  get(playerId: UserId): Player | undefined {
     return this.players.get(playerId);
   }
 
@@ -67,7 +67,7 @@ export default class PlayerService {
     onReconnectExpired: (player: Player) => void,
     timeoutMs = RECONNECT_TIMEOUT_MS
   ): Player | undefined {
-  
+
     const player = this.update(playerId, {
       connected: false,
       disconnectedAt: Date.now(),
@@ -75,6 +75,12 @@ export default class PlayerService {
     if (!player) return undefined;
 
     this.clearReconnectTimer(playerId);
+    if (timeoutMs <= 0) {
+      onReconnectExpired(player);
+      this.delete(playerId);
+      return player;
+    }
+
     const timer = setTimeout(() => {
       const currentPlayer = this.players.get(playerId);
       if (!currentPlayer || currentPlayer.connected) return;
