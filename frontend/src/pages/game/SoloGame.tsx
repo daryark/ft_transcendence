@@ -7,7 +7,10 @@ import {
   subscribeToSocket,
 } from "../../socket/socketClient";
 import { getSessionUser } from "../../auth/session";
-import type { GameConfig } from "../../../shared/types/config.types";
+import type {
+  GameConfig,
+  ObjectiveConfig,
+} from "../../../shared/types/config.types";
 import type {
   GameEndPayload,
   GameStats,
@@ -33,6 +36,7 @@ const INPUT_COOLDOWNS: Partial<Record<PlayerMove, number>> = {
 const ESC_HOLD_MS = 2000;
 const COUNTDOWN_NUMBERS = ["3", "2", "1", "GO"] as const;
 const COUNTDOWN_STEP_MS = 900;
+const TIME_WARNING_SECONDS = new Set([30, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]);
 
 type ActiveGamePayload = GameStartPayload & {
   from?: string;
@@ -51,6 +55,32 @@ type SoloResult = {
   reason: GameEndPayload["reason"];
   stats: GameStats;
 };
+
+type SoloCountdownOverlayProps = {
+  value: string;
+  extension?: "number" | "warning";
+};
+
+function SoloCountdownOverlay({
+  value,
+  extension,
+}: SoloCountdownOverlayProps) {
+  const extensionClass =
+    extension === "warning"
+      ? " solo-game__countdown--number solo-game__countdown--warning"
+      : extension === "number"
+        ? " solo-game__countdown--number"
+        : "";
+
+  return (
+    <div
+      className={`solo-game__countdown${extensionClass}`}
+      aria-live="polite"
+    >
+      {value}
+    </div>
+  );
+}
 
 const toActiveGamePayload = (value: unknown): Partial<ActiveGamePayload> => {
   if (!value || typeof value !== "object") {
@@ -155,11 +185,86 @@ function formatRunTime(milliseconds: number) {
   const safeMilliseconds = Math.max(0, milliseconds);
   const minutes = Math.floor(safeMilliseconds / 60000);
   const seconds = Math.floor((safeMilliseconds % 60000) / 1000);
-  const millis = safeMilliseconds % 1000;
+  const centiseconds = Math.floor((safeMilliseconds % 1000) / 10);
 
-  return `${minutes}:${seconds.toString().padStart(2, "0")}.${millis
+  return `${minutes}:${seconds.toString().padStart(2, "0")}.${centiseconds
     .toString()
-    .padStart(3, "0")}`;
+    .padStart(2, "0")}`;
+}
+
+function getResultObjectiveStat(
+  stats: GameStats,
+  objectiveKey: ObjectiveConfig["key"] | undefined,
+) {
+  if (objectiveKey === "score") {
+    return { label: "FINAL SCORE", value: `${stats.score}` };
+  }
+
+  if (objectiveKey === "lines") {
+    return { label: "FINAL LINES", value: `${stats.lines}` };
+  }
+
+  return { label: "FINAL TIME", value: formatRunTime(stats.elapsedMs) };
+}
+
+function getResultBanner(
+  reason: GameEndPayload["reason"],
+  objective: ObjectiveConfig | null,
+  modeLabel: string,
+) {
+  if (reason !== "objective_complete") return "RUN ENDED";
+
+  if (objective?.winCondition === "lines") {
+    return `${objective.linesToClear ?? 40} LINES CLEAR`;
+  }
+
+  if (objective?.winCondition === "time") {
+    return "TIME UP";
+  }
+
+  if (objective?.winCondition === "score") {
+    return `${objective.scoreToWin ?? "TARGET"} SCORE`;
+  }
+
+  return `${modeLabel} COMPLETE`;
+}
+
+function getObjectiveWarning(
+  objective: ObjectiveConfig | null,
+  stats: GameStats | undefined,
+) {
+  if (!objective || !stats?.objective) return null;
+
+  if (objective.winCondition === "time") {
+    const remainingMs = stats.objective.remaining ?? stats.remainingMs;
+    if (remainingMs === null || remainingMs <= 0) return null;
+
+    const remainingSeconds = Math.ceil(remainingMs / 1000);
+
+    return TIME_WARNING_SECONDS.has(remainingSeconds)
+      ? `${remainingSeconds}`
+      : null;
+  }
+
+  if (objective.winCondition === "lines") {
+    const target = stats.objective.target ?? objective.linesToClear ?? null;
+    if (!target) return null;
+
+    const remainingLines = Math.max(0, target - stats.objective.current);
+    const lineWarnings = new Set([
+      Math.ceil(target / 4),
+      Math.ceil(target / 8),
+      5,
+      4,
+      3,
+      2,
+      1,
+    ]);
+
+    return lineWarnings.has(remainingLines) ? `${remainingLines}` : null;
+  }
+
+  return null;
 }
 
 function getReturnPath(locationState: unknown) {
@@ -243,7 +348,6 @@ export default function SoloGame() {
   const escStartRef = useRef<number | null>(null);
 
   const objective = gameConfig?.mode === "solo" ? gameConfig.objective : null;
-  const isFortyLines = gameConfig?.mode === "solo" && gameConfig.preset === "40Lines";
   const isZen = gameConfig?.mode === "solo" && gameConfig.preset === "zen";
   const targetLines =
     objective?.winCondition === "lines" ? objective.linesToClear ?? 40 : 40;
@@ -260,6 +364,7 @@ export default function SoloGame() {
     objective?.key === "score"
       ? { label: "SCORE", value: `${liveStats?.score ?? 0}` }
       : { label: "LINES", value: lineProgress };
+  const objectiveWarning = getObjectiveWarning(objective, liveStats);
 
   const modeLabel = getSoloModeLabel(gameConfig);
   const isVersus = gameConfig?.mode === "custom" && Object.keys(versusPlayers).length > 0;
@@ -805,8 +910,12 @@ export default function SoloGame() {
     );
   }
 
-  if (isFortyLines && soloResult) {
-    const runTime = formatRunTime(soloResult.stats.elapsedMs);
+  if (gameConfig?.mode === "solo" && objective?.key !== "none" && soloResult) {
+    const resultObjective = gameConfig.objective;
+    const resultObjectiveStat = getResultObjectiveStat(
+      soloResult.stats,
+      resultObjective.key,
+    );
     const returnPath = getReturnPath(location.state);
 
     return (
@@ -829,12 +938,12 @@ export default function SoloGame() {
           </button>
         </header>
 
-        <section className="solo-game-results__card" aria-label="40 Lines results">
-          <span className="solo-game-results__eyebrow">FINAL TIME</span>
-          <strong className="solo-game-results__time">{runTime}</strong>
+        <section className="solo-game-results__card" aria-label={`${modeLabel} results`}>
+          <span className="solo-game-results__eyebrow">{resultObjectiveStat.label}</span>
+          <strong className="solo-game-results__time">{resultObjectiveStat.value}</strong>
 
           <div className="solo-game-results__banner">
-            {soloResult.reason === "objective_complete" ? "40 LINES CLEAR" : "RUN ENDED"}
+            {getResultBanner(soloResult.reason, resultObjective, modeLabel)}
           </div>
 
           <div className="solo-game-results__stats">
@@ -924,13 +1033,19 @@ export default function SoloGame() {
       </section>
 
       {countdownStep && (
-        <div
-          className={`solo-game__countdown ${countdownStep.length <= 2 ? "solo-game__countdown--number" : ""
-            }`}
-          aria-live="polite"
-        >
-          {countdownStep}
-        </div>
+        <SoloCountdownOverlay
+          key={`countdown-${countdownStep}`}
+          value={countdownStep}
+          extension={countdownStep.length <= 2 ? "number" : undefined}
+        />
+      )}
+
+      {!countdownStep && !soloResult && objectiveWarning && (
+        <SoloCountdownOverlay
+          key={`warning-${objectiveWarning}`}
+          value={objectiveWarning}
+          extension="warning"
+        />
       )}
 
       {/* ESC hold abort UI */}

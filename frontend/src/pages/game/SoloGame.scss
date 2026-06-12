@@ -1,6 +1,9 @@
 .solo-game {
+  --solo-game-padding: clamp(1rem, 3vw, 2rem);
+
+  position: relative;
   min-height: calc(100vh - var(--app-header-height));
-  padding: clamp(1rem, 3vw, 2rem);
+  padding: var(--solo-game-padding);
   color: var(--app-text);
 }
 
@@ -206,8 +209,11 @@ body.solo-versus-active {
 }
 
 .solo-game__status {
+  position: absolute;
+  top: var(--solo-game-padding);
+  right: var(--solo-game-padding);
+  z-index: 20;
   width: min(var(--app-page-max), 100%);
-  margin: 0 auto 1rem;
   display: grid;
   grid-template-columns: repeat(2, minmax(7rem, 10rem));
   justify-content: end;
@@ -245,12 +251,14 @@ body.solo-versus-active {
 
 .solo-game__stage {
   position: relative;
+  min-height: calc(100vh - var(--app-header-height) - (var(--solo-game-padding) * 2));
   display: grid;
   grid-template-columns: minmax(10.75rem, 12rem) auto 9rem;
   grid-template-areas:
     "hold board next"
     "stats board next";
   justify-content: center;
+  align-content: center;
   align-items: start;
   gap: 1rem;
 }
@@ -338,6 +346,9 @@ body.solo-versus-active {
 }
 
 .solo-game__countdown {
+  --solo-countdown-number-color: #f7c600;
+  --solo-countdown-number-glow: rgba(255, 232, 106, 0.76);
+
   position: fixed;
   left: 50%;
   top: 50%;
@@ -373,8 +384,16 @@ body.solo-versus-active {
   border: 0;
   border-radius: 50%;
   background: rgba(25, 20, 0, 0.42);
-  color: #f7c600;
+  color: var(--solo-countdown-number-color);
   font-size: clamp(4rem, 9vw, 6.5rem);
+  text-shadow: 0 0 1rem var(--solo-countdown-number-glow);
+}
+
+.solo-game__countdown--warning {
+  --solo-countdown-number-color: #ff4f4f;
+  --solo-countdown-number-glow: rgba(255, 79, 79, 0.62);
+
+  opacity: 0.68;
 }
 
 .solo-game-results__top,
