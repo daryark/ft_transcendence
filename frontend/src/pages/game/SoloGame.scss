@@ -487,6 +487,14 @@ body.solo-versus-active {
   text-shadow: 0 0 1rem rgba(255, 192, 150, 0.36);
 }
 
+.solo-game-results__time--message {
+  padding: 0 1rem;
+  font-size: clamp(2.5rem, 7vw, 5.25rem);
+  line-height: 1;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
 .solo-game-results__banner {
   min-height: 5rem;
   display: grid;

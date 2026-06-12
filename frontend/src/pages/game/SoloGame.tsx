@@ -7,6 +7,7 @@ import {
   subscribeToSocket,
 } from "../../socket/socketClient";
 import { getSessionUser } from "../../auth/session";
+import MultiplayerGameOver from "./MultiplayerGameOver";
 import type {
   GameConfig,
   ObjectiveConfig,
@@ -54,6 +55,7 @@ type CountdownStep =
 type SoloResult = {
   reason: GameEndPayload["reason"];
   stats: GameStats;
+  winnerId?: GameEndPayload["winnerId"];
 };
 
 type SoloCountdownOverlayProps = {
@@ -543,12 +545,17 @@ export default function SoloGame() {
         ? payload.players[currentUserId ?? ""]?.state ??
         Object.values(payload.players)[0]?.state
         : payload.state;
+      const nextState = state ?? gameStateRef.current;
+      const stats = payload.result?.stats ?? nextState?.update;
+
+      if (!nextState || !stats) return;
 
       setVersusPlayers(payload.players ?? {});
-      setGameState(state);
+      setGameState(nextState);
       setSoloResult({
         reason: payload.reason,
-        stats: payload.result?.stats ?? state.update,
+        stats,
+        winnerId: payload.winnerId,
       });
       setCountdownStep(null);
       try {
@@ -560,7 +567,7 @@ export default function SoloGame() {
           ACTIVE_GAME_KEY,
           JSON.stringify({
             roomId: gameId,
-            state,
+            state: nextState,
             config: saved?.config ?? gameConfigRef.current,
             players: payload.players ?? saved?.players,
             runStartedAt: saved?.runStartedAt ?? runStartedAtRef.current,
@@ -570,7 +577,7 @@ export default function SoloGame() {
       } catch {
         window.sessionStorage.setItem(
           ACTIVE_GAME_KEY,
-          JSON.stringify({ roomId: gameId, state }),
+          JSON.stringify({ roomId: gameId, state: nextState }),
         );
       }
     };
@@ -786,6 +793,20 @@ export default function SoloGame() {
           Back to Solo
         </Link>
       </main>
+    );
+  }
+
+  if (isVersus && soloResult) {
+    const returnPath = getReturnPath(location.state);
+    return (
+      <MultiplayerGameOver
+        connectionStatus={connectionStatus}
+        onNext={() => navigate(returnPath)}
+        players={versusPlayers}
+        reason={soloResult.reason}
+        stats={soloResult.stats}
+        winnerId={soloResult.winnerId}
+      />
     );
   }
 

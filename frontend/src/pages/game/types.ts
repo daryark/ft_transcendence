@@ -58,6 +58,7 @@ export interface GameStartPayload {
 
 export interface GameEndPayload {
   roomId: string;
+  winnerId?: number | string | null;
   reason:
     | "game_over"
     | "objective_complete"

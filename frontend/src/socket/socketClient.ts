@@ -1,8 +1,6 @@
 import { io, type Socket } from "socket.io-client";
 
 export const SOCKET_URL = "/";
-  // import.meta.env.VITE_SOCKET_URL ?? "http://localhost:3000";
-
 
 const SOCKET_EVENT = "tetra-socket-change";
 const ANONYMOUS_SOCKET_KEY = "__anonymous__";
@@ -25,7 +23,7 @@ export const connectSocket = (token?: string) => {
 
   if (!socket) {
     socket = io(SOCKET_URL, {
-       path: "/socket.io",
+      path: "/socket.io",
       auth: {
         ...(token ? { token } : {}),
       },

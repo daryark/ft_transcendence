@@ -7,6 +7,7 @@ import { isInput } from "../../engine/input";
 const JOIN_PREFIX = "JOIN:";
 const customRoomHosts = new Map();
 const customEngines = new Map();
+const customRoomScores = new Map();
 
 function emitError(socket, reason) {
   socket.emit("server:error", { reason });
@@ -16,13 +17,33 @@ function getPlayerName(player) {
   return player?.profile?.nickname ?? String(player?.id ?? "PLAYER");
 }
 
-function serializePlayer(player, hostId) {
+function getMatchTotalGames(room) {
+  const roundsToWin = room.matchConfig?.roundsToWin;
+
+  return typeof roundsToWin === "number" && Number.isFinite(roundsToWin)
+    ? Math.max(1, roundsToWin * 2 - 1)
+    : 1;
+}
+
+function getRoomScores(room) {
+  if (!customRoomScores.has(room.id)) {
+    customRoomScores.set(room.id, new Map());
+  }
+
+  return customRoomScores.get(room.id);
+}
+
+function serializePlayer(player, hostId, room) {
+  const scores = getRoomScores(room);
+
   return {
     id: player.id,
     username: getPlayerName(player),
     rank: player.profile?.rank,
     isHost: player.id === hostId,
     connected: player.connected,
+    matchWins: scores.get(String(player.id)) ?? 0,
+    matchTotalGames: getMatchTotalGames(room),
   };
 }
 
@@ -36,10 +57,10 @@ function serializeRoom(room) {
     visibility: room.roomConfig.public ? "public" : "private",
     status: room.status,
     players: Array.from(room.players.values()).map((player) =>
-      serializePlayer(player, hostId),
+      serializePlayer(player, hostId, room),
     ),
     spectators: Array.from(room.spectators?.values() ?? []).map((spectator) =>
-      serializePlayer(spectator, hostId),
+      serializePlayer(spectator, hostId, room),
     ),
     config: {
       roomConfig: room.roomConfig,
@@ -149,6 +170,12 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
 
   const activePlayerIds = getActivePlayerIds(engine);
   if (activePlayerIds.length > 1) return false;
+  const winnerId = activePlayerIds[0] ?? null;
+
+  if (winnerId) {
+    const scores = getRoomScores(room);
+    scores.set(String(winnerId), (scores.get(String(winnerId)) ?? 0) + 1);
+  }
 
   room.status = "ended";
   room.state = getFirstPlayerState(engine);
@@ -156,12 +183,15 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
   const payload = {
     ...serializeVersusGame(room, engine),
     reason,
-    winnerId: activePlayerIds[0] ?? null,
+    winnerId,
   };
 
   roomService.broadcast(room.id, "game:update", payload);
   roomService.broadcast(room.id, "game:end", payload);
   engine.stop();
+  room.status = "lobby";
+  room.engine = null;
+  broadcastRoomUpdate(roomService, room);
   return true;
 }
 
@@ -335,6 +365,7 @@ function createCustomRoom(socket, roomService, player, payload) {
   const room = roomService.createRoom(config);
 
   customRoomHosts.set(room.id, player.id);
+  customRoomScores.set(room.id, new Map());
   roomService.addPlayer(room.id, player);
   socket.join(room.id);
   socket.data.roomId = room.id;
