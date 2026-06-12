@@ -1,8 +1,9 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { authFetch } from "../../auth/authFetch";
 import { type SessionUser } from "../../auth/session";
+import { getAvatarStyle } from "./avatarStyle";
 import "./ProfileHeader.scss";
 
 type LeagueStats = {
@@ -28,38 +29,6 @@ type ProfileDetails = {
 
 type ApiProfileResponse = ProfileDetails | { profile: ProfileDetails };
 
-const avatarColors = [
-  "#d6cc1e",
-  "#8ed053",
-  "#6ec6ff",
-  "#ff7f50",
-  "#c986ff",
-  "#ffcc66",
-  "#6ee7b7",
-  "#ef6f8f",
-  "#a7f3d0",
-  "#f97316",
-  "#93c5fd",
-  "#f0abfc",
-  "#fde047",
-  "#34d399",
-  "#fb7185",
-  "#60a5fa",
-  "#c4b5fd",
-  "#facc15",
-  "#5eead4",
-  "#e879f9",
-];
-
-export const getAvatarStyle = (avatarId?: number) => {
-  const index =
-    avatarId && avatarId >= 1 && avatarId <= avatarColors.length
-      ? avatarId - 1
-      : 0;
-
-  return { "--avatar-color": avatarColors[index] } as CSSProperties;
-};
-
 const getJoinedText = (user: SessionUser) => {
   if (!user.created_at) {
     return "JOINED TODAY";
@@ -79,10 +48,28 @@ const getJoinedText = (user: SessionUser) => {
   return days === 0 ? "JOINED TODAY" : `JOINED ${days} DAYS AGO`;
 };
 
-const unwrapProfile = (payload: ApiProfileResponse): ProfileDetails =>
-  "profile" in payload && typeof payload.profile === "object"
-    ? payload.profile
-    : payload;
+// const unwrapProfile = (payload: ApiProfileResponse): ProfileDetails =>
+//   "profile" in payload && typeof payload.profile === "object"
+//     ? payload.profile
+//     : payload;
+
+const isProfileWrapper = (
+  payload: ApiProfileResponse,
+): payload is { profile: ProfileDetails } => {
+  return (
+    "profile" in payload &&
+    typeof payload.profile === "object" &&
+    payload.profile !== null
+  );
+};
+
+const unwrapProfile = (payload: ApiProfileResponse): ProfileDetails => {
+  if (isProfileWrapper(payload)) {
+    return payload.profile;
+  }
+
+  return payload;
+};
 
 const formatNumber = (value: number | undefined) =>
   typeof value === "number" && Number.isFinite(value) ? value.toLocaleString() : "0";

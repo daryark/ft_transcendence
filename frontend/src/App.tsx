@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useParams } from "react-router-dom";
 import Layout from "./components/Layout/Layout";
 import Play from "./pages/play/Play";
 import TetraChannel from "./pages/tetra-channel/TetraChannel";
@@ -18,6 +18,12 @@ import OAuthSuccess from "./pages/auth/OAuthSuccess";
 import SoloGame from "./pages/game/SoloGame";
 
 import "./styles/globals.scss";
+
+function GameRoute() {
+  const { gameId } = useParams<{ gameId: string }>();
+
+  return <SoloGame key={gameId} />;
+}
 
 export default function App() {
   return (
@@ -100,7 +106,7 @@ export default function App() {
             path="game/:gameId"
             element={
               <ProtectedRoute>
-                <SoloGame />
+                <GameRoute />
               </ProtectedRoute>
             }
           />

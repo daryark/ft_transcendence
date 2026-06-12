@@ -60,6 +60,48 @@ const toActiveGamePayload = (value: unknown): Partial<ActiveGamePayload> => {
   return value as Partial<ActiveGamePayload>;
 };
 
+const readStoredActiveGame = (
+  gameId: string | undefined,
+): Partial<ActiveGamePayload> | null => {
+  try {
+    const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
+
+    if (!savedRaw) {
+      return null;
+    }
+
+    const saved = toActiveGamePayload(JSON.parse(savedRaw));
+
+    if (!gameId || saved.roomId !== gameId) {
+      window.sessionStorage.removeItem(ACTIVE_GAME_KEY);
+      return null;
+    }
+
+    return saved;
+  } catch {
+    window.sessionStorage.removeItem(ACTIVE_GAME_KEY);
+    return null;
+  }
+};
+
+const clearStoredActiveGame = (gameId?: string) => {
+  try {
+    if (!gameId) {
+      window.sessionStorage.removeItem(ACTIVE_GAME_KEY);
+      return;
+    }
+
+    const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
+    const saved = toActiveGamePayload(savedRaw ? JSON.parse(savedRaw) : null);
+
+    if (!saved.roomId || saved.roomId === gameId) {
+      window.sessionStorage.removeItem(ACTIVE_GAME_KEY);
+    }
+  } catch {
+    window.sessionStorage.removeItem(ACTIVE_GAME_KEY);
+  }
+};
+
 const isVersusPayload = (
   value: unknown,
 ): value is GameStartPayload & { players: Record<string, VersusPlayerState> } =>
@@ -68,38 +110,24 @@ const isVersusPayload = (
   "players" in value &&
   !!(value as { players?: unknown }).players;
 
-function getInitialState(locationState: unknown) {
+function getInitialState(locationState: unknown, gameId: string | undefined) {
   const payload = locationState as GameStartPayload | null;
 
-  if (payload?.state) {
+  if (payload?.roomId === gameId && payload?.state) {
     return payload.state;
   }
 
-  try {
-    const saved = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
-    const parsed = saved ? toActiveGamePayload(JSON.parse(saved)) : null;
-
-    return parsed?.state ?? null;
-  } catch {
-    return null;
-  }
+  return readStoredActiveGame(gameId)?.state ?? null;
 }
 
-function getInitialConfig(locationState: unknown) {
+function getInitialConfig(locationState: unknown, gameId: string | undefined) {
   const payload = locationState as GameStartPayload | null;
 
-  if (payload?.config) {
+  if (payload?.roomId === gameId && payload?.config) {
     return payload.config;
   }
 
-  try {
-    const saved = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
-    const parsed = saved ? toActiveGamePayload(JSON.parse(saved)) : null;
-
-    return parsed?.config ?? null;
-  } catch {
-    return null;
-  }
+  return readStoredActiveGame(gameId)?.config ?? null;
 }
 
 function getCountdownSequence(config: GameConfig | null): CountdownStep[] {
@@ -116,10 +144,13 @@ function getCountdownSequence(config: GameConfig | null): CountdownStep[] {
   return [];
 }
 
-function getInitialCountdownStep(locationState: unknown) {
+function getInitialCountdownStep(
+  locationState: unknown,
+  gameId: string | undefined,
+) {
   const payload = locationState as GameStartPayload | null;
 
-  if (!payload?.state) return null;
+  if (payload?.roomId !== gameId || !payload?.state) return null;
 
   return getCountdownSequence(payload.config ?? null)[0] ?? null;
 }
@@ -195,31 +226,28 @@ export default function SoloGame() {
   const currentUser = getSessionUser();
   const currentUserId = currentUser ? String(currentUser.id) : null;
   const [gameState, setGameState] = useState<GameState | null>(() =>
-    getInitialState(location.state),
+    getInitialState(location.state, gameId),
   );
   const [gameConfig, setGameConfig] = useState<GameConfig | null>(() =>
-    getInitialConfig(location.state),
+    getInitialConfig(location.state, gameId),
   );
   const [countdownStep, setCountdownStep] = useState<CountdownStep>(() =>
-    getInitialCountdownStep(location.state),
+    getInitialCountdownStep(location.state, gameId),
   );
-  const [runStartedAt, setRunStartedAt] = useState<number | null>(() => {
-    try {
-      const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
-      const saved = toActiveGamePayload(savedRaw ? JSON.parse(savedRaw) : null);
-
-      return saved.runStartedAt ?? null;
-    } catch {
-      return null;
-    }
-  });
+  const [runStartedAt, setRunStartedAt] = useState<number | null>(
+    () => readStoredActiveGame(gameId)?.runStartedAt ?? null,
+  );
   const [soloResult, setSoloResult] = useState<SoloResult | null>(null);
   const [versusPlayers, setVersusPlayers] = useState<
     Record<string, VersusPlayerState>
   >(() => {
     const payload = toActiveGamePayload(location.state);
 
-    return payload.players ?? {};
+    if (payload.roomId === gameId) {
+      return payload.players ?? {};
+    }
+
+    return readStoredActiveGame(gameId)?.players ?? {};
   });
   const [now, setNow] = useState(() => Date.now());
   const [socket, setSocket] = useState(() => getSocket());
@@ -242,6 +270,21 @@ export default function SoloGame() {
   const [escProgress, setEscProgress] = useState(0);
   const escIntervalRef = useRef<number | null>(null);
   const escStartRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    const locationPayload = toActiveGamePayload(location.state);
+
+    if (locationPayload.roomId === gameId && locationPayload.state) {
+      try {
+        window.sessionStorage.setItem(
+          ACTIVE_GAME_KEY,
+          JSON.stringify(locationPayload),
+        );
+      } catch {
+        // The current game can continue without persistence.
+      }
+    }
+  }, [gameId, location.state]);
 
   const objective = gameConfig?.mode === "solo" ? gameConfig.objective : null;
   const isFortyLines = gameConfig?.mode === "solo" && gameConfig.preset === "40Lines";
@@ -325,8 +368,7 @@ export default function SoloGame() {
         setRunStartedAt(startedAt);
         setNow(startedAt);
         try {
-          const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
-          const saved = toActiveGamePayload(savedRaw ? JSON.parse(savedRaw) : null);
+          const saved = readStoredActiveGame(gameId);
           window.sessionStorage.setItem(
             ACTIVE_GAME_KEY,
             JSON.stringify({ ...saved, runStartedAt: startedAt }),
@@ -338,7 +380,7 @@ export default function SoloGame() {
     }, COUNTDOWN_STEP_MS);
 
     return () => window.clearTimeout(timeoutId);
-  }, [countdownStep, gameConfig]);
+  }, [countdownStep, gameConfig, gameId]);
 
   useEffect(() => {
     if (objective?.winCondition !== "time" || !gameState || gameState.gameOver) {
@@ -378,10 +420,7 @@ export default function SoloGame() {
       setGameState(state);
       setNow(Date.now());
       try {
-        const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
-        const saved = toActiveGamePayload(
-          savedRaw ? JSON.parse(savedRaw) : null,
-        );
+        const saved = readStoredActiveGame(gameId);
         window.sessionStorage.setItem(
           ACTIVE_GAME_KEY,
           JSON.stringify({
@@ -423,11 +462,8 @@ export default function SoloGame() {
       setNow(startedAt ?? Date.now());
 
       try {
-        const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
-        const saved = toActiveGamePayload(
-          savedRaw ? JSON.parse(savedRaw) : null,
-        );
-        const from = payload.from ?? saved.from;
+        const saved = readStoredActiveGame(gameId);
+        const from = payload.from ?? saved?.from;
         window.sessionStorage.setItem(
           ACTIVE_GAME_KEY,
           JSON.stringify({
@@ -464,28 +500,7 @@ export default function SoloGame() {
       });
       setCountdownStep(null);
       setNow(Date.now());
-      try {
-        const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
-        const saved = toActiveGamePayload(
-          savedRaw ? JSON.parse(savedRaw) : null,
-        );
-        window.sessionStorage.setItem(
-          ACTIVE_GAME_KEY,
-          JSON.stringify({
-            roomId: gameId,
-            state,
-            config: saved?.config ?? gameConfigRef.current,
-            players: payload.players ?? saved?.players,
-            runStartedAt: saved?.runStartedAt ?? runStartedAtRef.current,
-            from: saved?.from,
-          }),
-        );
-      } catch {
-        window.sessionStorage.setItem(
-          ACTIVE_GAME_KEY,
-          JSON.stringify({ roomId: gameId, state }),
-        );
-      }
+      clearStoredActiveGame(gameId);
     };
 
     if (socket.connected) {
@@ -531,9 +546,11 @@ export default function SoloGame() {
         setEscProgress(progress);
         if (progress >= 1) {
           // emit stop and navigate back
+          const returnPath = getReturnPath(location.state);
           socket.emit("game:stop");
+          clearStoredActiveGame(gameId);
           clearEsc();
-          navigate(getReturnPath(location.state));
+          navigate(returnPath);
         }
       }, 100);
     };
@@ -560,7 +577,7 @@ export default function SoloGame() {
       window.removeEventListener("keyup", onKeyUp);
       clearEsc();
     };
-  }, [socket, navigate, location.state]);
+  }, [gameId, socket, navigate, location.state]);
 
   useEffect(() => {
     if (!socket) return undefined;
@@ -760,6 +777,7 @@ export default function SoloGame() {
             className="versus-game__exit"
             onClick={() => {
               socket?.emit("game:stop");
+              clearStoredActiveGame(gameId);
               navigate("/play/multiplayer/custom");
             }}
             type="button"

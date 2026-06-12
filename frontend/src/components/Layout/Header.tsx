@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import ProfileHeader, { getAvatarStyle } from "../ProfileHeader/ProfileHeader";
+import ProfileHeader from "../ProfileHeader/ProfileHeader";
+import { getAvatarStyle } from "../ProfileHeader/avatarStyle";
 import SocialPanels from "../SocialPanels/SocialPanels";
 
 import {

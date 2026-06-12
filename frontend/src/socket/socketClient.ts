@@ -1,7 +1,8 @@
 import { io, type Socket } from "socket.io-client";
 
-export const SOCKET_URL = "/";
-  // import.meta.env.VITE_SOCKET_URL ?? "http://localhost:3000";
+// export const SOCKET_URL = import.meta.env.VITE_SOCKET_URL ?? "http://localhost:3000";
+
+export const SOCKET_URL ="/";
 
 
 const SOCKET_EVENT = "tetra-socket-change";
