@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import MultiplayerGameOver from "./MultiplayerGameOver";
 import { getModeLabel } from "./gameUtils";
@@ -13,6 +14,14 @@ import GameAudioPanel from "../../music/GameAudioPanel";
 export default function GamePage() {
   const session = useGameSession();
   const { gameConfig, gameState, result } = session;
+
+  useEffect(() => {
+    document.body.classList.add("game-screen-active");
+
+    return () => {
+      document.body.classList.remove("game-screen-active");
+    };
+  }, []);
 
   if (!gameState) {
     return (

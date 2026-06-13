@@ -92,7 +92,7 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
 
           <div className="room-game__main-board">
             <GameBoard
-              cellSize={30}
+              cellSize={32}
               gameState={targetState}
               showGhost={gameConfig.controls.showShadowPiece}
             />

@@ -178,7 +178,7 @@ function drawDeathZone(
 
 export default function GameBoard({
   gameState,
-  cellSize = 30,
+  cellSize = 38,
   showGhost = true,
 }: GameBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);

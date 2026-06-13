@@ -120,6 +120,7 @@ export function BackgroundProvider({ children }: { children: ReactNode }) {
           />
         )}
         <div className="app-background__shade" />
+        <div className="app-background__menu-dim" />
       </div>
       {children}
     </>

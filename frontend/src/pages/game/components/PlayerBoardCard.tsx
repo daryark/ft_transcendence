@@ -36,7 +36,7 @@ export default function PlayerBoardCard({
 
       <div className="versus-game__board-wrap">
         <GameBoard
-          cellSize={24}
+          cellSize={26}
           gameState={state}
           showGhost={controls.showShadowPiece}
         />
@@ -48,7 +48,7 @@ export default function PlayerBoardCard({
       <div>
         <GamePreviewPanel
           className="versus-game__side-panel versus-game__side-panel--next"
-          figureSize={14}
+          figureSize={30}
           nextCount={controls.nextPieces}
           state={state}
           type="next"
