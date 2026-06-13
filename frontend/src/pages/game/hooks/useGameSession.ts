@@ -25,23 +25,14 @@ import type {
   GameStartPayload,
   GameState,
   GameStats,
-  PlayerMove,
-  PlayerMovePhase,
   VersusPlayerState,
 } from "../types";
+import { useConfirm } from "../../../components/Confirm/ConfirmProvider";
+import { useToast } from "../../../components/Toast/ToastProvider";
+import { useNetworkStatus } from "../../../network/NetworkProvider";
+import { useGameControls } from "./useGameControls";
 
-const HORIZONTAL_REPEAT_DELAY_MS = 95;
-const HORIZONTAL_REPEAT_MS = 42;
-const ESC_HOLD_MS = 2000;
 const COUNTDOWN_STEP_MS = 900;
-const INPUT_COOLDOWNS: Partial<Record<PlayerMove, number>> = {
-  down: 40,
-  rotate: 75,
-  rotateCCW: 75,
-  rotate180: 75,
-  hold: 140,
-  drop: 180,
-};
 
 type GameUpdatePayload =
   | GameState
@@ -52,20 +43,6 @@ export type GameResult = {
   stats: GameStats;
   winnerId?: GameEndPayload["winnerId"];
 };
-
-function keyToMove(event: KeyboardEvent): PlayerMove | null {
-  if (event.key === "ArrowLeft") return "left";
-  if (event.key === "ArrowRight") return "right";
-  if (event.key === "ArrowDown") return "down";
-  if (event.key === "ArrowUp" || event.key.toLowerCase() === "x") {
-    return "rotate";
-  }
-  if (event.key.toLowerCase() === "z") return "rotateCCW";
-  if (event.key === " ") return "drop";
-  if (event.key.toLowerCase() === "c" || event.shiftKey) return "hold";
-
-  return null;
-}
 
 function getInitialPayload(locationState: unknown, gameId?: string) {
   const locationPayload = toActiveGamePayload(locationState);
@@ -81,6 +58,9 @@ export function useGameSession() {
   const { gameId } = useParams<{ gameId: string }>();
   const location = useLocation();
   const navigate = useNavigate();
+  const confirm = useConfirm();
+  const { showToast } = useToast();
+  const networkStatus = useNetworkStatus();
   const [initialPayload] = useState(() =>
     getInitialPayload(location.state, gameId),
   );
@@ -108,27 +88,26 @@ export function useGameSession() {
   const [connectionStatus, setConnectionStatus] = useState(() =>
     getSocket() ? "CONNECTING" : "OFFLINE",
   );
-  const [escProgress, setEscProgress] = useState(0);
+  const [sessionError, setSessionError] = useState("");
   const gameStateRef = useRef(gameState);
   const gameConfigRef = useRef(gameConfig);
   const countdownRef = useRef(countdownStep);
-  const resultRef = useRef(result);
-  const lastInputAt = useRef<Partial<Record<PlayerMove, number>>>({});
-  const horizontalRepeat = useRef<{
-    key: "ArrowLeft" | "ArrowRight";
-    timeoutId: number;
-    intervalId: number | null;
-  } | null>(null);
-  const escIntervalRef = useRef<number | null>(null);
-  const escStartRef = useRef<number | null>(null);
   const returnPath = getReturnPath(location.state, gameId);
+  const escProgress = useGameControls({
+    socket,
+    gameId,
+    gameState,
+    countdownActive: Boolean(countdownStep),
+    resultActive: Boolean(result),
+    returnPath,
+    navigate,
+  });
 
   useEffect(() => {
     gameStateRef.current = gameState;
     gameConfigRef.current = gameConfig;
     countdownRef.current = countdownStep;
-    resultRef.current = result;
-  }, [countdownStep, gameConfig, gameState, result]);
+  }, [countdownStep, gameConfig, gameState]);
 
   useEffect(() => {
     const isMultiplayer = !!gameConfig && gameConfig.mode !== "solo";
@@ -188,7 +167,41 @@ export function useGameSession() {
       null;
 
     const handleConnect = () => setConnectionStatus("LIVE");
-    const handleDisconnect = () => setConnectionStatus("OFFLINE");
+    const handleReconnect = () => {
+      handleConnect();
+      socket.emit("game:resume");
+    };
+    const handleDisconnect = () => setConnectionStatus("RECONNECTING");
+    const handleResume = (payload: ActiveGamePayload) => {
+      if (payload.roomId !== gameId) return;
+
+      const state = selectState(payload);
+      if (!state) {
+        setSessionError("The server could not restore this game.");
+        return;
+      }
+
+      setSessionError("");
+      setConnectionStatus("LIVE");
+      setGameState(state);
+      setGameConfig(payload.config ?? gameConfigRef.current);
+      setPlayers(payload.players ?? {});
+      saveActiveGame({
+        roomId: payload.roomId,
+        config: payload.config ?? gameConfigRef.current ?? undefined,
+        from: readStoredActiveGame(gameId)?.from,
+        runStartedAt: state.startedAt,
+      });
+    };
+    const handleServerError = (payload: { reason?: string }) => {
+      if (
+        payload.reason === "NO_ACTIVE_GAME" ||
+        payload.reason === "ROOM_NOT_FOUND"
+      ) {
+        clearStoredActiveGame(gameId);
+        setSessionError("This game is no longer available on the server.");
+      }
+    };
     const handleUpdate = (payload: GameUpdatePayload) => {
       setConnectionStatus("LIVE");
       if (countdownRef.current) return;
@@ -252,192 +265,48 @@ export function useGameSession() {
       setPlayers(payload.players ?? {});
       setCountdownStep(null);
 
-      if (!state || !stats) return;
+      const finalStats: GameStats =
+        stats ?? {
+          score: 0,
+          lines: 0,
+          piecesPlaced: 0,
+          elapsedMs: 0,
+          remainingMs: null,
+          piecesPerSecond: 0,
+          round: 1,
+          serverNow: Date.now(),
+          objective: null,
+        };
 
-      setGameState(state);
+      if (state) setGameState(state);
       setResult({
         reason: payload.reason,
-        stats,
+        stats: finalStats,
         winnerId: payload.winnerId,
       });
     };
 
-    if (socket.connected) handleConnect();
-    socket.on("connect", handleConnect);
+    if (socket.connected) {
+      handleReconnect();
+    }
+    socket.on("connect", handleReconnect);
     socket.on("disconnect", handleDisconnect);
     socket.on("game:update", handleUpdate);
     socket.on("game:start", handleStart);
+    socket.on("game:resume", handleResume);
     socket.on("game:end", handleEnd);
+    socket.on("server:error", handleServerError);
 
     return () => {
-      socket.off("connect", handleConnect);
+      socket.off("connect", handleReconnect);
       socket.off("disconnect", handleDisconnect);
       socket.off("game:update", handleUpdate);
       socket.off("game:start", handleStart);
+      socket.off("game:resume", handleResume);
       socket.off("game:end", handleEnd);
+      socket.off("server:error", handleServerError);
     };
   }, [gameId, playerIdentityId, socket]);
-
-  useEffect(() => {
-    if (!socket) return undefined;
-
-    const clearEsc = () => {
-      if (escIntervalRef.current !== null) {
-        window.clearInterval(escIntervalRef.current);
-        escIntervalRef.current = null;
-      }
-      escStartRef.current = null;
-      setEscProgress(0);
-    };
-    const startEsc = () => {
-      if (escStartRef.current !== null) return;
-
-      escStartRef.current = window.performance.now();
-      escIntervalRef.current = window.setInterval(() => {
-        const startedAt = escStartRef.current ?? window.performance.now();
-        const progress = Math.min(
-          1,
-          (window.performance.now() - startedAt) / ESC_HOLD_MS,
-        );
-        setEscProgress(progress);
-
-        if (progress >= 1) {
-          socket.emit("game:stop");
-          clearStoredActiveGame(gameId);
-          clearEsc();
-          navigate(returnPath);
-        }
-      }, 100);
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      startEsc();
-    };
-    const handleKeyUp = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      clearEsc();
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-
-    return () => {
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      clearEsc();
-    };
-  }, [gameId, navigate, returnPath, socket]);
-
-  useEffect(() => {
-    if (!socket) return undefined;
-
-    const emitMove = (
-      move: PlayerMove,
-      phase: PlayerMovePhase = "press",
-      repeat = false,
-    ) => {
-      if (phase === "release") {
-        socket.emit("player:move", { type: move, phase });
-        return;
-      }
-      if (countdownRef.current || resultRef.current) {
-        return;
-      }
-
-      const cooldown = INPUT_COOLDOWNS[move] ?? 0;
-      const now = window.performance.now();
-      if (now - (lastInputAt.current[move] ?? 0) < cooldown) return;
-
-      lastInputAt.current[move] = now;
-      socket.emit("player:move", { type: move, phase, repeat });
-    };
-    const stopHorizontalRepeat = (release = false) => {
-      const active = horizontalRepeat.current;
-      if (!active) return;
-
-      const move = active.key === "ArrowLeft" ? "left" : "right";
-      window.clearTimeout(active.timeoutId);
-      if (active.intervalId !== null) {
-        window.clearInterval(active.intervalId);
-      }
-      horizontalRepeat.current = null;
-      if (release) emitMove(move, "release");
-    };
-    const startHorizontalRepeat = (
-      key: "ArrowLeft" | "ArrowRight",
-      move: PlayerMove,
-    ) => {
-      if (horizontalRepeat.current?.key === key) return;
-
-      stopHorizontalRepeat(true);
-      emitMove(move);
-      const timeoutId = window.setTimeout(() => {
-        const intervalId = window.setInterval(
-          () => emitMove(move, "press", true),
-          HORIZONTAL_REPEAT_MS,
-        );
-
-        if (horizontalRepeat.current?.key === key) {
-          horizontalRepeat.current.intervalId = intervalId;
-        } else {
-          window.clearInterval(intervalId);
-        }
-      }, HORIZONTAL_REPEAT_DELAY_MS);
-      horizontalRepeat.current = { key, timeoutId, intervalId: null };
-    };
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        countdownRef.current ||
-        resultRef.current ||
-        gameStateRef.current?.gameOver
-      ) {
-        return;
-      }
-
-      const move = keyToMove(event);
-      if (!move) return;
-
-      event.preventDefault();
-      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-        startHorizontalRepeat(event.key, move);
-        return;
-      }
-      if (
-        event.repeat &&
-        (move === "rotate" ||
-          move === "rotateCCW" ||
-          move === "rotate180" ||
-          move === "drop")
-      ) {
-        return;
-      }
-      emitMove(move, "press", event.repeat);
-    };
-    const handleKeyUp = (event: KeyboardEvent) => {
-      if (horizontalRepeat.current?.key === event.key) {
-        stopHorizontalRepeat(true);
-      } else if (event.key === "ArrowDown") {
-        emitMove("down", "release");
-      }
-    };
-    const handleBlur = () => {
-      stopHorizontalRepeat(true);
-      emitMove("down", "release");
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    window.addEventListener("keyup", handleKeyUp);
-    window.addEventListener("blur", handleBlur);
-
-    return () => {
-      stopHorizontalRepeat(true);
-      window.removeEventListener("keydown", handleKeyDown);
-      window.removeEventListener("keyup", handleKeyUp);
-      window.removeEventListener("blur", handleBlur);
-    };
-  }, [socket]);
 
   const playerEntries = useMemo(() => Object.values(players), [players]);
   const selfPlayer =
@@ -462,7 +331,14 @@ export function useGameSession() {
     (player) => String(player.id) !== String(selfPlayer?.id),
   );
 
-  const exitGame = () => {
+  const exitGame = async () => {
+    const approved = await confirm({
+      title: "Leave active game?",
+      message: "Leaving now will stop your run or remove you from the match.",
+      confirmLabel: "LEAVE GAME",
+    });
+    if (!approved) return;
+
     socket?.emit("game:stop");
     clearStoredActiveGame(gameId);
     navigate(returnPath);
@@ -476,6 +352,8 @@ export function useGameSession() {
     result,
     countdownStep,
     connectionStatus,
+    networkStatus,
+    sessionError,
     escProgress,
     currentUser,
     selfPlayer,
@@ -492,6 +370,12 @@ export function useGameSession() {
       navigate(returnPath);
     },
     restartSolo: () => socket?.emit("room:start"),
+    retryConnection: () => {
+      setSessionError("");
+      socket?.connect();
+      socket?.emit("game:resume");
+      showToast("Trying to restore the game session.", "info");
+    },
   };
 }
 

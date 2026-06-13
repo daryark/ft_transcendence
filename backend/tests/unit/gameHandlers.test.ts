@@ -111,6 +111,31 @@ describe('gameHandlers', () => {
     expect(socket.on).toHaveBeenCalledWith('player:move', expect.any(Function));
   });
 
+  test('game:resume emits the current server-authoritative room state', () => {
+    const state = { gameOver: false, score: 42 };
+    const room = {
+      id: 'ROOM1',
+      status: 'playing',
+      state,
+      engine: null,
+      players: new Map(),
+      gameConfig: { mode: 'solo' },
+    };
+    const socket = createSocket({ data: { roomId: 'ROOM1' } });
+    const modeService = { join: jest.fn() };
+    const roomService = { getRoom: jest.fn(() => room) };
+
+    registerGameHandlers(socket, { modeService, roomService });
+    getRegisteredHandler(socket, 'game:resume')();
+
+    expect(socket.emit).toHaveBeenCalledWith('game:resume', {
+      roomId: 'ROOM1',
+      status: 'playing',
+      state,
+      config: room.gameConfig,
+    });
+  });
+
   test.each(['anonymous', 'registered'])(
     'room:start restarts an ended solo room for a %s player',
     (identityType) => {

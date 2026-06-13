@@ -41,7 +41,13 @@ export function readStoredActiveGame(
 
 export function saveActiveGame(payload: Partial<ActiveGamePayload>) {
   try {
-    window.sessionStorage.setItem(ACTIVE_GAME_KEY, JSON.stringify(payload));
+    const metadata = {
+      roomId: payload.roomId,
+      config: payload.config,
+      from: payload.from,
+      runStartedAt: payload.runStartedAt,
+    };
+    window.sessionStorage.setItem(ACTIVE_GAME_KEY, JSON.stringify(metadata));
   } catch {
     // Persistence is optional; the active socket session can continue.
   }

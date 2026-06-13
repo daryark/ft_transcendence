@@ -73,8 +73,6 @@ export const saveGameConfig = (config: GameConfigDTO) => {
 export const getStoredGameConfig = (): GameConfigDTO | null => {
   try {
     const rawConfig = window.localStorage.getItem(GAME_CONFIG_STORAGE_KEY);
-    console.log(rawConfig);
-
     return rawConfig ? (JSON.parse(rawConfig) as GameConfigDTO) : null;
   } catch {
     return null;

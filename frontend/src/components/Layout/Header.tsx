@@ -3,6 +3,8 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import ProfileHeader from "../ProfileHeader/ProfileHeader";
 import { getAvatarStyle } from "../ProfileHeader/avatarStyle";
 import SocialPanels from "../SocialPanels/SocialPanels";
+import Dialog from "../Dialog/Dialog";
+import { apiJson } from "../../api/client";
 
 import {
   clearSession,
@@ -46,6 +48,10 @@ const Header = () => {
   const isLoggedIn = user !== null;
 
   const [isSocialOpen, setIsSocialOpen] = useState(false);
+  const [playerMeta, setPlayerMeta] = useState({
+    level: 0,
+    rank: "UNRANKED",
+  });
 
   const isActive = (path: string) => location.pathname === path;
   const pageTitle = getPageTitle(location.pathname);
@@ -67,6 +73,38 @@ const Header = () => {
       }
     });
   }, []);
+
+  useEffect(() => {
+    if (!user || user.isAnonymous) {
+      return;
+    }
+
+    const controller = new AbortController();
+    void apiJson<{
+      profile?: {
+        level?: number;
+        modes?: { league?: { rank?: string } | null };
+      };
+      level?: number;
+      modes?: { league?: { rank?: string } | null };
+    }>(`/api/users/${encodeURIComponent(user.username)}/miniprofile`, {
+      signal: controller.signal,
+    })
+      .then((payload) => {
+        const profile = payload.profile ?? payload;
+        setPlayerMeta({
+          level: profile.level ?? 0,
+          rank: profile.modes?.league?.rank ?? "UNRANKED",
+        });
+      })
+      .catch((error) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setPlayerMeta({ level: 0, rank: "UNRANKED" });
+        }
+      });
+
+    return () => controller.abort();
+  }, [user]);
 
   return (
     <>
@@ -132,8 +170,8 @@ const Header = () => {
                         <span className="anonymousLabel">ANONYMOUS</span>
                       ) : (
                         <span className="playerMeta">
-                          <span className="levelBadge">0</span>
-                          <span className="rankBadge">0</span>
+                          <span className="levelBadge">{playerMeta.level}</span>
+                          <span className="rankBadge">{playerMeta.rank}</span>
                         </span>
                       )}
                     </span>
@@ -161,10 +199,10 @@ const Header = () => {
       </header>
 
       {user && isProfileOpen && (
-        <div
+        <Dialog
           className="profileOverlay"
-          role="presentation"
-          onMouseDown={() => setIsProfileOpen(false)}
+          label={`${user.username} profile`}
+          onClose={() => setIsProfileOpen(false)}
         >
           <ProfileHeader
             user={user}
@@ -172,7 +210,7 @@ const Header = () => {
             onClose={() => setIsProfileOpen(false)}
             onLogout={handleLogout}
           />
-        </div>
+        </Dialog>
       )}
     </>
   );

@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { authFetch } from "../../auth/authFetch";
 import { getSessionUser } from "../../auth/session";
 import { getSocket, subscribeToSocket } from "../../socket/socketClient";
+import Dialog from "../Dialog/Dialog";
 import "./SocialPanels.scss";
 
 type SocialTab = "friends" | "requests" | "blocked";
@@ -335,11 +336,13 @@ const ProfileModal = ({
   const displayUsername = profile?.username ?? person.username;
 
   return (
-    <div className="miniProfileLayer" onMouseDown={onClose}>
+    <Dialog
+      className="miniProfileLayer"
+      label={`${displayUsername} mini profile`}
+      onClose={onClose}
+    >
       <section
         className="miniProfileCard"
-        aria-label={`${displayUsername} mini profile`}
-        onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="miniProfileTop">
           <div
@@ -424,7 +427,7 @@ const ProfileModal = ({
           VIEW FULL PROFILE
         </button>
       </section>
-    </div>
+    </Dialog>
   );
 };
 
@@ -990,9 +993,12 @@ export default function SocialPanels({ isOpen, onClose }: Props) {
       />
 
       <aside
+        aria-label="Social panel"
+        aria-modal={isOpen}
         className={`socialPanel ${isOpen ? "open" : ""} ${
           selectedFriend ? "chatMode" : "peopleMode"
         }`}
+        role="dialog"
       >
         {!selectedFriend ? (
           <>

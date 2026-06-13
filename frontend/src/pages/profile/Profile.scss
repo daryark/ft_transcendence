@@ -229,14 +229,7 @@
 }
 
 .profile-page__editOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 120;
-  display: grid;
-  place-items: center;
-  padding: 1rem;
-  background: rgba(3, 6, 10, 0.82);
-  backdrop-filter: blur(14px);
+  width: min(36rem, 100%);
 }
 
 .profile-page__editModal {

@@ -130,6 +130,14 @@ select:focus-visible {
   color: var(--app-text);
 }
 
+body.reduced-game-effects *,
+body.reduced-game-effects *::before,
+body.reduced-game-effects *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
 @media (max-width: 700px) {
   body::after {
     font-size: 0.92rem;

@@ -12,12 +12,14 @@ export type ClientToServerEvents =
     | "mode:leave"
     | "room:start"
     | "player:move"
+    | "game:resume"
     | "game:stop";
 
 export type ServerToClientEvents =
     | "session:identity"
     | "game:start"
     | "game:update"
+    | "game:resume"
     | "game:end"
     | "round:start"
     | "round:end"
@@ -27,6 +29,40 @@ export type ServerToClientEvents =
 
 export function emitError(socket: Socket, reason: string) {
     socket.emit("server:error" as ServerToClientEvents, { reason });
+}
+
+function serializeResumePayload(room: NonNullable<ReturnType<RoomService["getRoom"]>>) {
+    const customEngine = room.engine as any;
+    const versusPlayers: Record<string, unknown> = {};
+
+    if (customEngine?.playerEngines instanceof Map) {
+        for (const player of room.players.values()) {
+            const playerId = String(player.id);
+            const playerEngine = customEngine.playerEngines.get(playerId);
+            const state = playerEngine?.room?.state ?? null;
+
+            versusPlayers[playerId] = {
+                id: player.id,
+                username: player.profile?.nickname ?? `Player ${playerId.slice(0, 5)}`,
+                rank: player.profile?.rank,
+                state,
+                gameOver: Boolean(
+                    state?.gameOver ||
+                    customEngine.eliminatedPlayerIds?.has?.(playerId),
+                ),
+            };
+        }
+    }
+
+    return {
+        roomId: room.id,
+        status: room.status,
+        state: room.state,
+        config: room.gameConfig,
+        ...(Object.keys(versusPlayers).length > 0
+            ? { players: versusPlayers }
+            : {}),
+    };
 }
 
 export default function gameHandlers(
@@ -53,6 +89,25 @@ export default function gameHandlers(
             const room = roomService.getRoom(roomId);
             room?.engine?.pushInput(input);
         }
+    });
+
+    socket.on("game:resume", () => {
+        const { roomId } = socket.data as SocketData;
+        if (!roomId) {
+            emitError(socket, "NO_ACTIVE_GAME");
+            return;
+        }
+
+        const room = roomService.getRoom(roomId);
+        if (!room) {
+            emitError(socket, "ROOM_NOT_FOUND");
+            return;
+        }
+
+        socket.emit(
+            "game:resume" as ServerToClientEvents,
+            serializeResumePayload(room),
+        );
     });
 
     socket.on("mode:leave", () => {

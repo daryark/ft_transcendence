@@ -15,6 +15,7 @@ interface GameBoardProps {
 const MIN_VISIBLE_TOP_Y = -4;
 const DANGER_STACK_RATIO = 0.8;
 const SPAWN_Y = -3;
+const EMPTY_BUFFER: number[][] = [];
 
 function getBufferedCell(
   board: number[][],
@@ -182,7 +183,7 @@ export default function GameBoard({
 }: GameBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { rows, cols, board, current, next } = gameState;
-  const buffer = gameState.buffer ?? [];
+  const buffer = gameState.buffer ?? EMPTY_BUFFER;
   const safeRows = Math.max(rows, board.length, 1);
   const safeCols = Math.max(cols, board[0]?.length ?? 0, 1);
   const topY = useMemo(() => {

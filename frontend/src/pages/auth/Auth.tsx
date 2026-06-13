@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { apiJson } from "../../api/client";
 import {
   createAnonymousSession,
   getSessionUser,
@@ -11,264 +12,236 @@ import "./Auth.scss";
 
 type AuthMode = "login" | "register";
 
-type AuthInput = {
-  email?: string;
-  login?: string;
-  password: string;
-  username?: string;
-};
-
 type AuthResponse = {
   message?: string;
   error?: string;
-  user?: SessionUser | null;
-  token?: string;
+  user?: unknown;
+  token?: unknown;
 };
 
-const parseAuthResponse = async (res: Response): Promise<AuthResponse> => {
-  try {
-    return (await res.json()) as AuthResponse;
-  } catch {
-    return {};
-  }
-};
+function isSessionUser(value: unknown): value is SessionUser {
+  if (!value || typeof value !== "object") return false;
+  const user = value as Record<string, unknown>;
+  return (
+    typeof user.id === "number" &&
+    typeof user.email === "string" &&
+    typeof user.username === "string" &&
+    (typeof user.created_at === "string" || user.created_at === null)
+  );
+}
 
-const requestAuth = async (
+async function requestAuth(
   mode: AuthMode,
-  input: AuthInput,
-): Promise<SessionData> => {
-  const endpoint = mode === "login" ? "/api/auth/login" : "/api/auth/register";
-
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+  input: Record<string, string>,
+): Promise<SessionData> {
+  const response = await apiJson<AuthResponse>(
+    mode === "login" ? "/api/auth/login" : "/api/auth/register",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
     },
-    body: JSON.stringify(input),
-  });
+  );
 
-  const payload = await parseAuthResponse(res);
-
-  if (!res.ok) {
-    throw new Error(
-      payload.error || payload.message || "Authentication failed",
-    );
+  if (!isSessionUser(response.user)) {
+    throw new Error(response.error || response.message || "Invalid auth response");
   }
 
-  if (!payload.user) {
-    throw new Error(
-      mode === "login" ? "Invalid email or password" : "Registration failed",
-    );
+  if (response.token !== undefined && typeof response.token !== "string") {
+    throw new Error("Invalid authentication token");
   }
 
   return {
-    user: payload.user,
-    token: payload.token,
+    user: response.user,
+    token: response.token,
   };
-};
+}
 
-//export add
-const registerUser = async (data: {
-  email: string;
-  password: string;
-  username: string;
-}) => requestAuth("register", data);
-
-//export add
-// const loginUser = async (data: { login: string; password: string }) =>
-//   requestAuth("login", {
-//     // login: data.login,
-//     // email: data.login,
-//     username: data.login,
-//     password: data.password,
-//   });
-
-const loginUser = async (data: { login: string; password: string }) => {
-  const isEmail = data.login.includes("@");
-
-  return requestAuth("login", {
-    ...(isEmail
-      ? { email: data.login.trim() }
-      : { username: data.login.trim() }),
-
-    password: data.password,
-  });
-};
-
-//////////////////////////////
-const Auth = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const navigate = useNavigate();
-
-  const [loginOrEmail, setLoginOrEmail] = useState("");
+export default function Auth() {
+  const [mode, setMode] = useState<AuthMode>("login");
+  const [login, setLogin] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [username, setUsername] = useState("");
-
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const returnPath = useMemo(() => {
+    if (
+      typeof location.state === "object" &&
+      location.state !== null &&
+      "from" in location.state &&
+      typeof location.state.from === "string" &&
+      location.state.from.startsWith("/")
+    ) {
+      return location.state.from;
+    }
+    return "/play";
+  }, [location.state]);
 
   useEffect(() => {
-    if (getSessionUser()) {
-      navigate("/play", { replace: true });
-    }
-  }, [navigate]);
+    if (getSessionUser()) navigate(returnPath, { replace: true });
+  }, [navigate, returnPath]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
-      setLoading(true);
-      setError("");
-
-      const session = isLogin
-        ? await loginUser({ login: loginOrEmail.trim(), password })
-        : await registerUser({ email, password, username });
+      const session =
+        mode === "login"
+          ? await requestAuth("login", {
+              ...(login.includes("@")
+                ? { email: login.trim() }
+                : { username: login.trim() }),
+              password,
+            })
+          : await requestAuth("register", {
+              email: email.trim(),
+              password,
+              username: username.trim(),
+            });
 
       saveSession(session);
-
-      navigate("/play");
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Authentication failed");
+      navigate(returnPath, { replace: true });
+    } catch (nextError) {
+      setError(
+        nextError instanceof Error
+          ? nextError.message
+          : "Authentication failed",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAnonymous = () => {
-    saveSession(createAnonymousSession());
-    navigate("/play");
-  };
-
-  const handleGitHubLogin = () => {
-    window.location.href = "/api/auth/github";
-  };
-
   return (
     <div className="auth">
-      {/* left*/}
       <div className="auth__left">
-        <div className="auth__tetris-animation">
-          {[...Array(20)].map((_, i) => (
-            <div key={i} className="tetris-block">
-              {["🟦", "🟧", "🟪", "🟩", "🟥"][i % 5]}
+        <div className="auth__tetris-animation" aria-hidden="true">
+          {Array.from({ length: 20 }, (_, index) => (
+            <div className="tetris-block" key={index}>
+              {["I", "O", "T", "S", "Z"][index % 5]}
             </div>
           ))}
         </div>
         <div className="auth__overlay">
           <h1>TETRA</h1>
-          <p>amazing game in this world</p>
+          <p>FAST, SOCIAL, COMPETITIVE BLOCK STACKING</p>
         </div>
       </div>
 
-      {/* rigth */}
       <div className="auth__right">
         <div className="auth__card">
-          {/* header form */}
           <div className="auth__header">
-            <h2>{isLogin ? "Welcome back" : "Create account"}</h2>
-            <p>{isLogin ? "Enter your credentials" : "Start your journey"}</p>
+            <h2>{mode === "login" ? "Welcome back" : "Create account"}</h2>
+            <p>
+              {mode === "login"
+                ? "Enter your credentials"
+                : "Start your journey"}
+            </p>
           </div>
 
-          {/* switch parts login/registration */}
           <div className="auth__tabs">
-            <button
-              type="button"
-              className={isLogin ? "active" : ""}
-              onClick={() => {
-                setIsLogin(true);
-                setError("");
-              }}
-            >
-              Login
-            </button>
-
-            <button
-              type="button"
-              className={!isLogin ? "active" : ""}
-              onClick={() => {
-                setIsLogin(false);
-                setError("");
-              }}
-            >
-              Register
-            </button>
+            {(["login", "register"] as AuthMode[]).map((nextMode) => (
+              <button
+                className={mode === nextMode ? "active" : ""}
+                key={nextMode}
+                onClick={() => {
+                  setMode(nextMode);
+                  setError("");
+                }}
+                type="button"
+              >
+                {nextMode}
+              </button>
+            ))}
           </div>
 
-          {/* form */}
-          <form onSubmit={handleSubmit} className="auth__form">
-            {!isLogin && (
+          <form className="auth__form" onSubmit={handleSubmit}>
+            {mode === "register" && (
               <input
-                type="text"
-                placeholder="Username"
-                value={username}
-                minLength={3}
-                maxLength={100}
-                required={!isLogin}
                 autoComplete="username"
-                onChange={(e) => setUsername(e.target.value)}
+                maxLength={100}
+                minLength={3}
+                onChange={(event) => setUsername(event.target.value)}
+                placeholder="Username"
+                required
+                value={username}
               />
             )}
-
-            {isLogin ? (
+            {mode === "login" ? (
               <input
-                type="text"
-                placeholder="Username or email"
-                // placeholder="Username"
-                value={loginOrEmail}
-                required
                 autoComplete="username"
-                onChange={(e) => setLoginOrEmail(e.target.value)}
+                onChange={(event) => setLogin(event.target.value)}
+                placeholder="Username or email"
+                required
+                value={login}
               />
             ) : (
               <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                required
                 autoComplete="email"
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(event) => setEmail(event.target.value)}
+                placeholder="Email"
+                required
+                type="email"
+                value={email}
               />
             )}
-
             <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              minLength={isLogin ? 1 : 8}
+              autoComplete={
+                mode === "login" ? "current-password" : "new-password"
+              }
               maxLength={128}
+              minLength={mode === "login" ? 1 : 8}
+              onChange={(event) => setPassword(event.target.value)}
+              placeholder="Password"
               required
-              autoComplete={isLogin ? "current-password" : "new-password"}
-              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              value={password}
             />
-
-            <button className="auth__submit" type="submit" disabled={loading}>
-              {loading ? "Loading..." : isLogin ? "Login" : "Create account"}
+            <button className="auth__submit" disabled={loading} type="submit">
+              {loading
+                ? "LOADING..."
+                : mode === "login"
+                  ? "LOGIN"
+                  : "CREATE ACCOUNT"}
             </button>
-
-            {error && <p className="auth__error">{error}</p>}
+            {error && (
+              <p className="auth__error" role="alert">
+                {error}
+              </p>
+            )}
           </form>
 
           <div className="auth__divider">
             <span>or continue with</span>
           </div>
-
-          {/* Oauth buttons */}
           <div className="auth__oauth">
             <button
               className="oauth github"
+              onClick={() => {
+                window.sessionStorage.setItem(
+                  "tetra-auth-return-path",
+                  returnPath,
+                );
+                window.location.href = "/api/auth/github";
+              }}
               type="button"
-              onClick={handleGitHubLogin}
             >
               GitHub
             </button>
           </div>
-
-          {/* anonymous */}
           <button
             className="auth__anonymous"
+            onClick={() => {
+              saveSession(createAnonymousSession());
+              navigate(returnPath, { replace: true });
+            }}
             type="button"
-            onClick={handleAnonymous}
           >
             Play as anonymous
           </button>
@@ -276,6 +249,4 @@ const Auth = () => {
       </div>
     </div>
   );
-};
-
-export default Auth;
+}

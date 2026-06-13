@@ -1,0 +1,28 @@
+.toast-region {
+  position: fixed;
+  top: calc(var(--app-header-height) + 1rem);
+  right: 1rem;
+  z-index: 200;
+  width: min(24rem, calc(100vw - 2rem));
+  display: grid;
+  gap: 0.55rem;
+}
+
+.toast {
+  min-height: 3rem;
+  padding: 0.75rem 1rem;
+  border-left: 0.3rem solid #77bfff;
+  background: rgba(8, 11, 16, 0.96);
+  color: #fff;
+  box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.42);
+  font-weight: 800;
+  text-align: left;
+}
+
+.toast--success {
+  border-color: #5ee58a;
+}
+
+.toast--error {
+  border-color: #ff5964;
+}

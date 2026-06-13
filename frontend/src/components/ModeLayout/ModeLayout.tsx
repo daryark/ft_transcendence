@@ -1,4 +1,4 @@
-// components/ModeLayout/ModeLayout.tsx
+import type { CSSProperties, ReactNode } from "react";
 import BackButton from "../BackButton/BackButton";
 import "./ModeLayout.scss";
 
@@ -10,42 +10,36 @@ interface ModeLayoutProps {
   showMusic?: boolean;
   onStart: () => void;
   isLoading?: boolean;
-  options?: React.ReactNode;
-  advanced?: React.ReactNode;
-  tabs?: React.ReactNode;
-  headerExtra?: React.ReactNode;
+  options?: ReactNode;
+  advanced?: ReactNode;
+  tabs?: ReactNode;
+  headerExtra?: ReactNode;
 }
 
-export const ModeLayout: React.FC<ModeLayoutProps> = ({
+export function ModeLayout({
   title,
   description,
   accentColor,
   personalBest,
-  showMusic = true,
   onStart,
   isLoading = false,
-  // options,
-  // advanced,
-  // tabs,
   headerExtra,
-}) => {
+}: ModeLayoutProps) {
   const lines = Array.isArray(description) ? description : [description];
 
   return (
     <div
       className="mode-layout"
-      style={{ "--accent": accentColor } as React.CSSProperties}
+      style={{ "--accent": accentColor } as CSSProperties}
     >
       <BackButton />
 
-      {/* Main block */}
       <div className="mode-layout__content">
-        {/* Инфо-карточка */}
         <div className="mode-layout__info">
           <div className="mode-layout__info-left">
             <h2>{title}</h2>
-            {lines.map((line, i) => (
-              <p key={i}>{line}</p>
+            {lines.map((line) => (
+              <p key={line}>{line}</p>
             ))}
             {personalBest && (
               <div className="mode-layout__pb">
@@ -59,11 +53,7 @@ export const ModeLayout: React.FC<ModeLayoutProps> = ({
           )}
         </div>
 
-        {/* music + start */}
         <div className="mode-layout__start-row">
-          {showMusic && (
-            <div className="mode-layout__music">♪ RANDOM: CALM</div>
-          )}
           <button
             className="mode-layout__start"
             disabled={isLoading}
@@ -73,14 +63,7 @@ export const ModeLayout: React.FC<ModeLayoutProps> = ({
             {isLoading ? "STARTING" : "START"}
           </button>
         </div>
-
-        {/* only custom */}
-        {/* {tabs}
-
-        {options}
-
-        {advanced} */}
       </div>
     </div>
   );
-};
+}

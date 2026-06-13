@@ -14,6 +14,8 @@ import {
   type SessionUser,
 } from "../../auth/session";
 import "./Profile.scss";
+import Dialog from "../../components/Dialog/Dialog";
+import { EmptyState, Skeleton } from "../../components/StateView/StateView";
 
 type ModeKey = "league" | "quickPlay" | "fortyLines" | "blitz" | "zen";
 
@@ -325,7 +327,11 @@ const EditProfileModal = ({
   };
 
   return (
-    <div className="profile-page__editOverlay" role="presentation">
+    <Dialog
+      className="profile-page__editOverlay"
+      label="Edit profile"
+      onClose={onClose}
+    >
       <form className="profile-page__editModal" onSubmit={handleSubmit}>
         <button
           className="profile-page__editClose"
@@ -383,7 +389,7 @@ const EditProfileModal = ({
           {saving ? "SAVING..." : "SAVE CHANGES"}
         </button>
       </form>
-    </div>
+    </Dialog>
   );
 };
 
@@ -477,16 +483,20 @@ export default function Profile() {
   };
 
   if (loading) {
-    return <div className="profile-page profile-page--state">Loading...</div>;
+    return (
+      <div className="profile-page profile-page--state">
+        <Skeleton lines={7} />
+      </div>
+    );
   }
 
   if (!profile) {
     return (
       <div className="profile-page profile-page--state">
-        <section className="profile-page__emptyState">
-          <h1>Profile unavailable</h1>
-          {error && <p>{error}</p>}
-        </section>
+        <EmptyState
+          title="PROFILE UNAVAILABLE"
+          message={error || "The requested profile could not be found."}
+        />
       </div>
     );
   }

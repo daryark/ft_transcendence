@@ -194,14 +194,7 @@
 }
 
 .profileOverlay {
-  position: fixed;
-  inset: 0;
-  z-index: 120;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1rem;
-  background: rgba(0, 0, 0, 0.78);
+  width: min(38rem, 100%);
 }
 
 .profileModal {

@@ -11,6 +11,7 @@ const ANONYMOUS_SOCKET_KEY = "__anonymous__";
 let socket: Socket | null = null;
 let socketToken: string | null = null;
 let socketIdentityId: string | null = null;
+let socketError: string | null = null;
 
 const emitSocketChange = () => {
   window.dispatchEvent(new Event(SOCKET_EVENT));
@@ -41,6 +42,15 @@ export const connectSocket = (token?: string) => {
           : null;
       emitSocketChange();
     });
+    socket.on("connect", () => {
+      socketError = null;
+      emitSocketChange();
+    });
+    socket.on("disconnect", () => emitSocketChange());
+    socket.on("connect_error", (error) => {
+      socketError = error.message || "Unable to connect to the game server";
+      emitSocketChange();
+    });
     socketToken = nextSocketToken;
     emitSocketChange();
   }
@@ -51,12 +61,14 @@ export const connectSocket = (token?: string) => {
 export const getSocket = () => socket;
 
 export const getSocketIdentityId = () => socketIdentityId;
+export const getSocketError = () => socketError;
 
 export const disconnectSocket = () => {
   socket?.disconnect();
   socket = null;
   socketToken = null;
   socketIdentityId = null;
+  socketError = null;
   emitSocketChange();
 };
 

@@ -39,6 +39,9 @@ export default function OAuthSuccess() {
 
   useEffect(() => {
     const code = new URLSearchParams(window.location.search).get("code");
+    const returnPath =
+      window.sessionStorage.getItem("tetra-auth-return-path") || "/play";
+    window.sessionStorage.removeItem("tetra-auth-return-path");
 
     if (!code) {
       navigate("/", { replace: true });
@@ -85,7 +88,7 @@ export default function OAuthSuccess() {
           },
         });
 
-        navigate("/play", { replace: true });
+        navigate(returnPath, { replace: true });
       } catch {
         navigate("/", { replace: true });
       }

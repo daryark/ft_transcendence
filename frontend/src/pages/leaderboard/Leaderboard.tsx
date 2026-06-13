@@ -1,8 +1,9 @@
 import { useParams, useNavigate } from "react-router-dom";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { authFetch } from "../../auth/authFetch";
 import { userCapabilities } from "../../auth/capabilities";
 import { getSessionUser, subscribeToSession } from "../../auth/session";
+import { apiJson } from "../../api/client";
+import { EmptyState, Skeleton } from "../../components/StateView/StateView";
 
 import "./Leaderboard.scss";
 
@@ -28,16 +29,37 @@ const isLeaderboardScope = (value?: string): value is LeaderboardScope =>
 const fetchLeaderboard = async (
   mode: LeaderboardMode,
   scope: LeaderboardScope,
+  signal: AbortSignal,
 ) => {
-  const res = await authFetch(
+  const data = await apiJson<unknown>(
     `/api/leaderboards?mode=${encodeURIComponent(mode)}&scope=${encodeURIComponent(scope)}`,
+    { signal },
   );
 
-  if (!res.ok) {
-    throw new Error("Failed to fetch leaderboard");
+  if (!Array.isArray(data)) {
+    throw new Error("Leaderboard API returned invalid data");
   }
 
-  return res.json();
+  return data.map((entry, index): Player => {
+    if (!entry || typeof entry !== "object") {
+      throw new Error(`Invalid leaderboard entry ${index + 1}`);
+    }
+    const value = entry as Record<string, unknown>;
+    if (
+      typeof value.id !== "number" ||
+      typeof value.name !== "string" ||
+      typeof value.score !== "number" ||
+      typeof value.country !== "string"
+    ) {
+      throw new Error(`Invalid leaderboard entry ${index + 1}`);
+    }
+    return {
+      id: value.id,
+      name: value.name,
+      score: value.score,
+      country: value.country,
+    };
+  });
 };
 
 export default function Leaderboard() {
@@ -73,22 +95,36 @@ export default function Leaderboard() {
   }, [currentMode, currentScope, navigate, requestedScope]);
 
   useEffect(() => {
+    const controller = new AbortController();
     const loadData = async () => {
       try {
         setLoading(true);
         setError(null);
 
-        const data = await fetchLeaderboard(currentMode, currentScope);
+        const data = await fetchLeaderboard(
+          currentMode,
+          currentScope,
+          controller.signal,
+        );
 
         setPlayers(data);
-      } catch {
-        setError("Error loading leaderboard");
+      } catch (nextError) {
+        if (
+          !(nextError instanceof DOMException && nextError.name === "AbortError")
+        ) {
+          setError(
+            nextError instanceof Error
+              ? nextError.message
+              : "Error loading leaderboard",
+          );
+        }
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
     };
 
-    loadData();
+    void loadData();
+    return () => controller.abort();
   }, [currentMode, currentScope]);
 
   return (
@@ -157,11 +193,20 @@ export default function Leaderboard() {
       </div>
 
       {/* STATES */}
-      {loading && <p>Loading...</p>}
-      {error && <p>{error}</p>}
+      {loading && <Skeleton lines={8} />}
+      {error && (
+        <EmptyState title="LEADERBOARD UNAVAILABLE" message={error} />
+      )}
 
       {/* TABLE */}
-      {!loading && !error && (
+      {!loading && !error && players.length === 0 && (
+        <EmptyState
+          title="NO SCORES YET"
+          message="Complete a match to appear on this leaderboard."
+        />
+      )}
+
+      {!loading && !error && players.length > 0 && (
         <table className="leaderboard__table">
           <thead>
             <tr>

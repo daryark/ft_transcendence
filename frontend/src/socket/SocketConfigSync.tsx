@@ -6,8 +6,10 @@ import {
 } from "../auth/session";
 import { saveGameConfig, type GameConfigDTO } from "./gameConfigStorage";
 import { connectSocket, disconnectSocket } from "./socketClient";
+import { useToast } from "../components/Toast/ToastProvider";
 
 export default function SocketConfigSync() {
+  const { showToast } = useToast();
   const [session, setSession] = useState<SessionData | null>(() =>
     getSession(),
   );
@@ -28,7 +30,12 @@ export default function SocketConfigSync() {
     const handleGameConfig = (config: GameConfigDTO) => {
       saveGameConfig(config);
     };
-    const handleConnectError = () => undefined;
+    const handleConnectError = (error: Error) => {
+      showToast(
+        error.message || "Unable to connect to the game server.",
+        "error",
+      );
+    };
 
     socket.on("game:config", handleGameConfig);
     socket.on("connect_error", handleConnectError);
@@ -37,7 +44,7 @@ export default function SocketConfigSync() {
       socket.off("game:config", handleGameConfig);
       socket.off("connect_error", handleConnectError);
     };
-  }, [session]);
+  }, [session, showToast]);
 
   return null;
 }

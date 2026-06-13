@@ -23,6 +23,26 @@
   text-align: center;
 }
 
+.game-network-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-content: center;
+  gap: 0.45rem;
+  padding: 1rem;
+  background: rgba(2, 4, 7, 0.76);
+  color: #fff;
+  text-align: center;
+  backdrop-filter: blur(0.3rem);
+}
+
+.game-network-overlay strong {
+  color: #ff765e;
+  font-family: var(--app-font-display);
+  font-size: clamp(2rem, 6vw, 4rem);
+}
+
 .solo-game--versus {
   min-height: 100vh;
   padding: 0;
@@ -876,6 +896,16 @@ body.game-session-active {
 }
 
 @media (max-width: 860px) {
+  body.game-session-active {
+    overflow: auto;
+  }
+
+  .solo-game--versus,
+  .room-game,
+  .versus-game__stage {
+    overflow: visible;
+  }
+
   .versus-game__topbar,
   .versus-game__stage {
     grid-template-columns: minmax(0, 1fr);

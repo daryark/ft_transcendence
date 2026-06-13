@@ -16,6 +16,12 @@ import Profile from "./pages/profile/Profile";
 import SocketConfigSync from "./socket/SocketConfigSync";
 import OAuthSuccess from "./pages/auth/OAuthSuccess";
 import GamePage from "./pages/game/GamePage";
+import ErrorBoundary from "./components/ErrorBoundary/ErrorBoundary";
+import { ToastProvider } from "./components/Toast/ToastProvider";
+import { ConfirmProvider } from "./components/Confirm/ConfirmProvider";
+import { MusicProvider } from "./music/MusicProvider";
+import { NetworkProvider } from "./network/NetworkProvider";
+import { ForbiddenPage, OfflinePage } from "./pages/system/SystemPage";
 
 import "./styles/globals.scss";
 
@@ -27,10 +33,15 @@ function GameRoute() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <SocketConfigSync />
-      <Routes>
-        <Route path="/" element={<Layout />}>
+    <ErrorBoundary>
+      <ToastProvider>
+        <ConfirmProvider>
+          <MusicProvider>
+            <BrowserRouter>
+              <SocketConfigSync />
+              <NetworkProvider>
+                <Routes>
+                  <Route path="/" element={<Layout />}>
           <Route index element={<Auth />} />
           <Route
             path="play/*"
@@ -101,6 +112,8 @@ export default function App() {
             element={<Leaderboard />}
           />
           <Route path="about" element={<About />} />
+          <Route path="forbidden" element={<ForbiddenPage />} />
+          <Route path="offline" element={<OfflinePage />} />
           <Route path="profile/:username" element={<Profile />} />
           <Route
             path="game/:gameId"
@@ -112,10 +125,15 @@ export default function App() {
           />
           <Route path="auth" element={<Auth />} />
           <Route path="*" element={<NotFound />} />
-        </Route>
+                  </Route>
 
-        <Route path="auth/callback" element={<OAuthSuccess />} />
-      </Routes>
-    </BrowserRouter>
+                  <Route path="auth/callback" element={<OAuthSuccess />} />
+                </Routes>
+              </NetworkProvider>
+            </BrowserRouter>
+          </MusicProvider>
+        </ConfirmProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
