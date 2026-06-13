@@ -10,6 +10,7 @@ const ANONYMOUS_SOCKET_KEY = "__anonymous__";
 
 let socket: Socket | null = null;
 let socketToken: string | null = null;
+let socketIdentityId: string | null = null;
 
 const emitSocketChange = () => {
   window.dispatchEvent(new Event(SOCKET_EVENT));
@@ -22,6 +23,7 @@ export const connectSocket = (token?: string) => {
     socket.disconnect();
     socket = null;
     socketToken = null;
+    socketIdentityId = null;
   }
 
   if (!socket) {
@@ -32,6 +34,13 @@ export const connectSocket = (token?: string) => {
       },
       transports: ["websocket", "polling"],
     });
+    socket.on("session:identity", (payload: { id?: unknown }) => {
+      socketIdentityId =
+        typeof payload?.id === "string" || typeof payload?.id === "number"
+          ? String(payload.id)
+          : null;
+      emitSocketChange();
+    });
     socketToken = nextSocketToken;
     emitSocketChange();
   }
@@ -41,10 +50,13 @@ export const connectSocket = (token?: string) => {
 
 export const getSocket = () => socket;
 
+export const getSocketIdentityId = () => socketIdentityId;
+
 export const disconnectSocket = () => {
   socket?.disconnect();
   socket = null;
   socketToken = null;
+  socketIdentityId = null;
   emitSocketChange();
 };
 

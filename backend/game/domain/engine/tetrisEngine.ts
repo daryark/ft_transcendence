@@ -6,6 +6,7 @@ import Room from "../room";
 import type { RoomId } from "../room";
 import type { GameState, GameUpdateStats } from "./state";
 import type { Figure } from "./figures";
+import { figureCellValues } from "./figures";
 import type { ServerToClientEvents } from "../../../sockets/gameHandlers";
 
 type RoomService = {
@@ -205,7 +206,7 @@ export default function createEngine(room: Room, roomService: RoomService) {
         const y = current.y + dy;
 
         if (y >= 0 && y < state.rows && x >= 0 && x < state.cols) {
-          state.board[y][x] = 1;
+          state.board[y][x] = figureCellValues[current.type];
         }
       });
     });

@@ -7,6 +7,7 @@ type MultiplayerGameOverProps = {
   stats: GameStats;
   winnerId?: GameEndPayload["winnerId"];
   onNext: () => void;
+  modeLabel?: string;
 };
 
 function formatVersusName(name: string | undefined, fallback: string) {
@@ -26,6 +27,7 @@ export default function MultiplayerGameOver({
   stats,
   winnerId,
   onNext,
+  modeLabel = "MULTIPLAYER",
 }: MultiplayerGameOverProps) {
   const winner = winnerId ? players[String(winnerId)] : null;
 
@@ -39,8 +41,8 @@ export default function MultiplayerGameOver({
         </div>
       </header>
 
-      <section className="solo-game-results__card" aria-label="Custom game results">
-        <span className="solo-game-results__eyebrow">CUSTOM ROOM</span>
+      <section className="solo-game-results__card" aria-label={`${modeLabel} results`}>
+        <span className="solo-game-results__eyebrow">{modeLabel}</span>
         <strong className="solo-game-results__time solo-game-results__time--message">
           {winner ? `${formatVersusName(winner.username, "PLAYER")} WINS` : "ROUND ENDED"}
         </strong>

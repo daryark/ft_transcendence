@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 import createEngine from '../../game/domain/engine/tetrisEngine';
 import { TICK_MS } from '../../game/domain/engine/tetrisEngine';
-import { createFigure, figures } from '../../game/domain/engine/figures';
+import { createFigure, figureCellValues, figures } from '../../game/domain/engine/figures';
 import { initGame } from '../../game/domain/engine/state';
 import { createConfig } from '../../game/config/configBase';
 import type Room from '../../game/domain/room';
@@ -77,6 +77,7 @@ describe('tetris engine solo runtime loop', () => {
 
   test('counts a piece only when it locks', () => {
     const room = createRoom();
+    room.state!.current = createFigure('T', room.state!.cols);
     const roomService = { broadcast: jest.fn() };
 
     const engine = createEngine(room, roomService);
@@ -86,6 +87,9 @@ describe('tetris engine solo runtime loop', () => {
 
     expect(room.state!.piecesPlaced).toBe(1);
     expect(room.state!.update.piecesPlaced).toBe(1);
+    expect(
+      room.state!.board.flat().filter((cell) => cell !== 0),
+    ).toEqual(Array(4).fill(figureCellValues.T));
   });
 
   test('grounded piece locks after lock delay even if rotated repeatedly', () => {
@@ -103,7 +107,9 @@ describe('tetris engine solo runtime loop', () => {
     }
     jest.advanceTimersByTime(TICK_MS * 60);
 
-    expect(room.state!.board.flat().some((cell) => cell === 1)).toBe(true);
+    expect(
+      room.state!.board.flat().some((cell) => cell === figureCellValues.J),
+    ).toBe(true);
     engine.stop();
   });
 
@@ -117,7 +123,9 @@ describe('tetris engine solo runtime loop', () => {
     engines.push(engine);
     jest.advanceTimersByTime(TICK_MS * 31);
 
-    expect(room.state!.board.flat().some((cell) => cell === 1)).toBe(true);
+    expect(
+      room.state!.board.flat().some((cell) => cell === figureCellValues.O),
+    ).toBe(true);
     engine.stop();
   });
 

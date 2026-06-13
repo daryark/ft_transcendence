@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { Figure, GameState } from "../../pages/game/types";
-import { figureColors } from "../../pages/game/types";
+import {
+  boardCellFigureTypes,
+  figureColors,
+} from "../../pages/game/types";
 import "./GameBoard.scss";
 
 interface GameBoardProps {
   gameState: GameState;
   cellSize?: number;
+  showGhost?: boolean;
 }
 
 const HIDDEN_ROWS = 2;
@@ -79,6 +83,7 @@ function drawPiece(
 export default function GameBoard({
   gameState,
   cellSize = 30,
+  showGhost = true,
 }: GameBoardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const { rows, cols, board, current } = gameState;
@@ -111,7 +116,11 @@ export default function GameBoard({
       row.forEach((cell, colIndex) => {
         if (!cell) return;
 
-        ctx.fillStyle = "#58606f";
+        const figureType = boardCellFigureTypes[cell];
+
+        ctx.fillStyle = figureType
+          ? figureColors[figureType]
+          : "#58606f";
         ctx.fillRect(
           colIndex * cellSize,
           (rowIndex + HIDDEN_ROWS) * cellSize,
@@ -128,9 +137,11 @@ export default function GameBoard({
       });
     });
 
-    ctx.globalAlpha = 0.22;
-    drawPiece(ctx, ghost, cellSize, figureColors[ghost.type]);
-    ctx.globalAlpha = 1;
+    if (showGhost) {
+      ctx.globalAlpha = 0.22;
+      drawPiece(ctx, ghost, cellSize, figureColors[ghost.type]);
+      ctx.globalAlpha = 1;
+    }
     drawPiece(ctx, current, cellSize, figureColors[current.type]);
 
     if (gameState.gameOver) {
@@ -141,7 +152,16 @@ export default function GameBoard({
       ctx.textAlign = "center";
       ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
     }
-  }, [board, cellSize, current, gameState.gameOver, ghost, safeCols, safeRows]);
+  }, [
+    board,
+    cellSize,
+    current,
+    gameState.gameOver,
+    ghost,
+    safeCols,
+    safeRows,
+    showGhost,
+  ]);
 
   return (
     <canvas

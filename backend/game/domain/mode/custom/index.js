@@ -456,7 +456,7 @@ function registerCustomRoomEvents(socket, roomService) {
 
     const roomId = socket.data.roomId;
     const identity = socket.data.identity;
-    if (!roomId || !identity) return;
+    if (!roomId || !identity || socket.data.role !== "player") return;
 
     const room = roomService.getRoom(roomId);
     if (!room || room.gameConfig.mode !== "custom") return;

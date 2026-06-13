@@ -34,6 +34,9 @@ export default function socketSetup(io: Server) {
     io.use(socketAuth(playerService));
     io.on("connection", (socket) => {
         console.log('New client connected:', socket.id);
+        socket.emit("session:identity", {
+            id: socket.data.identity.id,
+        });
         if (socket.data.roomId) {
             socket.join(socket.data.roomId);
         }

@@ -15,14 +15,14 @@ import ProtectedRoute from "./components/Auth/ProtectedRoute";
 import Profile from "./pages/profile/Profile";
 import SocketConfigSync from "./socket/SocketConfigSync";
 import OAuthSuccess from "./pages/auth/OAuthSuccess";
-import SoloGame from "./pages/game/SoloGame";
+import GamePage from "./pages/game/GamePage";
 
 import "./styles/globals.scss";
 
 function GameRoute() {
   const { gameId } = useParams<{ gameId: string }>();
 
-  return <SoloGame key={gameId} />;
+  return <GamePage key={gameId} />;
 }
 
 export default function App() {

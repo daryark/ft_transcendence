@@ -15,6 +15,7 @@ export type ClientToServerEvents =
     | "game:stop";
 
 export type ServerToClientEvents =
+    | "session:identity"
     | "game:start"
     | "game:update"
     | "game:end"
@@ -47,8 +48,8 @@ export default function gameHandlers(
     socket.on("player:move", (input: unknown) => {
         if (!isInput(input)) return;
 
-        const { roomId } = socket.data as SocketData;
-        if (roomId) {
+        const { roomId, role } = socket.data as SocketData;
+        if (roomId && role === "player") {
             const room = roomService.getRoom(roomId);
             room?.engine?.pushInput(input);
         }

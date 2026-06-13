@@ -84,6 +84,7 @@ export interface VersusPlayerState {
   username: string;
   rank?: string;
   state: GameState;
+  gameOver?: boolean;
 }
 
 export type PlayerMove =
@@ -106,6 +107,16 @@ export const figureColors: Record<FigureType, string> = {
   Z: "#ff5a66",
   J: "#5b75ff",
   L: "#ffad42",
+};
+
+export const boardCellFigureTypes: Record<number, FigureType> = {
+  1: "I",
+  2: "O",
+  3: "T",
+  4: "S",
+  5: "Z",
+  6: "J",
+  7: "L",
 };
 
 // export const figureColors: Record<FigureType, string> = {

@@ -1,5 +1,15 @@
 export type FigureType = "I" | "O" | "T" | "S" | "Z" | "J" | "L";
 
+export const figureCellValues: Record<FigureType, number> = {
+  I: 1,
+  O: 2,
+  T: 3,
+  S: 4,
+  Z: 5,
+  J: 6,
+  L: 7,
+};
+
 export interface Figure {
   type: FigureType;
   shape: number[][];

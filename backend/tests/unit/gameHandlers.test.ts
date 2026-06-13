@@ -245,7 +245,7 @@ describe('gameHandlers', () => {
 
   test('player:move pushes input to room engine when socket has roomId', () => {
     const pushInput = jest.fn();
-    const socket = createSocket({ data: { roomId: 'ROOM1' } });
+    const socket = createSocket({ data: { roomId: 'ROOM1', role: 'player' } });
     const modeService = { join: jest.fn() };
     const roomService = {
       getRoom: jest.fn<(roomId: string) => { engine: { pushInput: typeof pushInput } }>(
@@ -264,7 +264,7 @@ describe('gameHandlers', () => {
 
   test('player:move forwards held-input release to the room engine', () => {
     const pushInput = jest.fn();
-    const socket = createSocket({ data: { roomId: 'ROOM1' } });
+    const socket = createSocket({ data: { roomId: 'ROOM1', role: 'player' } });
     const modeService = { join: jest.fn() };
     const roomService = {
       getRoom: jest.fn(() => ({ engine: { pushInput } })),
@@ -296,7 +296,7 @@ describe('gameHandlers', () => {
   });
 
   test('player:move does not throw when room does not exist', () => {
-    const socket = createSocket({ data: { roomId: 'ROOM404' } });
+    const socket = createSocket({ data: { roomId: 'ROOM404', role: 'player' } });
     const modeService = { join: jest.fn() };
     const roomService = { getRoom: jest.fn<(roomId: string) => undefined>(() => undefined) };
 
@@ -310,7 +310,7 @@ describe('gameHandlers', () => {
 
   test('player:move ignores invalid input type', () => {
     const pushInput = jest.fn();
-    const socket = createSocket({ data: { roomId: 'ROOM1' } });
+    const socket = createSocket({ data: { roomId: 'ROOM1', role: 'player' } });
     const modeService = { join: jest.fn() };
     const roomService = {
       getRoom: jest.fn<(roomId: string) => { engine: { pushInput: typeof pushInput } }>(
@@ -328,7 +328,7 @@ describe('gameHandlers', () => {
   });
 
   test('player:move does not throw when room exists without engine', () => {
-    const socket = createSocket({ data: { roomId: 'ROOM1' } });
+    const socket = createSocket({ data: { roomId: 'ROOM1', role: 'player' } });
     const modeService = { join: jest.fn() };
     const roomService = {
       getRoom: jest.fn<(roomId: string) => { engine: null }>(() => ({ engine: null })),
@@ -340,5 +340,22 @@ describe('gameHandlers', () => {
 
     expect(() => handler({ type: 'left' })).not.toThrow();
     expect(roomService.getRoom).toHaveBeenCalledWith('ROOM1');
+  });
+
+  test('player:move ignores spectators', () => {
+    const pushInput = jest.fn();
+    const socket = createSocket({
+      data: { roomId: 'ROOM1', role: 'spectator' },
+    });
+    const modeService = { join: jest.fn() };
+    const roomService = {
+      getRoom: jest.fn(() => ({ engine: { pushInput } })),
+    };
+
+    registerGameHandlers(socket, { modeService, roomService });
+    getRegisteredHandler(socket, 'player:move')({ type: 'left' });
+
+    expect(roomService.getRoom).not.toHaveBeenCalled();
+    expect(pushInput).not.toHaveBeenCalled();
   });
 });

@@ -31,16 +31,16 @@
     rgba(0, 0, 0, 0.18);
 }
 
-body.solo-versus-active .header,
-body.solo-versus-active::after {
+body.game-session-active .header,
+body.game-session-active::after {
   display: none;
 }
 
-body.solo-versus-active::before {
+body.game-session-active::before {
   inset: 0;
 }
 
-body.solo-versus-active {
+body.game-session-active {
   overflow: hidden;
 }
 
@@ -94,7 +94,7 @@ body.solo-versus-active {
 .versus-game__stage {
   min-height: calc(100vh - 3.1rem);
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 35rem));
+  grid-template-columns: repeat(2, minmax(28rem, 35rem));
   align-items: center;
   justify-content: center;
   gap: clamp(1.2rem, 3vw, 3.5rem);
@@ -578,11 +578,260 @@ body.solo-versus-active {
   text-align: center;
 }
 
+.room-game {
+  --room-main-board-width: 18.75rem;
+
+  min-height: 100vh;
+  padding: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 125, 0, 0.12), transparent 32%),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.32), transparent 38%, transparent 62%, rgba(0, 0, 0, 0.32)),
+    rgba(5, 7, 11, 0.94);
+}
+
+.room-game__stage {
+  min-height: calc(100vh - 3.1rem);
+  display: grid;
+  grid-template-columns: auto minmax(9rem, auto);
+  align-items: center;
+  justify-content: center;
+  gap: clamp(1rem, 2vw, 2rem);
+  width: min(100%, 82rem);
+  margin: 0 auto;
+  padding: clamp(0.8rem, 2vh, 1.5rem);
+}
+
+.room-game__self {
+  display: grid;
+  grid-template-columns: 9.5rem var(--room-main-board-width) 9.5rem;
+  align-items: start;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+.room-game__left-rail,
+.room-game__right-rail {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 1.25rem;
+}
+
+.room-game__main-board {
+  display: grid;
+}
+
+.room-game__main-board .game-board {
+  width: auto;
+  max-width: none;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  border-radius: 0;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.85),
+    0 1rem 3rem rgba(0, 0, 0, 0.36);
+}
+
+.room-game__hold,
+.room-game__next {
+  gap: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #fff;
+}
+
+.room-game__hold h2,
+.room-game__next h2 {
+  min-height: 1.6rem;
+  display: grid;
+  align-items: center;
+  margin: 0;
+  padding: 0 0.45rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: #101217;
+  font-size: 1rem;
+}
+
+.room-game__hold .solo-game__preview,
+.room-game__next .solo-game__preview {
+  min-height: 5.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0;
+  background: rgba(5, 8, 13, 0.82);
+}
+
+.room-game__next .solo-game__next {
+  gap: 0.4rem;
+  padding-top: 0.4rem;
+}
+
+.room-game__stats {
+  display: grid;
+  gap: 0.9rem;
+  padding-right: 0.25rem;
+  color: #fff;
+  text-align: right;
+  text-shadow: 0 0 0.7rem rgba(0, 0, 0, 0.9);
+}
+
+.room-game__stats > div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: end;
+  column-gap: 0.4rem;
+}
+
+.room-game__stats span {
+  grid-column: 1 / -1;
+  color: rgba(255, 255, 255, 0.68);
+  font-family: var(--app-font-display);
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.room-game__stats strong {
+  font-family: var(--app-font-display);
+  font-size: clamp(1.6rem, 2.4vw, 2.5rem);
+  line-height: 0.9;
+}
+
+.room-game__stats small {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.room-game__population {
+  margin-left: 0.9rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.78rem;
+}
+
+.room-game__population::before {
+  content: "/";
+  margin-right: 0.9rem;
+}
+
+.room-game__opponents {
+  display: grid;
+  grid-template-columns: repeat(2, max-content);
+  align-content: center;
+  justify-content: center;
+  gap: clamp(0.55rem, 1vw, 0.8rem);
+  max-height: calc(100vh - 5.5rem);
+  overflow: auto;
+  padding: 0.5rem;
+}
+
+.room-game__opponents--1,
+.room-game__opponents--2,
+.room-game__opponents--3 {
+  grid-template-columns: max-content;
+}
+
+.room-game__opponent {
+  position: relative;
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  padding: 0.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(4, 7, 11, 0.76);
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    transform 0.15s ease;
+}
+
+.room-game__opponent:not(:disabled):hover,
+.room-game__opponent:not(:disabled):focus-visible {
+  border-color: #ff8a15;
+  background: rgba(255, 125, 0, 0.14);
+  transform: translateY(-2px);
+}
+
+.room-game__opponent:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
+.room-game__opponent .game-board {
+  width: auto;
+  max-width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.room-game__opponent-name {
+  width: 100%;
+  overflow: hidden;
+  padding: 0.35rem 0.2rem 0.15rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-family: var(--app-font-display);
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.room-game__opponent-stats {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding: 0.2rem 0.15rem 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.62rem;
+  font-weight: 900;
+}
+
+.room-game__watch {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 2;
+  transform: translate(-50%, -50%);
+  padding: 0.3rem 0.55rem;
+  background: rgba(255, 125, 0, 0.9);
+  color: #111;
+  font-family: var(--app-font-display);
+  font-size: 0.68rem;
+  font-weight: 900;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.room-game__opponent:not(:disabled):hover .room-game__watch,
+.room-game__opponent:not(:disabled):focus-visible .room-game__watch {
+  opacity: 1;
+}
+
+.room-game__waiting {
+  min-height: 20rem;
+  display: grid;
+  grid-column: 1 / -1;
+  place-items: center;
+  padding: 1rem;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  color: rgba(255, 255, 255, 0.72);
+  font-family: var(--app-font-display);
+  font-size: clamp(1.2rem, 2vw, 2rem);
+  font-weight: 900;
+  text-align: center;
+}
+
 @media (max-width: 860px) {
   .versus-game__topbar,
-  .versus-game__stage,
-  .versus-game__player--self,
-  .versus-game__player--opponent {
+  .versus-game__stage {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -592,6 +841,7 @@ body.solo-versus-active {
 
   .versus-game__player--self,
   .versus-game__player--opponent {
+    grid-template-columns: minmax(7rem, 8.5rem) auto minmax(7rem, 8.5rem);
     justify-self: center;
   }
 
@@ -648,5 +898,39 @@ body.solo-versus-active {
 
   .solo-game-results__status {
     justify-items: start;
+  }
+
+  .room-game {
+    overflow: auto;
+  }
+
+  .room-game__stage {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .room-game__self {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+  }
+
+  .room-game__hold,
+  .room-game__next {
+    width: min(100%, 22rem);
+  }
+
+  .room-game__opponents {
+    grid-template-columns: repeat(auto-fit, minmax(7rem, 9rem));
+    max-height: none;
+  }
+}
+
+@media (max-width: 620px) {
+  .versus-game__player--self,
+  .versus-game__player--opponent {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .room-game__population {
+    display: none;
   }
 }
