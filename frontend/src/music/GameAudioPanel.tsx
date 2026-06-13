@@ -33,6 +33,7 @@ function VolumeControl({
       className="game-audio-panel__control"
       onWheel={(event) => {
         event.preventDefault();
+        event.stopPropagation();
         adjust(event.deltaY < 0 ? 1 : -1);
       }}
       onKeyDown={(event) => {
@@ -62,6 +63,11 @@ export default function GameAudioPanel() {
   const { bgmVolume, setBgmVolume, setSfxVolume, sfxVolume } = useMusic();
   const [visible, setVisible] = useState(false);
   const fadeTimer = useRef<number | null>(null);
+  const volumesRef = useRef({ bgmVolume, sfxVolume });
+
+  useEffect(() => {
+    volumesRef.current = { bgmVolume, sfxVolume };
+  }, [bgmVolume, sfxVolume]);
 
   const reveal = useCallback(() => {
     setVisible(true);
@@ -73,14 +79,20 @@ export default function GameAudioPanel() {
   }, []);
 
   useEffect(() => {
-    window.addEventListener("wheel", reveal, {
-      passive: true,
-    });
+    const handleGlobalWheel = (event: WheelEvent) => {
+      const direction = event.deltaY < 0 ? 1 : -1;
+      const volumes = volumesRef.current;
+      setBgmVolume(volumes.bgmVolume + direction * WHEEL_STEP);
+      setSfxVolume(volumes.sfxVolume + direction * WHEEL_STEP);
+      reveal();
+    };
+
+    window.addEventListener("wheel", handleGlobalWheel, { passive: true });
     return () => {
-      window.removeEventListener("wheel", reveal);
+      window.removeEventListener("wheel", handleGlobalWheel);
       if (fadeTimer.current !== null) window.clearTimeout(fadeTimer.current);
     };
-  }, [reveal]);
+  }, [reveal, setBgmVolume, setSfxVolume]);
 
   return (
     <aside

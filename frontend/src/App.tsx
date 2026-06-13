@@ -22,6 +22,7 @@ import { ConfirmProvider } from "./components/Confirm/ConfirmProvider";
 import { MusicProvider } from "./music/MusicProvider";
 import { NetworkProvider } from "./network/NetworkProvider";
 import { ForbiddenPage, OfflinePage } from "./pages/system/SystemPage";
+import { BackgroundProvider } from "./background/BackgroundProvider";
 
 import "./styles/globals.scss";
 
@@ -36,11 +37,12 @@ export default function App() {
     <ErrorBoundary>
       <ToastProvider>
         <ConfirmProvider>
-          <MusicProvider>
-            <BrowserRouter>
-              <SocketConfigSync />
-              <NetworkProvider>
-                <Routes>
+          <BackgroundProvider>
+            <MusicProvider>
+              <BrowserRouter>
+                <SocketConfigSync />
+                <NetworkProvider>
+                  <Routes>
                   <Route path="/" element={<Layout />}>
           <Route index element={<Auth />} />
           <Route
@@ -128,10 +130,11 @@ export default function App() {
                   </Route>
 
                   <Route path="auth/callback" element={<OAuthSuccess />} />
-                </Routes>
-              </NetworkProvider>
-            </BrowserRouter>
-          </MusicProvider>
+                  </Routes>
+                </NetworkProvider>
+              </BrowserRouter>
+            </MusicProvider>
+          </BackgroundProvider>
         </ConfirmProvider>
       </ToastProvider>
     </ErrorBoundary>

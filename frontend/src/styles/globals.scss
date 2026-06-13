@@ -30,16 +30,17 @@
 body {
   min-height: 100vh;
   overflow-x: hidden;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.16), rgba(0, 0, 0, 0.42) 38%, rgba(0, 0, 0, 0.84) 100%),
-    radial-gradient(ellipse at 52% 76%, rgba(13, 10, 8, 0) 0 12%, rgba(3, 4, 6, 0.86) 13% 17%, transparent 18%),
-    linear-gradient(180deg, #20100c 0%, #5b3818 24%, #7a5729 42%, #34271c 62%, #07080a 86%),
-    var(--app-bg);
+  background: var(--app-bg);
   color: var(--app-text);
   font-family: var(--app-font-ui);
   font-stretch: condensed;
   letter-spacing: 0.055em;
   line-height: 1.25;
+}
+
+#root {
+  min-height: 100vh;
+  isolation: isolate;
 }
 
 body::before {
