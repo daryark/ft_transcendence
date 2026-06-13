@@ -32,13 +32,13 @@ export default function MiniFigure({ figure, size = 18 }: MiniFigureProps) {
         <div className="mini-figure__row" key={rowIndex}>
           {row.map((cell, colIndex) => (
             <span
-              className="mini-figure__cell"
+              className={`mini-figure__cell${
+                cell ? " mini-figure__cell--filled" : ""
+              }`}
               key={`${rowIndex}-${colIndex}`}
               style={{
                 "--cell-size": `${size}px`,
-                "--cell-color": cell
-                  ? figureColors[figure.type]
-                  : "transparent",
+                "--cell-color": figureColors[figure.type],
               } as CSSProperties}
             />
           ))}
