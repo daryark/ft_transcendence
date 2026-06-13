@@ -88,8 +88,6 @@ function drawPiece(
   color: string,
   topY: number,
 ) {
-  ctx.fillStyle = color;
-
   piece.shape.forEach((row, rowIndex) => {
     row.forEach((cell, colIndex) => {
       if (!cell) return;
@@ -98,11 +96,46 @@ function drawPiece(
       const y = piece.y + rowIndex - topY;
 
       if (y < 0) return;
-      ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-      ctx.strokeStyle = "rgba(255, 255, 255, 0.18)";
-      ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+      drawBlock(ctx, x, y, cellSize, color);
     });
   });
+}
+
+function drawBlock(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  cellSize: number,
+  color: string,
+) {
+  const left = x * cellSize;
+  const top = y * cellSize;
+  const inset = Math.max(1, cellSize * 0.08);
+
+  ctx.fillStyle = color;
+  ctx.fillRect(left, top, cellSize, cellSize);
+
+  ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
+  ctx.fillRect(left + inset, top + inset, cellSize - inset * 2, inset);
+  ctx.fillRect(left + inset, top + inset, inset, cellSize - inset * 2);
+
+  ctx.fillStyle = "rgba(0, 0, 0, 0.2)";
+  ctx.fillRect(
+    left + inset,
+    top + cellSize - inset * 2,
+    cellSize - inset * 2,
+    inset,
+  );
+  ctx.fillRect(
+    left + cellSize - inset * 2,
+    top + inset,
+    inset,
+    cellSize - inset * 2,
+  );
+
+  ctx.strokeStyle = "rgba(0, 0, 0, 0.34)";
+  ctx.lineWidth = 1;
+  ctx.strokeRect(left + 0.5, top + 0.5, cellSize - 1, cellSize - 1);
 }
 
 function drawDeathZone(
@@ -206,12 +239,14 @@ export default function GameBoard({
 
     canvas.width = safeCols * cellSize;
     canvas.height = canvasRows * cellSize;
+    const visibleTop = -topY * cellSize;
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#08090f";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "rgba(2, 5, 6, 0.9)";
+    ctx.fillRect(0, visibleTop, canvas.width, safeRows * cellSize);
 
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.07)";
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.11)";
+    ctx.lineWidth = 1;
     for (let row = -topY; row < canvasRows; row += 1) {
       for (let col = 0; col < safeCols; col += 1) {
         ctx.strokeRect(col * cellSize, row * cellSize, cellSize, cellSize);
@@ -226,21 +261,12 @@ export default function GameBoard({
         if (!cell) return;
 
         const figureType = boardCellFigureTypes[cell];
-        ctx.fillStyle = figureType
-          ? figureColors[figureType]
-          : "#58606f";
-        ctx.fillRect(
-          colIndex * cellSize,
-          (boardY - topY) * cellSize,
+        drawBlock(
+          ctx,
+          colIndex,
+          boardY - topY,
           cellSize,
-          cellSize,
-        );
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
-        ctx.strokeRect(
-          colIndex * cellSize,
-          (boardY - topY) * cellSize,
-          cellSize,
-          cellSize,
+          figureType ? figureColors[figureType] : "#58606f",
         );
       });
     });
@@ -251,21 +277,12 @@ export default function GameBoard({
 
         const figureType = boardCellFigureTypes[cell];
 
-        ctx.fillStyle = figureType
-          ? figureColors[figureType]
-          : "#58606f";
-        ctx.fillRect(
-          colIndex * cellSize,
-          (rowIndex - topY) * cellSize,
+        drawBlock(
+          ctx,
+          colIndex,
+          rowIndex - topY,
           cellSize,
-          cellSize,
-        );
-        ctx.strokeStyle = "rgba(255, 255, 255, 0.16)";
-        ctx.strokeRect(
-          colIndex * cellSize,
-          (rowIndex - topY) * cellSize,
-          cellSize,
-          cellSize,
+          figureType ? figureColors[figureType] : "#58606f",
         );
       });
     });
@@ -283,11 +300,15 @@ export default function GameBoard({
 
     if (gameState.gameOver) {
       ctx.fillStyle = "rgba(0, 0, 0, 0.72)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.fillRect(0, visibleTop, canvas.width, safeRows * cellSize);
       ctx.fillStyle = "#ffffff";
       ctx.font = `700 ${cellSize}px monospace`;
       ctx.textAlign = "center";
-      ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
+      ctx.fillText(
+        "GAME OVER",
+        canvas.width / 2,
+        visibleTop + (safeRows * cellSize) / 2,
+      );
     }
   }, [
     board,
@@ -306,11 +327,20 @@ export default function GameBoard({
   ]);
 
   return (
-    <canvas
-      className="game-board"
-      ref={canvasRef}
-      width={safeCols * cellSize}
-      height={canvasRows * cellSize}
-    />
+    <div
+      className={`game-board${showDeathZone ? " game-board--danger" : ""}`}
+      style={{
+        aspectRatio: `${safeCols} / ${safeRows}`,
+        width: `${safeCols * cellSize}px`,
+        maxWidth: "92vw",
+      }}
+    >
+      <canvas
+        className="game-board__canvas"
+        ref={canvasRef}
+        width={safeCols * cellSize}
+        height={canvasRows * cellSize}
+      />
+    </div>
   );
 }
