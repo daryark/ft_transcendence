@@ -21,6 +21,7 @@ export type ServerToClientEvents =
     | "round:start"
     | "round:end"
     | "room:update"
+    | "social:update"
     | "server:error";
 
 export function emitError(socket: Socket, reason: string) {

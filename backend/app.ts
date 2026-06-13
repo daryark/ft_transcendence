@@ -4,6 +4,7 @@ import { authenticateToken } from "./middleware/httpAuth";
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { getJwtSecret } from "./auth/jwt";
+import { emitSocialUpdate } from "./sockets/realtime";
 
 const app = express();
 export default app;
@@ -129,6 +130,7 @@ api.post("/auth/login", async (req: ApiRequest, res: Response) => {
 // OAuth routes (GitHub)
 api.get("/auth/github", oauthController.redirectToGitHub);
 api.get("/auth/github/callback", oauthController.githubCallback);
+api.post("/auth/github/exchange", oauthController.exchangeOAuthCode);
 
 api.get("/auth/me", authenticateToken, (req: ApiRequest, res: Response) => {
   res.json({ user: req.user });
@@ -268,6 +270,7 @@ api.get("/friends", authenticateToken, async (req: ApiRequest, res: Response) =>
         otherUser: {
           id: otherUser.id,
           username: otherUser.username,
+          avatarId: otherUser.avatar_id ?? 0,
         },
       };
     });
@@ -289,6 +292,10 @@ api.post("/friends/request", authenticateToken, async (req: ApiRequest, res: Res
 
     const friendId = getFriendActionTargetId(req.body);
     const friendship = await createFriendRequest({ userId: requesterUserId, friendId });
+    emitSocialUpdate([requesterUserId, friendId], {
+      action: friendship.status === "accepted" ? "accepted" : "requested",
+      userIds: [requesterUserId, friendId],
+    });
 
     return sendOk(res, {
       friendship: {
@@ -328,6 +335,10 @@ api.post("/friends/respond", authenticateToken, async (req: ApiRequest, res: Res
     const friendship = action === "accept"
       ? await acceptFriendRequestById(friendshipId, requesterUserId)
       : await rejectFriendRequestById(friendshipId, requesterUserId);
+    emitSocialUpdate([friendship.user_id, friendship.friend_id], {
+      action: action === "accept" ? "accepted" : "rejected",
+      userIds: [friendship.user_id, friendship.friend_id],
+    });
 
     return sendOk(res, {
       friendship: {
@@ -355,6 +366,10 @@ api.post("/friends/remove", authenticateToken, async (req: ApiRequest, res: Resp
 
     const targetUserId = getFriendActionTargetId(req.body);
     await removeFriendshipByPair(requesterUserId, targetUserId);
+    emitSocialUpdate([requesterUserId, targetUserId], {
+      action: "removed",
+      userIds: [requesterUserId, targetUserId],
+    });
 
     return sendOk(res, { removed: true });
   } catch (error) {
@@ -374,6 +389,10 @@ api.post("/friends/block", authenticateToken, async (req: ApiRequest, res: Respo
 
     const targetUserId = getFriendActionTargetId(req.body);
     const friendship = await blockFriendshipByPair(requesterUserId, targetUserId);
+    emitSocialUpdate([requesterUserId, targetUserId], {
+      action: "blocked",
+      userIds: [requesterUserId, targetUserId],
+    });
 
     return sendOk(res, {
       friendship: {

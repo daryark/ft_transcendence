@@ -108,8 +108,8 @@ describe("friends service", () => {
 				friend_id: 2,
 				status: "accepted",
 				created_at: null,
-				users_friends_user_idTousers: { id: 1, username: "alice" },
-				users_friends_friend_idTousers: { id: 2, username: "bob" },
+				users_friends_user_idTousers: { id: 1, username: "alice", avatar_id: 1 },
+				users_friends_friend_idTousers: { id: 2, username: "bob", avatar_id: 2 },
 			},
 		]);
 
@@ -123,8 +123,8 @@ describe("friends service", () => {
 					friend_id: 2,
 					status: "accepted",
 					created_at: null,
-					users_friends_user_idTousers: { id: 1, username: "alice" },
-					users_friends_friend_idTousers: { id: 2, username: "bob" },
+					users_friends_user_idTousers: { id: 1, username: "alice", avatar_id: 1 },
+					users_friends_friend_idTousers: { id: 2, username: "bob", avatar_id: 2 },
 				},
 			],
 			page: 2,

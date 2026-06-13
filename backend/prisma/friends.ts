@@ -19,6 +19,7 @@ export type FriendRecord = {
 export type FriendIdentity = {
 	id: number;
 	username: string;
+	avatar_id: number | null;
 };
 
 export type FriendListItem = FriendRecord & {
@@ -92,10 +93,10 @@ function friendshipSelect() {
 		status: true,
 		created_at: true,
 		users_friends_user_idTousers: {
-			select: { id: true, username: true },
+			select: { id: true, username: true, avatar_id: true },
 		},
 		users_friends_friend_idTousers: {
-			select: { id: true, username: true },
+			select: { id: true, username: true, avatar_id: true },
 		},
 	} as const;
 }

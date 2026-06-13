@@ -437,10 +437,16 @@ function registerCustomRoomEvents(socket, roomService) {
 
   socket.on("room:start", () => {
     const roomId = socket.data.roomId;
-    if (!roomId) return;
+    const identity = socket.data.identity;
+    if (!roomId || !identity) return;
 
     const room = roomService.getRoom(roomId);
     if (!room || room.gameConfig.mode !== "custom") return;
+
+    if (customRoomHosts.get(room.id) !== identity.id) {
+      emitError(socket, "ONLY_HOST_CAN_START_ROOM");
+      return;
+    }
 
     startCustomVersus(room, roomService);
   });

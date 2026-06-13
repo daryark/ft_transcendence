@@ -16,6 +16,7 @@ import type {
   MultiplayerGameConfig,
   RoomConfig,
 } from "../../../../shared/types/config.types";
+import type { GameStartPayload } from "../../game/types";
 import "./MultiplayerMode.scss";
 
 type Visibility = "public" | "private";
@@ -435,6 +436,9 @@ export default function Custom() {
 
   const inRoom = roomId !== null;
   const roomName = config.roomConfig.roomName?.trim() || "CUSTOM ROOM";
+  const isCurrentUserHost = players.some(
+    (player) => player.isHost && String(player.id) === String(user?.id),
+  );
 
   useEffect(() => {
     document.body.classList.add("mp-custom-active");
@@ -495,13 +499,16 @@ export default function Custom() {
       setStatus(error.reason ?? "SERVER ERROR");
     };
 
-    const handleGameStart = (payload: { roomId?: string }) => {
+    const handleGameStart = (payload: GameStartPayload) => {
       const nextRoomId = payload.roomId ?? roomId;
 
       if (!nextRoomId) return;
 
       navigate(`/game/${nextRoomId}`, {
-        state: { from: customRoomPath(nextRoomId) },
+        state: {
+          ...payload,
+          from: customRoomPath(roomCode || nextRoomId),
+        },
       });
     };
 
@@ -516,7 +523,7 @@ export default function Custom() {
       socket.off("server:error", handleError);
       socket.off("game:start", handleGameStart);
     };
-  }, [currentPlayer, location.pathname, navigate, roomId]);
+  }, [currentPlayer, location.pathname, navigate, roomCode, roomId]);
 
   useEffect(() => {
     if (
@@ -1004,7 +1011,12 @@ export default function Custom() {
           )}
         </section>
 
-        <button className="mp-custom-save" onClick={saveConfig} type="button">
+        <button
+          className="mp-custom-save"
+          disabled={!isCurrentUserHost}
+          onClick={saveConfig}
+          type="button"
+        >
           SAVE
         </button>
         {status && <div className="mp-custom-status">{status}</div>}
@@ -1036,7 +1048,11 @@ export default function Custom() {
 
       <footer className="mp-custom-footer">
         <button type="button">PLAYING</button>
-        <button onClick={startGame} type="button">
+        <button
+          disabled={!isCurrentUserHost}
+          onClick={startGame}
+          type="button"
+        >
           START
           <small>{players.length} PLAYER</small>
         </button>

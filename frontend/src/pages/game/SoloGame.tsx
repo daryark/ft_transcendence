@@ -576,6 +576,7 @@ export default function SoloGame() {
     };
     const handleEnd = (payload: GameEndPayload) => {
       if (payload.roomId !== gameId) return;
+      clearStoredActiveGame(gameId);
       setConnectionStatus("ENDED");
       const state = payload.players
         ? payload.players[currentUserId ?? ""]?.state ??
@@ -594,28 +595,6 @@ export default function SoloGame() {
         winnerId: payload.winnerId,
       });
       setCountdownStep(null);
-      try {
-        const savedRaw = window.sessionStorage.getItem(ACTIVE_GAME_KEY);
-        const saved = toActiveGamePayload(
-          savedRaw ? JSON.parse(savedRaw) : null,
-        );
-        window.sessionStorage.setItem(
-          ACTIVE_GAME_KEY,
-          JSON.stringify({
-            roomId: gameId,
-            state: nextState,
-            config: saved?.config ?? gameConfigRef.current,
-            players: payload.players ?? saved?.players,
-            runStartedAt: saved?.runStartedAt ?? runStartedAtRef.current,
-            from: saved?.from,
-          }),
-        );
-      } catch {
-        window.sessionStorage.setItem(
-          ACTIVE_GAME_KEY,
-          JSON.stringify({ roomId: gameId, state: nextState }),
-        );
-      }
     };
 
     if (socket.connected) {

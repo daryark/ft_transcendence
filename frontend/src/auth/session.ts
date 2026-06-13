@@ -57,7 +57,9 @@ export const isSessionExpired = (session: SessionData | null) => {
 
 const readStoredSession = (): SessionData | null => {
   try {
-    const raw = window.localStorage.getItem(SESSION_STORAGE_KEY);
+    const raw =
+      window.sessionStorage.getItem(SESSION_STORAGE_KEY) ??
+      window.localStorage.getItem(SESSION_STORAGE_KEY);
     const session = raw ? (JSON.parse(raw) as SessionData) : null;
 
     if (session && !isSessionExpired(session)) {
@@ -80,12 +82,14 @@ const readStoredSession = (): SessionData | null => {
 const persistSession = (session: SessionData | null) => {
   if (!session) {
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
     window.sessionStorage.removeItem(ANONYMOUS_SESSION_STORAGE_KEY);
     return;
   }
 
   if (session.user.isAnonymous) {
     window.localStorage.removeItem(SESSION_STORAGE_KEY);
+    window.sessionStorage.removeItem(SESSION_STORAGE_KEY);
     window.sessionStorage.setItem(
       ANONYMOUS_SESSION_STORAGE_KEY,
       JSON.stringify(session),
@@ -94,7 +98,8 @@ const persistSession = (session: SessionData | null) => {
   }
 
   window.sessionStorage.removeItem(ANONYMOUS_SESSION_STORAGE_KEY);
-  window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+  window.localStorage.removeItem(SESSION_STORAGE_KEY);
+  window.sessionStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
 };
 
 export const initializeSession = () => {

@@ -1,18 +1,30 @@
-import { useEffect, useMemo, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { useNavigate } from "react-router-dom";
 
 import { authFetch } from "../../auth/authFetch";
 import { getSessionUser } from "../../auth/session";
+import { getSocket, subscribeToSocket } from "../../socket/socketClient";
 import "./SocialPanels.scss";
 
-type FriendStatus = "online" | "offline" | "blocked";
-type Filter = "online" | "all" | "blocked";
+type SocialTab = "friends" | "requests" | "blocked";
+type RelationshipStatus = "none" | "pending" | "accepted" | "blocked";
+type RequestDirection = "incoming" | "outgoing" | null;
+type FriendAction = "add" | "accept" | "reject" | "remove" | "block" | "unblock";
 
-type Friend = {
+type SocialPerson = {
   id: number;
   username: string;
-  status: FriendStatus;
   avatarId?: number;
+  relationshipId?: number;
+  relationshipStatus: RelationshipStatus;
+  requestDirection: RequestDirection;
 };
 
 type Message = {
@@ -93,35 +105,19 @@ const asArray = (value: unknown): unknown[] => {
   return Array.isArray(nested) ? nested : [];
 };
 
-const unwrapItems = (value: unknown): unknown[] => {
+const unwrapPayload = (value: unknown) => {
   const object = asRecord(value);
-  const payload = asRecord(object.data ?? object.result ?? object.payload ?? object);
-  const items = payload.items;
+  return asRecord(object.data ?? object.result ?? object.payload ?? object);
+};
 
-  if (Array.isArray(items)) {
-    return items;
-  }
-
-  return asArray(payload);
+const unwrapItems = (value: unknown): unknown[] => {
+  const payload = unwrapPayload(value);
+  return Array.isArray(payload.items) ? payload.items : asArray(payload);
 };
 
 const toNumber = (value: unknown): number | null => {
   const parsed = Number(value);
   return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-};
-
-const toStatus = (value: unknown): FriendStatus => {
-  const status = String(value ?? "").toLowerCase();
-
-  if (status === "blocked") {
-    return "blocked";
-  }
-
-  if (status === "online") {
-    return "online";
-  }
-
-  return "offline";
 };
 
 const getAvatarStyle = (avatarId?: number) => {
@@ -133,21 +129,55 @@ const getAvatarStyle = (avatarId?: number) => {
   return { "--avatar-color": avatarColors[index] } as CSSProperties;
 };
 
-const toFriend = (value: unknown): Friend | null => {
+const parseApiError = async (response: Response, fallback: string) => {
+  try {
+    const payload = asRecord(await response.json());
+    return String(payload.error ?? payload.message ?? fallback);
+  } catch {
+    return fallback;
+  }
+};
+
+const toRelationship = (
+  value: unknown,
+  currentUserId: number,
+): SocialPerson | null => {
   const object = asRecord(value);
-  const user = asRecord(
-    object.otherUser ?? object.user ?? object.friend ?? object.player,
-  );
-  const id =
-    toNumber(user.id) ??
-    toNumber(object.otherUserId) ??
-    toNumber(object.friendId) ??
-    toNumber(object.userId) ??
-    toNumber(object.userId) ??
-    toNumber(object.id);
-  const username = String(
-    object.username ?? user.username ?? object.name ?? user.name ?? "",
-  ).trim();
+  const user = asRecord(object.otherUser);
+  const id = toNumber(user.id);
+  const username = String(user.username ?? "").trim();
+  const relationshipId = toNumber(object.id);
+  const senderId = toNumber(object.userId ?? object.user_id);
+  const status = String(object.status ?? "").toLowerCase();
+
+  if (!id || !username || !relationshipId) {
+    return null;
+  }
+
+  const relationshipStatus: RelationshipStatus =
+    status === "pending" || status === "accepted" || status === "blocked"
+      ? status
+      : "none";
+
+  return {
+    id,
+    username,
+    avatarId: toNumber(user.avatarId ?? user.avatar_id) ?? undefined,
+    relationshipId,
+    relationshipStatus,
+    requestDirection:
+      relationshipStatus === "pending"
+        ? senderId === currentUserId
+          ? "outgoing"
+          : "incoming"
+        : null,
+  };
+};
+
+const toSearchPerson = (value: unknown): SocialPerson | null => {
+  const object = asRecord(value);
+  const id = toNumber(object.id);
+  const username = String(object.username ?? "").trim();
 
   if (!id || !username) {
     return null;
@@ -156,10 +186,9 @@ const toFriend = (value: unknown): Friend | null => {
   return {
     id,
     username,
-    avatarId:
-      toNumber(object.avatarId ?? object.avatar_id ?? user.avatarId ?? user.avatar_id) ??
-      undefined,
-    status: toStatus(object.status ?? object.presence ?? user.status ?? user.presence),
+    avatarId: toNumber(object.avatarId ?? object.avatar_id) ?? undefined,
+    relationshipStatus: "none",
+    requestDirection: null,
   };
 };
 
@@ -207,16 +236,6 @@ const unwrapMiniProfile = (payload: unknown): MiniProfile | null => {
   };
 };
 
-const mergeById = (left: Friend[], right: Friend[]) => {
-  const merged = new Map<number, Friend>();
-
-  [...left, ...right].forEach((friend) => merged.set(friend.id, friend));
-
-  return Array.from(merged.values()).sort((a, b) =>
-    a.username.localeCompare(b.username),
-  );
-};
-
 const formatModeValue = (value: unknown) => {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value.toLocaleString();
@@ -229,8 +248,69 @@ const formatModeValue = (value: unknown) => {
   return "NO DATA";
 };
 
+const relationshipLabel = (person: SocialPerson) => {
+  if (person.relationshipStatus === "accepted") return "FRIEND";
+  if (person.relationshipStatus === "blocked") return "BLOCKED";
+  if (person.requestDirection === "incoming") return "WANTS TO BE FRIENDS";
+  if (person.requestDirection === "outgoing") return "REQUEST SENT";
+  return "PLAYER";
+};
+
+const ActionButton = ({
+  children,
+  disabled,
+  onClick,
+  tone = "neutral",
+}: {
+  children: ReactNode;
+  disabled?: boolean;
+  onClick: () => void;
+  tone?: "neutral" | "positive" | "danger";
+}) => (
+  <button
+    className={`friendAction friendAction--${tone}`}
+    disabled={disabled}
+    onClick={onClick}
+    type="button"
+  >
+    {children}
+  </button>
+);
+
+const PersonRow = ({
+  person,
+  actions,
+  onOpenProfile,
+}: {
+  person: SocialPerson;
+  actions: ReactNode;
+  onOpenProfile: () => void;
+}) => (
+  <article className="friendRow">
+    <button
+      className="friendIdentity"
+      onClick={onOpenProfile}
+      type="button"
+    >
+      <span
+        className="friendAvatar"
+        style={getAvatarStyle(person.avatarId)}
+      />
+      <span className="friendInfo">
+        <span className="friendName">{person.username}</span>
+        <span
+          className={`friendStatus friendStatus--${person.relationshipStatus}`}
+        >
+          {relationshipLabel(person)}
+        </span>
+      </span>
+    </button>
+    <div className="friendActions">{actions}</div>
+  </article>
+);
+
 const ProfileModal = ({
-  friend,
+  person,
   profile,
   isLoading,
   error,
@@ -238,12 +318,12 @@ const ProfileModal = ({
   onOpenChat,
   onOpenFullProfile,
 }: {
-  friend: Friend;
+  person: SocialPerson;
   profile: MiniProfile | null;
   isLoading: boolean;
   error: string;
   onClose: () => void;
-  onOpenChat: () => void;
+  onOpenChat?: () => void;
   onOpenFullProfile: () => void;
 }) => {
   const modes = profile?.modes ?? {};
@@ -251,8 +331,8 @@ const ProfileModal = ({
   const fortyLines = modes.fortyLines;
   const blitz = modes.blitz;
   const quickPlay = modes.quickPlay;
-  const displayAvatarId = profile?.avatarId ?? friend.avatarId ?? 1;
-  const displayUsername = profile?.username ?? friend.username;
+  const displayAvatarId = profile?.avatarId ?? person.avatarId ?? 1;
+  const displayUsername = profile?.username ?? person.username;
 
   return (
     <div className="miniProfileLayer" onMouseDown={onClose}>
@@ -262,12 +342,16 @@ const ProfileModal = ({
         onMouseDown={(event) => event.stopPropagation()}
       >
         <div className="miniProfileTop">
-          <div className="miniProfileAvatar" style={getAvatarStyle(displayAvatarId)} />
+          <div
+            className="miniProfileAvatar"
+            style={getAvatarStyle(displayAvatarId)}
+          />
 
           <div className="miniProfileIdentity">
             <h2>{displayUsername}</h2>
             <p>
-              LEVEL {profile?.level ?? "-"} <span>◇</span> {friend.status}
+              LEVEL {profile?.level ?? "-"} <span>◇</span>{" "}
+              {relationshipLabel(person)}
             </p>
           </div>
 
@@ -275,21 +359,29 @@ const ProfileModal = ({
             <button type="button" onClick={onClose}>
               CLOSE
             </button>
-            <button type="button" onClick={onOpenChat}>
-              MESSAGE
-            </button>
+            {onOpenChat && (
+              <button type="button" onClick={onOpenChat}>
+                MESSAGE
+              </button>
+            )}
           </div>
         </div>
 
         {isLoading && <div className="miniProfileState">LOADING PROFILE...</div>}
-        {!isLoading && error && <div className="miniProfileState errorState">{error}</div>}
+        {!isLoading && error && (
+          <div className="miniProfileState errorState">{error}</div>
+        )}
 
         {!isLoading && !error && (
           <>
             <div className="miniProfileLevel">
               <span>{profile?.level ?? "-"}</span>
               <div className="miniProfileLevelBar">
-                <i style={{ width: `${Math.min((profile?.level ?? 1) % 100, 100)}%` }} />
+                <i
+                  style={{
+                    width: `${Math.min((profile?.level ?? 1) % 100, 100)}%`,
+                  }}
+                />
               </div>
             </div>
 
@@ -301,29 +393,34 @@ const ProfileModal = ({
                   {league?.tr ? `${formatModeValue(league.tr)}TR` : "NO DATA"}
                 </strong>
               </article>
-
               <article>
                 <span>40 LINES</span>
                 <strong>{formatModeValue(fortyLines?.value)}</strong>
-                {fortyLines?.achievedAgo && <small>{fortyLines.achievedAgo}</small>}
+                {fortyLines?.achievedAgo && (
+                  <small>{fortyLines.achievedAgo}</small>
+                )}
               </article>
-
               <article>
                 <span>BLITZ</span>
                 <strong>{formatModeValue(blitz?.value)}</strong>
                 {blitz?.achievedAgo && <small>{blitz.achievedAgo}</small>}
               </article>
-
               <article className="miniStatsWide">
                 <span>QUICK PLAY</span>
                 <strong>{formatModeValue(quickPlay?.value)}</strong>
-                {quickPlay?.achievedAgo && <small>{quickPlay.achievedAgo}</small>}
+                {quickPlay?.achievedAgo && (
+                  <small>{quickPlay.achievedAgo}</small>
+                )}
               </article>
             </div>
           </>
         )}
 
-        <button className="fullProfileButton" type="button" onClick={onOpenFullProfile}>
+        <button
+          className="fullProfileButton"
+          type="button"
+          onClick={onOpenFullProfile}
+        >
           VIEW FULL PROFILE
         </button>
       </section>
@@ -331,107 +428,176 @@ const ProfileModal = ({
   );
 };
 
-const SocialPanels = ({ isOpen, onClose }: Props) => {
+export default function SocialPanels({ isOpen, onClose }: Props) {
   const navigate = useNavigate();
   const currentUser = getSessionUser();
+  const [tab, setTab] = useState<SocialTab>("friends");
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
-  const [friends, setFriends] = useState<Friend[]>([]);
-  const [searchResults, setSearchResults] = useState<Friend[]>([]);
-  const [selectedFriend, setSelectedFriend] = useState<Friend | null>(null);
-  const [profileFriend, setProfileFriend] = useState<Friend | null>(null);
+  const [relationships, setRelationships] = useState<SocialPerson[]>([]);
+  const [searchResults, setSearchResults] = useState<SocialPerson[]>([]);
+  const [selectedFriend, setSelectedFriend] = useState<SocialPerson | null>(
+    null,
+  );
+  const [profilePerson, setProfilePerson] = useState<SocialPerson | null>(null);
   const [miniProfile, setMiniProfile] = useState<MiniProfile | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
-  const [friendsError, setFriendsError] = useState("");
+  const [socialError, setSocialError] = useState("");
+  const [socialNotice, setSocialNotice] = useState("");
   const [messagesError, setMessagesError] = useState("");
   const [profileError, setProfileError] = useState("");
-  const [isFriendsLoading, setIsFriendsLoading] = useState(false);
+  const [isSocialLoading, setIsSocialLoading] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
   const [isMessagesLoading, setIsMessagesLoading] = useState(false);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{
+    personId: number;
+    action: FriendAction;
+  } | null>(null);
   const trimmedSearch = search.trim();
 
-  useEffect(() => {
-    if (!isOpen) {
-      setSelectedFriend(null);
-      setProfileFriend(null);
-      setMiniProfile(null);
-      setSearch("");
-      return;
-    }
+  const loadRelationships = useCallback(
+    async (signal?: AbortSignal) => {
+      if (!currentUser) return;
 
-    const controller = new AbortController();
-
-    const loadFriends = async () => {
-      setIsFriendsLoading(true);
-      setFriendsError("");
+      setIsSocialLoading(true);
+      setSocialError("");
 
       try {
-        const response = await authFetch(FRIENDS_ENDPOINT, {
-          signal: controller.signal,
-        });
+        const collected: SocialPerson[] = [];
+        let page = 1;
+        let total = 0;
 
-        if (!response.ok) {
-          throw new Error("FAILED TO LOAD FRIENDS");
-        }
+        do {
+          const response = await authFetch(
+            `${FRIENDS_ENDPOINT}?status=all&page=${page}&limit=50`,
+            { signal },
+          );
 
-        const data = await response.json();
-        setFriends(unwrapItems(data).map(toFriend).filter(Boolean) as Friend[]);
+          if (!response.ok) {
+            throw new Error(
+              await parseApiError(response, "FAILED TO LOAD FRIENDS"),
+            );
+          }
+
+          const data = await response.json();
+          const payload = unwrapPayload(data);
+          const pageItems = unwrapItems(data)
+            .map((item) => toRelationship(item, currentUser.id))
+            .filter(Boolean) as SocialPerson[];
+
+          collected.push(...pageItems);
+          total = Number(payload.total ?? collected.length);
+          page += 1;
+          if (pageItems.length === 0) break;
+        } while (collected.length < total);
+
+        setRelationships(collected);
       } catch (error) {
-        if (!controller.signal.aborted) {
-          setFriends([]);
-          setFriendsError(
+        if (!signal?.aborted) {
+          setRelationships([]);
+          setSocialError(
             error instanceof Error ? error.message : "FAILED TO LOAD FRIENDS",
           );
         }
       } finally {
-        if (!controller.signal.aborted) {
-          setIsFriendsLoading(false);
+        if (!signal?.aborted) {
+          setIsSocialLoading(false);
         }
+      }
+    },
+    [currentUser],
+  );
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedFriend(null);
+      setProfilePerson(null);
+      setMiniProfile(null);
+      setSearch("");
+      setSearchResults([]);
+      setSocialNotice("");
+      return;
+    }
+
+    const controller = new AbortController();
+    void loadRelationships(controller.signal);
+    return () => controller.abort();
+  }, [isOpen, loadRelationships]);
+
+  useEffect(() => {
+    let activeSocket = getSocket();
+
+    const handleSocialUpdate = () => {
+      if (isOpen) {
+        void loadRelationships();
       }
     };
 
-    loadFriends();
+    const attach = () => {
+      const nextSocket = getSocket();
 
-    return () => controller.abort();
-  }, [isOpen]);
+      if (activeSocket === nextSocket) return;
+      activeSocket?.off("social:update", handleSocialUpdate);
+      activeSocket = nextSocket;
+      activeSocket?.on("social:update", handleSocialUpdate);
+    };
+
+    activeSocket?.on("social:update", handleSocialUpdate);
+    const unsubscribe = subscribeToSocket(attach);
+
+    return () => {
+      unsubscribe();
+      activeSocket?.off("social:update", handleSocialUpdate);
+    };
+  }, [isOpen, loadRelationships]);
 
   useEffect(() => {
     if (!isOpen || trimmedSearch.length < 2) {
       setSearchResults([]);
+      setIsSearching(false);
       return;
     }
 
     const controller = new AbortController();
 
     const searchPlayers = async () => {
+      setIsSearching(true);
+
       try {
-        const encodedSearch = encodeURIComponent(trimmedSearch);
         const response = await authFetch(
-          `${PLAYERS_SEARCH_ENDPOINT}?q=${encodedSearch}&limit=20`,
+          `${PLAYERS_SEARCH_ENDPOINT}?q=${encodeURIComponent(trimmedSearch)}&limit=20`,
           { signal: controller.signal },
         );
 
         if (!response.ok) {
-          setSearchResults([]);
-          return;
+          throw new Error(
+            await parseApiError(response, "PLAYER SEARCH FAILED"),
+          );
         }
 
-        const data = await response.json();
-        const players = unwrapItems(data)
-          .map(toFriend)
-          .filter(Boolean) as Friend[];
+        const players = unwrapItems(await response.json())
+          .map(toSearchPerson)
+          .filter(Boolean) as SocialPerson[];
 
-        setSearchResults(players.filter((player) => player.id !== currentUser?.id));
-      } catch {
+        setSearchResults(
+          players.filter((player) => player.id !== currentUser?.id),
+        );
+      } catch (error) {
         if (!controller.signal.aborted) {
           setSearchResults([]);
+          setSocialError(
+            error instanceof Error ? error.message : "PLAYER SEARCH FAILED",
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsSearching(false);
         }
       }
     };
 
     const timeoutId = window.setTimeout(searchPlayers, 250);
-
     return () => {
       window.clearTimeout(timeoutId);
       controller.abort();
@@ -462,8 +628,9 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
           throw new Error("MESSAGES API IS NOT READY YET");
         }
 
-        const data = await response.json();
-        setMessages(asArray(data).map(toMessage).filter(Boolean) as Message[]);
+        setMessages(
+          asArray(await response.json()).map(toMessage).filter(Boolean) as Message[],
+        );
       } catch (error) {
         if (!controller.signal.aborted) {
           setMessages([]);
@@ -478,13 +645,12 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
       }
     };
 
-    loadMessages();
-
+    void loadMessages();
     return () => controller.abort();
   }, [selectedFriend]);
 
   useEffect(() => {
-    if (!profileFriend) {
+    if (!profilePerson) {
       setMiniProfile(null);
       setProfileError("");
       return;
@@ -498,7 +664,7 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
 
       try {
         const response = await authFetch(
-          `/api/users/${encodeURIComponent(profileFriend.username)}/miniprofile`,
+          `/api/users/${encodeURIComponent(profilePerson.username)}/miniprofile`,
           { signal: controller.signal },
         );
 
@@ -506,14 +672,9 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
           throw new Error("FAILED TO LOAD PROFILE");
         }
 
-        const data = await response.json();
-        const parsedProfile = unwrapMiniProfile(data);
-
-        if (!parsedProfile) {
-          throw new Error("PROFILE RESPONSE IS EMPTY");
-        }
-
-        setMiniProfile(parsedProfile);
+        const profile = unwrapMiniProfile(await response.json());
+        if (!profile) throw new Error("PROFILE RESPONSE IS EMPTY");
+        setMiniProfile(profile);
       } catch (error) {
         if (!controller.signal.aborted) {
           setMiniProfile(null);
@@ -528,39 +689,264 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
       }
     };
 
-    loadMiniProfile();
-
+    void loadMiniProfile();
     return () => controller.abort();
-  }, [profileFriend]);
+  }, [profilePerson]);
 
-  const filteredFriends = useMemo(() => {
-    const isSearching = trimmedSearch.length >= 2;
-    const list = isSearching ? mergeById(friends, searchResults) : friends;
-    const normalizedSearch = trimmedSearch.toLowerCase();
+  const friends = useMemo(
+    () =>
+      relationships
+        .filter((person) => person.relationshipStatus === "accepted")
+        .sort((a, b) => a.username.localeCompare(b.username)),
+    [relationships],
+  );
+  const requests = useMemo(
+    () =>
+      relationships
+        .filter((person) => person.relationshipStatus === "pending")
+        .sort((a, b) => {
+          if (a.requestDirection !== b.requestDirection) {
+            return a.requestDirection === "incoming" ? -1 : 1;
+          }
+          return a.username.localeCompare(b.username);
+        }),
+    [relationships],
+  );
+  const blocked = useMemo(
+    () =>
+      relationships
+        .filter((person) => person.relationshipStatus === "blocked")
+        .sort((a, b) => a.username.localeCompare(b.username)),
+    [relationships],
+  );
+  const visiblePeople =
+    tab === "friends" ? friends : tab === "requests" ? requests : blocked;
+  const filteredPeople = visiblePeople.filter((person) =>
+    person.username.toLowerCase().includes(trimmedSearch.toLowerCase()),
+  );
 
-    return list.filter((friend) => {
-      const matchesSearch =
-        !normalizedSearch ||
-        friend.username.toLowerCase().includes(normalizedSearch);
+  const performAction = async (
+    person: SocialPerson,
+    action: FriendAction,
+  ) => {
+    const config: Record<
+      FriendAction,
+      { endpoint: string; body: Record<string, unknown>; success: string }
+    > = {
+      add: {
+        endpoint: "/api/friends/request",
+        body: { targetUserId: person.id },
+        success: `FRIEND REQUEST SENT TO ${person.username}`,
+      },
+      accept: {
+        endpoint: "/api/friends/respond",
+        body: { requestId: person.relationshipId, action: "accept" },
+        success: `${person.username} IS NOW YOUR FRIEND`,
+      },
+      reject: {
+        endpoint: "/api/friends/respond",
+        body: { requestId: person.relationshipId, action: "reject" },
+        success: `REQUEST FROM ${person.username} REJECTED`,
+      },
+      remove: {
+        endpoint: "/api/friends/remove",
+        body: { targetUserId: person.id },
+        success: `${person.username} REMOVED`,
+      },
+      block: {
+        endpoint: "/api/friends/block",
+        body: { targetUserId: person.id },
+        success: `${person.username} BLOCKED`,
+      },
+      unblock: {
+        endpoint: "/api/friends/remove",
+        body: { targetUserId: person.id },
+        success: `${person.username} UNBLOCKED`,
+      },
+    };
+    const request = config[action];
 
-      if (!matchesSearch) {
-        return false;
+    setPendingAction({ personId: person.id, action });
+    setSocialError("");
+    setSocialNotice("");
+
+    try {
+      const response = await authFetch(request.endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(request.body),
+      });
+
+      if (!response.ok) {
+        throw new Error(await parseApiError(response, "ACTION FAILED"));
       }
 
-      if (filter === "all" || (isSearching && filter !== "blocked")) {
-        return friend.status !== "blocked";
+      setSocialNotice(request.success);
+      setRelationships((current) => {
+        if (action === "accept") {
+          return current.map((entry) =>
+            entry.id === person.id
+              ? {
+                  ...entry,
+                  relationshipStatus: "accepted",
+                  requestDirection: null,
+                }
+              : entry,
+          );
+        }
+
+        if (action === "reject" || action === "remove" || action === "unblock") {
+          return current.filter((entry) => entry.id !== person.id);
+        }
+
+        if (action === "block") {
+          const blockedPerson = {
+            ...person,
+            relationshipStatus: "blocked" as const,
+            requestDirection: null,
+          };
+          return [
+            ...current.filter((entry) => entry.id !== person.id),
+            blockedPerson,
+          ];
+        }
+
+        return current;
+      });
+      setSearchResults((current) =>
+        current.filter((entry) => entry.id !== person.id),
+      );
+
+      if (action === "remove" || action === "block") {
+        setSelectedFriend((current) =>
+          current?.id === person.id ? null : current,
+        );
       }
 
-      return friend.status === filter;
-    });
-  }, [filter, friends, searchResults, trimmedSearch]);
+      await loadRelationships();
+    } catch (error) {
+      setSocialError(
+        error instanceof Error ? error.message : "SOCIAL ACTION FAILED",
+      );
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
+  const isActionPending = (person: SocialPerson) =>
+    pendingAction?.personId === person.id;
+
+  const renderActions = (person: SocialPerson) => {
+    const disabled = isActionPending(person);
+
+    if (person.relationshipStatus === "none") {
+      return (
+        <>
+          <ActionButton
+            disabled={disabled}
+            onClick={() => void performAction(person, "add")}
+            tone="positive"
+          >
+            ADD FRIEND
+          </ActionButton>
+          <ActionButton
+            disabled={disabled}
+            onClick={() => void performAction(person, "block")}
+            tone="danger"
+          >
+            BLOCK
+          </ActionButton>
+        </>
+      );
+    }
+
+    if (person.relationshipStatus === "accepted") {
+      return (
+        <>
+          <ActionButton
+            disabled={disabled}
+            onClick={() => setSelectedFriend(person)}
+            tone="positive"
+          >
+            MESSAGE
+          </ActionButton>
+          <ActionButton
+            disabled={disabled}
+            onClick={() => void performAction(person, "remove")}
+          >
+            REMOVE
+          </ActionButton>
+          <ActionButton
+            disabled={disabled}
+            onClick={() => void performAction(person, "block")}
+            tone="danger"
+          >
+            BLOCK
+          </ActionButton>
+        </>
+      );
+    }
+
+    if (person.relationshipStatus === "blocked") {
+      return (
+        <ActionButton
+          disabled={disabled}
+          onClick={() => void performAction(person, "unblock")}
+        >
+          UNBLOCK
+        </ActionButton>
+      );
+    }
+
+    if (person.requestDirection === "incoming") {
+      return (
+        <>
+          <ActionButton
+            disabled={disabled}
+            onClick={() => void performAction(person, "accept")}
+            tone="positive"
+          >
+            ACCEPT
+          </ActionButton>
+          <ActionButton
+            disabled={disabled}
+            onClick={() => void performAction(person, "reject")}
+          >
+            REJECT
+          </ActionButton>
+          <ActionButton
+            disabled={disabled}
+            onClick={() => void performAction(person, "block")}
+            tone="danger"
+          >
+            BLOCK
+          </ActionButton>
+        </>
+      );
+    }
+
+    return (
+      <>
+        <ActionButton
+          disabled={disabled}
+          onClick={() => void performAction(person, "remove")}
+        >
+          CANCEL
+        </ActionButton>
+        <ActionButton
+          disabled={disabled}
+          onClick={() => void performAction(person, "block")}
+          tone="danger"
+        >
+          BLOCK
+        </ActionButton>
+      </>
+    );
+  };
 
   const sendMessage = async () => {
     const content = draft.trim();
-
-    if (!selectedFriend || !content) {
-      return;
-    }
+    if (!selectedFriend || !content) return;
 
     setDraft("");
     setMessagesError("");
@@ -568,13 +954,8 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
     try {
       const response = await authFetch(MESSAGES_ENDPOINT, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          receiverId: selectedFriend.id,
-          content,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ receiverId: selectedFriend.id, content }),
       });
 
       if (!response.ok) {
@@ -582,11 +963,8 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
       }
 
       const data = await response.json();
-      const sentMessage = toMessage(data.message ?? data);
-
-      if (sentMessage) {
-        setMessages((current) => [...current, sentMessage]);
-      }
+      const sentMessage = toMessage(asRecord(data).message ?? data);
+      if (sentMessage) setMessages((current) => [...current, sentMessage]);
     } catch (error) {
       setDraft(content);
       setMessagesError(
@@ -595,18 +973,11 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
     }
   };
 
-  const openProfile = (friend: Friend) => {
-    setProfileFriend(friend);
-  };
-
   const openFullProfile = () => {
-    const username = miniProfile?.username ?? profileFriend?.username;
+    const username = miniProfile?.username ?? profilePerson?.username;
+    if (!username) return;
 
-    if (!username) {
-      return;
-    }
-
-    setProfileFriend(null);
+    setProfilePerson(null);
     onClose();
     navigate(`/profile/${encodeURIComponent(username)}`);
   };
@@ -626,17 +997,24 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
         {!selectedFriend ? (
           <>
             <div className="peopleHeader">
-              <h2>PEOPLE</h2>
-              <span className="presenceLabel">
-                In Menus <span className="presenceDiamond" />
-              </span>
+              <div>
+                <span className="peopleEyebrow">YOUR NETWORK</span>
+                <h2>SOCIAL</h2>
+              </div>
+              <button
+                className="socialClose"
+                onClick={onClose}
+                type="button"
+              >
+                CLOSE
+              </button>
             </div>
 
             <label className="peopleSearchWrap">
               <span className="searchGlyph" />
               <input
                 className="peopleSearch"
-                placeholder="FIND SOMEONE..."
+                placeholder="SEARCH PLAYERS..."
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
               />
@@ -644,56 +1022,83 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
 
             <div className="peopleTabs">
               <button
-                className={filter === "online" ? "active" : ""}
-                onClick={() => setFilter("online")}
+                className={tab === "friends" ? "active" : ""}
+                onClick={() => setTab("friends")}
                 type="button"
               >
-                ONLINE
+                FRIENDS <span>{friends.length}</span>
               </button>
-
               <button
-                className={filter === "all" ? "active" : ""}
-                onClick={() => setFilter("all")}
+                className={tab === "requests" ? "active" : ""}
+                onClick={() => setTab("requests")}
                 type="button"
               >
-                ALL
+                REQUESTS <span>{requests.length}</span>
               </button>
-
               <button
-                className={filter === "blocked" ? "active" : ""}
-                onClick={() => setFilter("blocked")}
+                className={tab === "blocked" ? "active" : ""}
+                onClick={() => setTab("blocked")}
                 type="button"
               >
-                BLOCKED
+                BLOCKED <span>{blocked.length}</span>
               </button>
             </div>
 
+            {socialNotice && (
+              <div className="socialNotice">{socialNotice}</div>
+            )}
+            {socialError && (
+              <div className="panelState errorState">{socialError}</div>
+            )}
+
             <div className="peopleList">
-              {isFriendsLoading && <div className="panelState">LOADING...</div>}
-              {!isFriendsLoading && friendsError && (
-                <div className="panelState errorState">{friendsError}</div>
-              )}
-              {!isFriendsLoading && !friendsError && filteredFriends.length === 0 && (
-                <div className="panelState">NO PLAYERS FOUND</div>
+              {trimmedSearch.length >= 2 && tab === "friends" && (
+                <section className="peopleSection">
+                  <h3>PLAYER SEARCH</h3>
+                  {isSearching && <div className="panelState">SEARCHING...</div>}
+                  {!isSearching && searchResults.length === 0 && (
+                    <div className="panelState">NO NEW PLAYERS FOUND</div>
+                  )}
+                  {searchResults.map((person) => (
+                    <PersonRow
+                      key={`search-${person.id}`}
+                      person={person}
+                      actions={renderActions(person)}
+                      onOpenProfile={() => setProfilePerson(person)}
+                    />
+                  ))}
+                </section>
               )}
 
-              {filteredFriends.map((friend) => (
-                <button
-                  key={friend.id}
-                  className="friendRow"
-                  onClick={() => setSelectedFriend(friend)}
-                  type="button"
-                >
-                  <span className="friendAvatar" style={getAvatarStyle(friend.avatarId)} />
-
-                  <span className="friendInfo">
-                    <span className="friendName">{friend.username}</span>
-                    <span className={`friendStatus ${friend.status}`}>
-                      ◇ {friend.status}
-                    </span>
-                  </span>
-                </button>
-              ))}
+              <section className="peopleSection">
+                <h3>
+                  {tab === "friends"
+                    ? "YOUR FRIENDS"
+                    : tab === "requests"
+                      ? "FRIEND REQUESTS"
+                      : "BLOCKED PLAYERS"}
+                </h3>
+                {isSocialLoading && (
+                  <div className="panelState">LOADING...</div>
+                )}
+                {!isSocialLoading && filteredPeople.length === 0 && (
+                  <div className="panelState">
+                    {tab === "friends"
+                      ? "NO FRIENDS FOUND"
+                      : tab === "requests"
+                        ? "NO PENDING REQUESTS"
+                        : "NO BLOCKED PLAYERS"}
+                  </div>
+                )}
+                {filteredPeople.map((person) => (
+                  <PersonRow
+                    key={`relationship-${person.relationshipId}`}
+                    person={person}
+                    actions={renderActions(person)}
+                    onOpenProfile={() => setProfilePerson(person)}
+                  />
+                ))}
+              </section>
             </div>
           </>
         ) : (
@@ -707,15 +1112,10 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
               >
                 ←
               </button>
-
-              <button className="railSearch" aria-label="Search" type="button">
-                <span className="searchGlyph" />
-              </button>
-
               <button
                 className="railFriend active"
                 aria-label={selectedFriend.username}
-                onClick={() => openProfile(selectedFriend)}
+                onClick={() => setProfilePerson(selectedFriend)}
                 type="button"
               >
                 <span
@@ -725,25 +1125,33 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
               </button>
             </nav>
 
-            <section className="directChat" aria-label={`${selectedFriend.username} chat`}>
+            <section
+              className="directChat"
+              aria-label={`${selectedFriend.username} chat`}
+            >
               <header className="directChatHeader">
                 <span
                   className="chatFriendAvatar"
                   style={getAvatarStyle(selectedFriend.avatarId)}
                 />
-
                 <div className="chatFriendTitle">
                   <h2>{selectedFriend.username}</h2>
                   <button
                     className="profileAction"
                     type="button"
-                    onClick={() => openProfile(selectedFriend)}
+                    onClick={() => setProfilePerson(selectedFriend)}
                   >
                     PROFILE
                   </button>
-                  <span className={`friendStatus ${selectedFriend.status}`}>
-                    ◇ {selectedFriend.status}
-                  </span>
+                  <button
+                    className="profileAction profileAction--danger"
+                    type="button"
+                    onClick={() =>
+                      void performAction(selectedFriend, "remove")
+                    }
+                  >
+                    REMOVE
+                  </button>
                 </div>
               </header>
 
@@ -752,14 +1160,17 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
               </div>
 
               <div className="messagesList">
-                {isMessagesLoading && <div className="panelState">LOADING...</div>}
+                {isMessagesLoading && (
+                  <div className="panelState">LOADING...</div>
+                )}
                 {!isMessagesLoading && messagesError && (
                   <div className="panelState errorState">{messagesError}</div>
                 )}
-                {!isMessagesLoading && !messagesError && messages.length === 0 && (
-                  <div className="panelState">NO MESSAGES YET</div>
-                )}
-
+                {!isMessagesLoading &&
+                  !messagesError &&
+                  messages.length === 0 && (
+                    <div className="panelState">NO MESSAGES YET</div>
+                  )}
                 {messages.map((message) => (
                   <div
                     key={message.id}
@@ -784,7 +1195,7 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
                 className="messageForm"
                 onSubmit={(event) => {
                   event.preventDefault();
-                  sendMessage();
+                  void sendMessage();
                 }}
               >
                 <input
@@ -800,22 +1211,24 @@ const SocialPanels = ({ isOpen, onClose }: Props) => {
         )}
       </aside>
 
-      {profileFriend && (
+      {profilePerson && (
         <ProfileModal
-          friend={profileFriend}
+          person={profilePerson}
           profile={miniProfile}
           isLoading={isProfileLoading}
           error={profileError}
-          onClose={() => setProfileFriend(null)}
-          onOpenChat={() => {
-            setSelectedFriend(profileFriend);
-            setProfileFriend(null);
-          }}
+          onClose={() => setProfilePerson(null)}
+          onOpenChat={
+            profilePerson.relationshipStatus === "accepted"
+              ? () => {
+                  setSelectedFriend(profilePerson);
+                  setProfilePerson(null);
+                }
+              : undefined
+          }
           onOpenFullProfile={openFullProfile}
         />
       )}
     </>
   );
-};
-
-export default SocialPanels;
+}

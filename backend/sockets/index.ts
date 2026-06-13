@@ -15,6 +15,7 @@ import { configDTO } from "../game/config/configDTO";
 import type { RoomId } from "../game/domain/room";
 import type { Identity } from "../auth/identity";
 import { Roles } from "../game/domain/player";
+import { setSocketServer, userSocketRoom } from "./realtime";
 
 
 export type SocketData = {
@@ -25,6 +26,7 @@ export type SocketData = {
 };
 
 export default function socketSetup(io: Server) {
+    setSocketServer(io);
     const roomService = new RoomService(io);
     const playerService = new PlayerService();
     const modeService = createModeService({ modes, roomService, playerService });
@@ -35,10 +37,13 @@ export default function socketSetup(io: Server) {
         if (socket.data.roomId) {
             socket.join(socket.data.roomId);
         }
+        if (socket.data.identity?.type === "registered") {
+            socket.join(userSocketRoom(socket.data.identity.id));
+        }
         socket.emit('game:config', configDTO);
 
         gameHandlers(socket, { modeService, roomService });
-        // chatHandlers(socket);
+        chatHandlers(io, socket);
 
         disconnectHandlers(socket, { roomService, playerService });
     });

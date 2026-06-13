@@ -1,15 +1,24 @@
 import { Server, Socket } from "socket.io";
 
 export default function chatHandlers(io: Server, socket: Socket) {
+    socket.on("chat:message", (data: unknown) => {
+        const { identity, roomId } = socket.data;
+        const message =
+            data &&
+            typeof data === "object" &&
+            "message" in data &&
+            typeof data.message === "string"
+                ? data.message.trim()
+                : "";
 
-    socket.on('chat:message', (data) => {
-        const { roomId } = socket.data;
+        if (!roomId || !identity || !message || message.length > 500) {
+            socket.emit("server:error", { reason: "INVALID_CHAT_MESSAGE" });
+            return;
+        }
 
-        if (!roomId) return ;
-
-        io.to(roomId).emit('chat:message', {
-            sender: socket.id,
-            message: data.message || data //! enforce {message: '...'} format and remove "|| data" part later
+        io.to(roomId).emit("chat:message", {
+            sender: String(identity.id),
+            message,
         });
     });
 };

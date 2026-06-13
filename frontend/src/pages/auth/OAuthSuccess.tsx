@@ -38,41 +38,60 @@ export default function OAuthSuccess() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = new URLSearchParams(window.location.search).get("token");
+    const code = new URLSearchParams(window.location.search).get("code");
 
-    if (!token) {
+    if (!code) {
       navigate("/", { replace: true });
       return;
     }
 
     window.history.replaceState(null, "", "/auth/callback");
 
-    const payload = parseJwt(token);
+    const finishOAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/github/exchange", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code }),
+        });
 
-    // ❌ invalid token
-    if (!payload) {
-      navigate("/", { replace: true });
-      return;
-    }
+        if (!response.ok) {
+          throw new Error("OAuth exchange failed");
+        }
 
-    // ❌ expired token
-    if (isExpired(payload)) {
-      navigate("/", { replace: true });
-      return;
-    }
+        const data = (await response.json()) as { token?: string };
+        const token = data.token;
+        const payload = token ? parseJwt(token) : null;
+        const userId = Number(payload?.sub);
 
-    // ✅ save session
-    saveSession({
-      token,
-      user: {
-        id: Number(payload.sub),
-        email: payload.email ?? "",
-        username: payload.username ?? "",
-        created_at: null,
-      },
-    });
+        if (
+          !token ||
+          !payload ||
+          isExpired(payload) ||
+          !Number.isInteger(userId) ||
+          userId <= 0 ||
+          !payload.username
+        ) {
+          throw new Error("Invalid OAuth session");
+        }
 
-    navigate("/play", { replace: true });
+        saveSession({
+          token,
+          user: {
+            id: userId,
+            email: payload.email ?? "",
+            username: payload.username,
+            created_at: null,
+          },
+        });
+
+        navigate("/play", { replace: true });
+      } catch {
+        navigate("/", { replace: true });
+      }
+    };
+
+    void finishOAuth();
   }, [navigate]);
 
   return <div>Signing you in with GitHub...</div>;

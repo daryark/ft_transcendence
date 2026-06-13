@@ -63,6 +63,36 @@
   line-height: 1;
 }
 
+.peopleHeader > div {
+  min-width: 0;
+}
+
+.peopleEyebrow {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: var(--app-font-display);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.socialClose {
+  min-height: 2.35rem;
+  padding: 0 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.6);
+  font-family: var(--app-font-display);
+  font-weight: 900;
+}
+
+.socialClose:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .presenceLabel {
   display: inline-flex;
   align-items: center;
@@ -148,6 +178,18 @@
   text-transform: uppercase;
 }
 
+.peopleTabs button span {
+  min-width: 1.45rem;
+  display: inline-grid;
+  place-items: center;
+  margin-left: 0.25rem;
+  padding: 0.1rem 0.32rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.75rem;
+}
+
 .peopleTabs button::after {
   position: absolute;
   right: 0.85rem;
@@ -173,15 +215,29 @@
   overflow-y: auto;
 }
 
+.peopleSection h3 {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 0.62rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(5, 5, 5, 0.97);
+  color: rgba(255, 255, 255, 0.34);
+  font-family: var(--app-font-display);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
 .friendRow {
   width: 100%;
   min-height: 5rem;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 1rem;
+  gap: 0.7rem;
   padding: 0.85rem 1.1rem;
-  border: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
   background: transparent;
   color: #fff;
@@ -190,6 +246,61 @@
 
 .friendRow:hover {
   background: rgba(255, 255, 255, 0.055);
+}
+
+.friendIdentity {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.friendActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.3rem;
+}
+
+.friendAction {
+  min-height: 1.9rem;
+  padding: 0 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.72);
+  font-family: var(--app-font-display);
+  font-size: 0.7rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.friendAction:hover:not(:disabled) {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.friendAction:disabled {
+  cursor: wait;
+  opacity: 0.35;
+}
+
+.friendAction--positive {
+  border-color: rgba(72, 242, 121, 0.32);
+  background: rgba(72, 242, 121, 0.1);
+  color: #8dffa8;
+}
+
+.friendAction--danger {
+  border-color: rgba(255, 91, 116, 0.3);
+  background: rgba(255, 91, 116, 0.08);
+  color: #ff98a8;
 }
 
 .friendAvatar,
@@ -248,8 +359,28 @@
   color: #4af579;
 }
 
-.friendStatus.blocked {
+.friendStatus--blocked {
   color: #ff667d;
+}
+
+.friendStatus--accepted {
+  color: #4af579;
+}
+
+.friendStatus--pending {
+  color: #ffcf67;
+}
+
+.socialNotice {
+  margin: 0.7rem 0.7rem 0;
+  padding: 0.68rem 0.8rem;
+  border: 1px solid rgba(72, 242, 121, 0.24);
+  background: rgba(72, 242, 121, 0.08);
+  color: #a9ffbc;
+  font-family: var(--app-font-display);
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .panelState {
@@ -399,6 +530,11 @@
 
 .profileAction:hover {
   background: rgba(255, 255, 255, 0.28);
+}
+
+.profileAction--danger {
+  background: rgba(255, 91, 116, 0.14);
+  color: #ffb1bd;
 }
 
 .chatNotice {
@@ -661,6 +797,19 @@
 
   .presenceLabel {
     display: none;
+  }
+
+  .peopleTabs button {
+    font-size: 0.85rem;
+  }
+
+  .friendRow {
+    grid-template-columns: 1fr;
+  }
+
+  .friendActions {
+    justify-content: flex-start;
+    padding-left: 3.35rem;
   }
 
   .chatLayout {
