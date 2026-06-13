@@ -1,10 +1,16 @@
 import { createFigure, Figure } from "./figures";
 import { createBag } from "./logic";
-import { createBoardHeight, createBoardWidth, createEmptyBoard } from "./board";
+import {
+  createBoardHeight,
+  createBoardWidth,
+  createEmptyBoard,
+  createEmptyBuffer,
+} from "./board";
 import type { SoloConfig } from "../../config/gameConfig.types";
 
 export interface GameState {
   board: number[][];
+  buffer: number[][];
   current: Figure;
   next: Figure[];
   hold: Figure | null;
@@ -104,11 +110,13 @@ export function initGame(
   startedAt = Date.now(),
 ): GameState {
   const board = createEmptyBoard(createBoardHeight(rows), createBoardWidth(cols));
+  const buffer = createEmptyBuffer(createBoardWidth(cols));
   const bag = createBag();
   const nextTypes = [...bag, ...createBag()];
   const next = nextTypes.map((t) => createFigure(t, cols));
   const state: GameState = {
     board,
+    buffer,
     current: next.shift()!,
     next,
     hold: null,

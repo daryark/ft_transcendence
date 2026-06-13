@@ -61,6 +61,7 @@ describe('startGame solo flow', () => {
       status: 'ended',
       state: {
         board: Array.from({ length: 20 }, () => Array(10).fill(1)),
+        buffer: Array.from({ length: 20 }, () => Array(10).fill(0)),
         current: { type: 'I', shape: [[1, 1, 1, 1]], x: 3, y: 0 },
         next: [],
         hold: null,

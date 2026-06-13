@@ -12,7 +12,7 @@ describe('engine state initialization', () => {
 
     expect(figure.type).toBe('O');
     expect(figure.x).toBe(4);
-    expect(figure.y).toBe(-2);
+    expect(figure.y).toBe(-3);
   });
 
   test('initGame creates playable solo state', () => {
@@ -20,6 +20,8 @@ describe('engine state initialization', () => {
 
     expect(state.board).toHaveLength(20);
     expect(state.board[0]).toHaveLength(10);
+    expect(state.buffer).toHaveLength(20);
+    expect(state.buffer.flat().every(cell => cell === 0)).toBe(true);
     expect(state.current).toBeDefined();
     expect(state.next.length).toBeGreaterThan(0);
     expect(state.hold).toBeNull();

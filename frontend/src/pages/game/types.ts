@@ -11,6 +11,7 @@ export interface Figure {
 
 export interface GameState {
   board: number[][];
+  buffer?: number[][];
   current: Figure;
   next: Figure[];
   hold: Figure | null;

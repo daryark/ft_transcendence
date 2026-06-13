@@ -34,6 +34,16 @@ describe('engine logic helpers', () => {
     expect(collision(board, { ...figure, x: 0, y: 0 })).toBe(false);
   });
 
+  test('collision checks occupied cells above the visible board', () => {
+    const board = Array.from({ length: 3 }, () => Array(3).fill(0));
+    const buffer = Array.from({ length: 4 }, () => Array(3).fill(0));
+    buffer[1][1] = 1; // y = -3
+    const figure: Figure = { type: 'O', shape: [[1]], x: 1, y: -3 };
+
+    expect(collision(board, figure, buffer)).toBe(true);
+    expect(collision(board, { ...figure, x: 2 }, buffer)).toBe(false);
+  });
+
   test('clearLines clears filled rows and scores', () => {
     const result = clearLines([
       [1, 1, 1],
@@ -48,5 +58,6 @@ describe('engine logic helpers', () => {
       [0, 0, 0],
       [1, 0, 1],
     ]);
+    expect(result.newBuffer).toEqual([]);
   });
 });

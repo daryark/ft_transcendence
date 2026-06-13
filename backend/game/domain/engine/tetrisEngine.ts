@@ -125,12 +125,16 @@ export default function createEngine(room: Room, roomService: RoomService) {
     return {
       ...piece,
       x: Math.floor((cols - piece.shape[0].length) / 2),
-      y: -2,
+      y: -3,
     };
   }
 
   function resetPiece(type: Figure["type"], cols: number): Figure {
     return createFigure(type, cols);
+  }
+
+  function hasCollision(state: GameState, piece: Figure) {
+    return collision(state.board, piece, state.buffer);
   }
 
   function spawnPiece(state: GameState) {
@@ -148,11 +152,11 @@ export default function createEngine(room: Room, roomService: RoomService) {
     state.canHold = true;
     currentPieceWasRotated = false;
     clearLockTimeout();
-    state.gameOver = collision(state.board, { ...current, y: 0 });
+    state.gameOver = hasCollision(state, current);
   }
 
   function trySetCurrent(state: GameState, piece: Figure) {
-    if (collision(state.board, piece)) return false;
+    if (hasCollision(state, piece)) return false;
 
     state.current = piece;
     return true;
@@ -194,7 +198,7 @@ export default function createEngine(room: Room, roomService: RoomService) {
   function lockCurrent(state: GameState) {
     let current = state.current;
 
-    while (!collision(state.board, moveFigure(current, 0, 1))) {
+    while (!hasCollision(state, moveFigure(current, 0, 1))) {
       current = moveFigure(current, 0, 1);
     }
 
@@ -207,12 +211,25 @@ export default function createEngine(room: Room, roomService: RoomService) {
 
         if (y >= 0 && y < state.rows && x >= 0 && x < state.cols) {
           state.board[y][x] = figureCellValues[current.type];
+        } else if (
+          y < 0 &&
+          y >= -state.buffer.length &&
+          x >= 0 &&
+          x < state.cols
+        ) {
+          state.buffer[state.buffer.length + y][x] =
+            figureCellValues[current.type];
         }
       });
     });
 
-    const { newBoard, cleared, scoreAdd } = clearLines(state.board);
+    const { newBoard, newBuffer, cleared, scoreAdd } = clearLines(
+      state.board,
+      1,
+      state.buffer,
+    );
     state.board = newBoard;
+    state.buffer = newBuffer;
     state.lines += cleared;
     state.score += scoreAdd;
     state.piecesPlaced += 1;
@@ -264,7 +281,8 @@ export default function createEngine(room: Room, roomService: RoomService) {
     clearLockTimeout();
     currentPieceWasRotated = false;
     state.gameOver =
-      state.gameOver || collision(state.board, { ...state.current, y: 0 });
+      state.gameOver ||
+      hasCollision(state, state.current);
   }
 
   const inputHandlers: Record<InputType, InputHandler> = {
@@ -315,7 +333,7 @@ export default function createEngine(room: Room, roomService: RoomService) {
   }
 
   function isTouchingGround(state: GameState) {
-    return collision(state.board, moveFigure(state.current, 0, 1));
+    return hasCollision(state, moveFigure(state.current, 0, 1));
   }
 
   function handleLockDelay(state: GameState) {

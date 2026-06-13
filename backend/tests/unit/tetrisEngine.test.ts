@@ -145,4 +145,65 @@ describe('tetris engine solo runtime loop', () => {
     expect(room.state!.current.x).toBe(room.state!.cols - 3);
     engine.stop();
   });
+
+  test('tops out when the next piece is blocked at spawn', () => {
+    const room = createRoom();
+    const state = room.state!;
+    state.current = createFigure('I', state.cols);
+    state.current.shape = figures.I[1];
+    state.current.x = -2;
+    state.next = [createFigure('O', state.cols)];
+    state.buffer[state.buffer.length - 3][4] = figureCellValues.J;
+    const roomService = { broadcast: jest.fn() };
+
+    const engine = createEngine(room, roomService);
+    engines.push(engine);
+    engine.pushInput({ type: 'drop' });
+    jest.advanceTimersByTime(TICK_MS);
+
+    expect(state.gameOver).toBe(true);
+  });
+
+  test('blocks at the visible ceiling do not cause top out', () => {
+    const room = createRoom();
+    const state = room.state!;
+    state.current = createFigure('I', state.cols);
+    state.current.shape = figures.I[1];
+    state.current.x = -2;
+    state.next = [createFigure('O', state.cols)];
+    state.board[0][4] = figureCellValues.J;
+    const roomService = { broadcast: jest.fn() };
+
+    const engine = createEngine(room, roomService);
+    engines.push(engine);
+    engine.pushInput({ type: 'drop' });
+    jest.advanceTimersByTime(TICK_MS);
+
+    expect(state.gameOver).toBe(false);
+    expect(state.current.type).toBe('O');
+    expect(state.current.y).toBe(-3);
+  });
+
+  test('keeps side-stack cells above the visible board', () => {
+    const room = createRoom();
+    const state = room.state!;
+    state.current = createFigure('I', state.cols);
+    state.next = [createFigure('T', state.cols)];
+    state.buffer[state.buffer.length - 4][0] = figureCellValues.L;
+    state.buffer[state.buffer.length - 3][0] = figureCellValues.L;
+    const roomService = { broadcast: jest.fn() };
+
+    const engine = createEngine(room, roomService);
+    engines.push(engine);
+    engine.pushInput({ type: 'drop' });
+    jest.advanceTimersByTime(TICK_MS);
+
+    expect(state.buffer[state.buffer.length - 4][0]).toBe(
+      figureCellValues.L,
+    );
+    expect(state.buffer[state.buffer.length - 3][0]).toBe(
+      figureCellValues.L,
+    );
+    expect(state.gameOver).toBe(false);
+  });
 });

@@ -14,7 +14,23 @@ export function rotate(matrix: number[][]): number[][] {
   return matrix[0].map((_, i) => matrix.map((row) => row[i]).reverse());
 }
 
-export function collision(board: number[][], f: Figure): boolean {
+function getCell(
+  board: number[][],
+  buffer: number[][],
+  x: number,
+  y: number,
+) {
+  if (y >= 0) return board[y]?.[x];
+
+  const bufferIndex = buffer.length + y;
+  return bufferIndex >= 0 ? buffer[bufferIndex]?.[x] : 0;
+}
+
+export function collision(
+  board: number[][],
+  f: Figure,
+  buffer: number[][] = [],
+): boolean {
   for (let r = 0; r < f.shape.length; r++) {
     for (let c = 0; c < f.shape[r].length; c++) {
       if (f.shape[r][c]) {
@@ -22,8 +38,13 @@ export function collision(board: number[][], f: Figure): boolean {
         const y = f.y + r;
 
         if (x < 0 || x >= board[0].length) return true;
-        if (y < 0) continue;
-        if (y >= board.length || board[y]?.[x] !== 0) return true;
+        if (
+          (buffer.length > 0 && y < -buffer.length) ||
+          y >= board.length
+        ) {
+          return true;
+        }
+        if (getCell(board, buffer, x, y) !== 0) return true;
       }
     }
   }
@@ -32,16 +53,24 @@ export function collision(board: number[][], f: Figure): boolean {
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
-export function clearLines(board: number[][], level = 1) {
-  const newBoard = board.filter((row) => row.some((cell) => cell === 0));
-  const cleared = board.length - newBoard.length;
+export function clearLines(
+  board: number[][],
+  level = 1,
+  buffer: number[][] = [],
+) {
+  const combined = [...buffer, ...board];
+  const remainingRows = combined.filter((row) =>
+    row.some((cell) => cell === 0),
+  );
+  const cleared = combined.length - remainingRows.length;
 
   for (let i = 0; i < cleared; i++) {
-    newBoard.unshift(Array(board[0].length).fill(0));
+    remainingRows.unshift(Array(board[0].length).fill(0));
   }
 
   return {
-    newBoard,
+    newBoard: remainingRows.slice(buffer.length),
+    newBuffer: remainingRows.slice(0, buffer.length),
     cleared,
     scoreAdd: LINE_SCORES[cleared] * level,
   };
@@ -85,7 +114,7 @@ export function holdPiece(state: GameState): GameState {
   newCurrent = {
     ...newCurrent,
     x: Math.floor((state.cols - newCurrent.shape[0].length) / 2),
-    y: -2,
+    y: -3,
   };
 
   return {
@@ -96,4 +125,3 @@ export function holdPiece(state: GameState): GameState {
     next: newNext,
   };
 }
-

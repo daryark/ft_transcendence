@@ -60,6 +60,6 @@ export function createFigure(type: FigureType, cols: number): Figure {
     type,
     shape,
     x: Math.floor((cols - shape[0].length) / 2),
-    y: -2,
+    y: -3,
   };
 }
