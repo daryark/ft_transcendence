@@ -26,7 +26,7 @@ export default function PlayerBoardCard({
       {controls.hold ? (
         <GamePreviewPanel
           className="versus-game__side-panel versus-game__side-panel--hold"
-          figureSize={18}
+          figureSize={24}
           state={state}
           type="hold"
         />

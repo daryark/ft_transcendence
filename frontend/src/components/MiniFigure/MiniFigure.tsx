@@ -8,37 +8,21 @@ interface MiniFigureProps {
   size?: number;
 }
 
-const GRID = 4;
-
-export default function MiniFigure({ figure, size = 18 }: MiniFigureProps) {
-  const grid = Array.from({ length: GRID }, () => Array(GRID).fill(0));
-  const offsetY = Math.max(0, Math.floor((GRID - figure.shape.length) / 2));
-  const offsetX = Math.max(0, Math.floor((GRID - figure.shape[0].length) / 2));
-
-  figure.shape.forEach((row, rowIndex) => {
-    row.forEach((cell, colIndex) => {
-      const y = rowIndex + offsetY;
-      const x = colIndex + offsetX;
-
-      if (cell && grid[y]?.[x] !== undefined) {
-        grid[y][x] = 1;
-      }
-    });
-  });
-
+export default function MiniFigure({ figure, size = 38 }: MiniFigureProps) {
   return (
     <div className="mini-figure" aria-label={`${figure.type} piece preview`}>
-      {grid.map((row, rowIndex) => (
+      {figure.shape.map((row, rowIndex) => (
         <div className="mini-figure__row" key={rowIndex}>
           {row.map((cell, colIndex) => (
             <span
-              className="mini-figure__cell"
+              className={`mini-figure__cell${
+                cell ? " mini-figure__cell--filled" : ""
+              }`}
               key={`${rowIndex}-${colIndex}`}
               style={{
                 "--cell-size": `${size}px`,
-                "--cell-color": cell
-                  ? figureColors[figure.type]
-                  : "transparent",
+                "--cell-inset": `${Math.max(1, size * 0.08)}px`,
+                "--cell-color": figureColors[figure.type],
               } as CSSProperties}
             />
           ))}
