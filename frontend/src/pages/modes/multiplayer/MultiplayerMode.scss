@@ -537,13 +537,25 @@ body.mp-custom-active .mp-custom-status {
   gap: 0.75rem;
 }
 
-.mp-custom-welcome p,
-.mp-custom-chat-log p {
+.mp-custom-welcome p {
   margin: 0;
   color: #bcbcc0;
   font-size: 0.8rem;
   font-weight: 900;
   text-transform: uppercase;
+}
+
+.mp-custom-chat-log p {
+  margin: 0;
+  color: #bcbcc0;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: none;
+}
+
+.mp-custom-chat-log strong {
+  color: #fff;
+  font-weight: 900;
 }
 
 .mp-custom-bindings {

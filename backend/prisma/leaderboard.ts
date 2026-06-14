@@ -1,6 +1,13 @@
 import { prisma } from './prisma';
-import type { gamemode } from '@prisma/client';
 import { z } from 'zod';
+
+export type GameMode =
+  | 'quickPlay'
+  | 'tetraLeague'
+  | 'fortyLines'
+  | 'blitz'
+  | 'zen'
+  | 'customGame';
 
 /**
  * Leaderboard entry with user stats
@@ -35,12 +42,12 @@ const modeMap: Record<string, string> = {
 
 const scopeSchema = z.enum(['global', 'country', 'friends']);
 
-function normalizeMode(mode?: string): gamemode | undefined {
+function normalizeMode(mode?: string): GameMode | undefined {
   if (!mode) {
     return undefined;
   }
 
-  return (modeMap[mode] as gamemode | undefined) ?? undefined;
+  return (modeMap[mode] as GameMode | undefined) ?? undefined;
 }
 
 async function resolveScopeUserIds(scope: 'global' | 'country' | 'friends', requesterUserId?: number): Promise<number[] | null> {
@@ -183,7 +190,7 @@ export async function getLeaderboard(
  * @returns Promise<LeaderboardEntry[]>
  */
 export async function getLeaderboardByMode(
-  mode: gamemode,
+  mode: GameMode,
   limit: number = 100
 ): Promise<LeaderboardEntry[]> {
   return getLeaderboard({ mode, limit });
@@ -198,7 +205,7 @@ export async function getLeaderboardByMode(
  */
 export async function getUserLeaderboardStats(
   userId: number,
-  mode?: gamemode
+  mode?: GameMode
 ): Promise<{
   name: string;
   rank: number;

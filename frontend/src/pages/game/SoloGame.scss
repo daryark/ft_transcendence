@@ -44,6 +44,11 @@
 }
 
 .solo-game--versus {
+  --versus-player-scale: 1;
+  --versus-self-scale: var(--versus-player-scale);
+  --versus-opponent-scale: var(--versus-player-scale);
+  --versus-player-column: calc(35rem * var(--versus-player-scale));
+
   min-height: 100vh;
   padding: 0;
   background:
@@ -114,27 +119,51 @@ body.game-session-active {
 .versus-game__stage {
   min-height: calc(100vh - 3.1rem);
   display: grid;
-  grid-template-columns: repeat(2, minmax(28rem, 35rem));
+  grid-template-columns:
+    minmax(0, calc(35rem * var(--versus-self-scale)))
+    minmax(0, calc(35rem * var(--versus-opponent-scale)));
   align-items: center;
   justify-content: center;
-  gap: clamp(1.2rem, 3vw, 3.5rem);
+  gap: calc(clamp(1.2rem, 3vw, 3.5rem) * var(--versus-player-scale));
   padding: clamp(0.75rem, 3vh, 2.5rem) clamp(0.75rem, 3vw, 3rem);
   overflow: hidden;
 }
 
-.versus-game__player {
+.versus-game__player-slot {
+  min-width: 0;
   display: grid;
-  grid-template-columns: minmax(7rem, 8.5rem) auto minmax(7rem, 8.5rem);
+  place-items: center;
+}
+
+.versus-game__player-slot--self {
+  width: calc(35rem * var(--versus-self-scale));
+}
+
+.versus-game__player-slot--opponent {
+  width: calc(35rem * var(--versus-opponent-scale));
+}
+
+.versus-game__player {
+  --versus-card-scale: 1;
+
+  width: calc(35rem * var(--versus-card-scale));
+  max-width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 22%) max-content minmax(0, 24%);
   align-items: start;
-  gap: 0.75rem;
+  justify-content: center;
+  gap: calc(0.75rem * var(--versus-card-scale));
   justify-self: center;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .versus-game__side-panel {
   display: grid;
   align-content: start;
-  gap: 0.65rem;
+  gap: calc(0.65rem * var(--versus-card-scale));
   min-width: 0;
+  overflow: hidden;
   color: #fff;
   font-family: var(--app-font-display);
   text-transform: uppercase;
@@ -143,39 +172,44 @@ body.game-session-active {
 
 .versus-game__side-panel h2 {
   margin: 0;
-  min-height: 1.55rem;
+  min-height: calc(1.55rem * var(--versus-card-scale));
   display: grid;
   align-items: center;
   padding: 0 0.22rem;
   background: #fff;
   color: #111;
-  font-size: clamp(1.05rem, 1.4vw, 1.45rem);
+  font-size: clamp(0.75rem, calc(1.25rem * var(--versus-card-scale)), 1.45rem);
   line-height: 1;
 }
 
 .versus-game__stats {
   display: grid;
   justify-items: end;
-  gap: 0.1rem;
-  margin-top: 1rem;
+  gap: calc(0.1rem * var(--versus-card-scale));
+  margin-top: calc(1rem * var(--versus-card-scale));
 }
 
 .versus-game__stats span {
   color: rgba(255, 255, 255, 0.84);
-  font-size: 0.75rem;
+  font-size: calc(0.75rem * var(--versus-card-scale));
   font-weight: 900;
 }
 
 .versus-game__stats strong {
   color: #fff;
-  font-size: clamp(1.65rem, 2.6vw, 2.65rem);
+  font-size: clamp(1rem, calc(2.2rem * var(--versus-card-scale)), 2.65rem);
   line-height: 0.92;
 }
 
 .versus-game__board-wrap {
   display: grid;
   min-width: 0;
-  justify-items: stretch;
+  justify-items: center;
+}
+
+.versus-game__queue-wrap {
+  min-width: 0;
+  overflow: hidden;
 }
 
 .versus-game__board-wrap .game-board {
@@ -188,13 +222,13 @@ body.game-session-active {
 }
 
 .versus-game__name {
-  min-height: 2.05rem;
+  min-height: calc(2.05rem * var(--versus-card-scale));
   display: grid;
   place-items: center;
   background: rgba(0, 0, 0, 0.82);
   color: #fff;
   font-family: var(--app-font-display);
-  font-size: clamp(1rem, 1.5vw, 1.4rem);
+  font-size: clamp(0.75rem, calc(1.25rem * var(--versus-card-scale)), 1.4rem);
   font-weight: 900;
   text-transform: uppercase;
 }
@@ -215,12 +249,14 @@ body.game-session-active {
 }
 
 .solo-game--versus .solo-game__preview {
-  min-height: 4.7rem;
+  min-height: calc(4.7rem * var(--versus-card-scale));
   border-radius: 0;
+  overflow: hidden;
 }
 
 .solo-game--versus .solo-game__next {
-  gap: 0.45rem;
+  gap: calc(0.45rem * var(--versus-card-scale));
+  overflow: hidden;
 }
 
 .solo-game__link {
@@ -627,6 +663,39 @@ body.game-session-active {
   text-align: center;
 }
 
+.solo-game__focus-warning {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  z-index: 90;
+  width: min(20rem, calc(100vw - 2rem));
+  transform: translate(-50%, -50%);
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.55rem 0.75rem;
+  border: 2px solid #ff1f1f;
+  background: rgba(3, 5, 8, 0.86);
+  color: #fff;
+  font-family: var(--app-font-display);
+  text-align: center;
+  text-shadow: 0 0 0.6rem rgba(0, 0, 0, 0.86);
+  pointer-events: none;
+}
+
+.solo-game__focus-warning strong {
+  color: #ff1f1f;
+  font-size: clamp(1.7rem, 4vw, 2.45rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.solo-game__focus-warning span {
+  color: #fff;
+  font-size: clamp(0.9rem, 2vw, 1.25rem);
+  font-weight: 900;
+  line-height: 1.1;
+}
+
 .room-game {
   --room-main-board-width: 18.75rem;
 
@@ -896,6 +965,11 @@ body.game-session-active {
 }
 
 @media (max-width: 860px) {
+  .solo-game--versus {
+    --versus-player-scale: 1;
+    --versus-player-column: minmax(0, 1fr);
+  }
+
   body.game-session-active {
     overflow: auto;
   }
@@ -915,19 +989,24 @@ body.game-session-active {
     padding: 1rem;
   }
 
+  .versus-game__player-slot {
+    width: auto;
+    min-height: 0;
+  }
+
   .versus-game__player--self,
   .versus-game__player--opponent {
-    grid-template-columns: minmax(7rem, 8.5rem) auto minmax(7rem, 8.5rem);
+    grid-template-columns: minmax(0, 22%) max-content minmax(0, 24%);
     justify-self: center;
   }
 
   .versus-game__side-panel {
-    width: min(100%, 20rem);
+    width: 100%;
     justify-self: center;
   }
 
   .versus-game__side-panel .solo-game__next {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .solo-game__status {
@@ -949,7 +1028,7 @@ body.game-session-active {
     width: min(100%, 22rem);
   }
 
-  .solo-game__next {
+  .solo-game__stage .solo-game__next {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
@@ -1001,11 +1080,6 @@ body.game-session-active {
 }
 
 @media (max-width: 620px) {
-  .versus-game__player--self,
-  .versus-game__player--opponent {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
   .room-game__population {
     display: none;
   }

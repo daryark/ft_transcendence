@@ -62,6 +62,7 @@ export default function Auth() {
   const [login, setLogin] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -191,18 +192,57 @@ export default function Auth() {
                 value={email}
               />
             )}
-            <input
-              autoComplete={
-                mode === "login" ? "current-password" : "new-password"
-              }
-              maxLength={128}
-              minLength={mode === "login" ? 1 : 8}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="Password"
-              required
-              type="password"
-              value={password}
-            />
+            <div className="auth__password-field">
+              <input
+                autoComplete={
+                  mode === "login" ? "current-password" : "new-password"
+                }
+                maxLength={128}
+                minLength={mode === "login" ? 1 : 8}
+                onChange={(event) => setPassword(event.target.value)}
+                placeholder="Password"
+                required
+                type={showPassword ? "text" : "password"}
+                value={password}
+              />
+              <button
+                aria-label={showPassword ? "Hide password" : "Show password"}
+                className="auth__password-toggle"
+                onClick={() => setShowPassword((visible) => !visible)}
+                type="button"
+              >
+                <svg
+                  aria-hidden="true"
+                  fill="none"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  width="20"
+                >
+                  <path
+                    d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+                    stroke="currentColor"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                  />
+                  {!showPassword && (
+                    <path
+                      d="M4 20 20 4"
+                      stroke="currentColor"
+                      strokeLinecap="round"
+                      strokeWidth="2"
+                    />
+                  )}
+                </svg>
+              </button>
+            </div>
             <button className="auth__submit" disabled={loading} type="submit">
               {loading
                 ? "LOADING..."

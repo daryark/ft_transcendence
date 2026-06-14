@@ -15,10 +15,12 @@ const LEGACY_SETTINGS_KEY = "tetra-music-settings";
 
 type AudioSettings = {
   bgmVolume: number;
+  muted: boolean;
   sfxVolume: number;
 };
 
 type MusicContextValue = AudioSettings & {
+  setMuted: (muted: boolean) => void;
   setBgmVolume: (volume: number) => void;
   setSfxVolume: (volume: number) => void;
 };
@@ -43,42 +45,46 @@ function readSettings(): AudioSettings {
           : typeof legacy.volume === "number"
             ? clampVolume(legacy.volume)
             : 0.35,
+      muted: Boolean(stored.muted),
       sfxVolume:
         typeof stored.sfxVolume === "number"
           ? clampVolume(stored.sfxVolume)
           : 0.7,
     };
   } catch {
-    return { bgmVolume: 0.35, sfxVolume: 0.7 };
+    return { bgmVolume: 0.35, muted: false, sfxVolume: 0.7 };
   }
 }
 
 export function MusicProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState(readSettings);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const effectiveBgmVolume = settings.muted ? 0 : settings.bgmVolume;
+  const effectiveSfxVolume = settings.muted ? 0 : settings.sfxVolume;
 
   const startMusic = useCallback(() => {
     const audio = audioRef.current;
-    if (!audio || settings.bgmVolume === 0 || !audio.paused) return;
+    if (!audio || effectiveBgmVolume === 0 || !audio.paused) return;
     void audio.play().catch(() => {
       // Browsers may block autoplay until the first user interaction.
     });
-  }, [settings.bgmVolume]);
+  }, [effectiveBgmVolume]);
 
   useEffect(() => {
     window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     document.documentElement.style.setProperty(
       "--sfx-volume",
-      String(settings.sfxVolume),
+      String(effectiveSfxVolume),
     );
-  }, [settings]);
+  }, [effectiveSfxVolume, settings]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return undefined;
 
-    audio.volume = settings.bgmVolume;
-    if (settings.bgmVolume === 0) {
+    audio.muted = settings.muted || effectiveBgmVolume === 0;
+    audio.volume = effectiveBgmVolume;
+    if (effectiveBgmVolume === 0) {
       audio.pause();
     } else {
       startMusic();
@@ -92,11 +98,18 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("pointerdown", unlockAudio);
       window.removeEventListener("keydown", unlockAudio);
     };
-  }, [settings.bgmVolume, startMusic]);
+  }, [effectiveBgmVolume, settings.muted, startMusic]);
 
   const value = useMemo<MusicContextValue>(
     () => ({
       ...settings,
+      bgmVolume: settings.bgmVolume,
+      sfxVolume: settings.sfxVolume,
+      setMuted: (muted) =>
+        setSettings((current) => ({
+          ...current,
+          muted,
+        })),
       setBgmVolume: (bgmVolume) =>
         setSettings((current) => ({
           ...current,
@@ -115,8 +128,8 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     <MusicContext.Provider value={value}>
       {children}
       <audio
-        autoPlay
         loop
+        muted={settings.muted || effectiveBgmVolume === 0}
         preload="auto"
         ref={audioRef}
         src={DEFAULT_TRACK}

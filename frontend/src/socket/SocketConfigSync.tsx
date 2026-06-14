@@ -26,7 +26,7 @@ export default function SocketConfigSync() {
       return undefined;
     }
 
-    const socket = connectSocket(session.token);
+    const socket = connectSocket(session.token, session.user.username);
     const handleGameConfig = (config: GameConfigDTO) => {
       saveGameConfig(config);
     };

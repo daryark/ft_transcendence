@@ -6,7 +6,12 @@ jest.mock('../../game/domain/match/startGame', () => ({
   default: jest.fn(),
 }));
 
+jest.mock('../../game/domain/mode/custom/index.js', () => ({
+  removeCustomRoomParticipant: jest.fn(),
+}));
+
 import startGame from '../../game/domain/match/startGame';
+import { removeCustomRoomParticipant } from '../../game/domain/mode/custom/index.js';
 
 type GameHandlersSocket = Parameters<typeof gameHandlers>[0];
 type GameHandlersDeps = Parameters<typeof gameHandlers>[1];
@@ -18,6 +23,7 @@ type TestSocket = {
   on: jest.MockedFunction<(event: string, handler: EventHandler) => void>;
   emit: jest.MockedFunction<(event: string, payload?: unknown) => void>;
   join: jest.MockedFunction<(roomId: string) => void>;
+  leave: jest.MockedFunction<(roomId: string) => void>;
 };
 
 describe('gameHandlers', () => {
@@ -32,6 +38,7 @@ describe('gameHandlers', () => {
       on: jest.fn<(event: string, handler: EventHandler) => void>(),
       emit: jest.fn<(event: string, payload?: unknown) => void>(),
       join: jest.fn<(roomId: string) => void>(),
+      leave: jest.fn<(roomId: string) => void>(),
       ...overrides,
     };
   }
@@ -196,11 +203,15 @@ describe('gameHandlers', () => {
     });
     const modeService = { join: jest.fn() };
     const roomService = {
-      getRoom: jest.fn(),
+      getRoom: jest.fn(() => ({
+        gameConfig: { mode: 'quickplay' },
+        status: 'lobby',
+      })),
       removePlayer: jest.fn(),
       removeSpectator: jest.fn(),
       isEmpty: jest.fn(() => false),
       deleteRoom: jest.fn(),
+      broadcast: jest.fn(),
     };
 
     registerGameHandlers(socket, { modeService, roomService });
@@ -224,11 +235,15 @@ describe('gameHandlers', () => {
     });
     const modeService = { join: jest.fn() };
     const roomService = {
-      getRoom: jest.fn(),
+      getRoom: jest.fn(() => ({
+        gameConfig: { mode: 'quickplay' },
+        status: 'lobby',
+      })),
       removePlayer: jest.fn(),
       removeSpectator: jest.fn(),
       isEmpty: jest.fn(() => false),
       deleteRoom: jest.fn(),
+      broadcast: jest.fn(),
     };
 
     registerGameHandlers(socket, { modeService, roomService });
@@ -252,11 +267,15 @@ describe('gameHandlers', () => {
     });
     const modeService = { join: jest.fn() };
     const roomService = {
-      getRoom: jest.fn(),
+      getRoom: jest.fn(() => ({
+        gameConfig: { mode: 'quickplay' },
+        status: 'lobby',
+      })),
       removePlayer: jest.fn(),
       removeSpectator: jest.fn(),
       isEmpty: jest.fn(() => true),
       deleteRoom: jest.fn(),
+      broadcast: jest.fn(),
     };
 
     registerGameHandlers(socket, { modeService, roomService });
@@ -285,6 +304,29 @@ describe('gameHandlers', () => {
 
     expect(roomService.getRoom).toHaveBeenCalledWith('ROOM1');
     expect(pushInput).toHaveBeenCalledWith({ type: 'left' });
+  });
+
+  test('player:move pushes player id and input to custom versus engine', () => {
+    const pushInput = jest.fn();
+    const socket = createSocket({
+      data: {
+        identity: { id: 'user-1', type: 'anonymous' },
+        roomId: 'ROOM1',
+        role: 'player',
+      },
+    });
+    const modeService = { join: jest.fn() };
+    const roomService = {
+      getRoom: jest.fn(() => ({
+        gameConfig: { mode: 'custom' },
+        engine: { pushInput },
+      })),
+    };
+
+    registerGameHandlers(socket, { modeService, roomService });
+    getRegisteredHandler(socket, 'player:move')({ type: 'left' });
+
+    expect(pushInput).toHaveBeenCalledWith('user-1', { type: 'left' });
   });
 
   test('player:move forwards held-input release to the room engine', () => {
@@ -382,5 +424,93 @@ describe('gameHandlers', () => {
 
     expect(roomService.getRoom).not.toHaveBeenCalled();
     expect(pushInput).not.toHaveBeenCalled();
+  });
+
+  test('game:stop removes custom participant without stopping the whole engine first', () => {
+    const stopMatch = jest.fn();
+    const stopEngine = jest.fn();
+    const socket = createSocket({
+      data: {
+        identity: { id: 'user-1', type: 'anonymous' },
+        roomId: 'ROOM1',
+        role: 'player',
+      },
+    });
+    const modeService = { join: jest.fn() };
+    const roomService = {
+      getRoom: jest.fn(() => ({
+        gameConfig: { mode: 'custom' },
+        match: { stop: stopMatch },
+        engine: { stop: stopEngine },
+      })),
+    };
+
+    registerGameHandlers(socket, { modeService, roomService });
+    getRegisteredHandler(socket, 'game:stop')();
+
+    expect(socket.leave).toHaveBeenCalledWith('ROOM1');
+    expect(socket.data.roomId).toBeUndefined();
+    expect(socket.data.role).toBeUndefined();
+    expect(removeCustomRoomParticipant).toHaveBeenCalledWith(
+      roomService,
+      'ROOM1',
+      'user-1',
+      'player',
+    );
+    expect(stopMatch).not.toHaveBeenCalled();
+    expect(stopEngine).not.toHaveBeenCalled();
+  });
+
+  test('game:stop removes player and ends any non-custom multiplayer room', () => {
+    const stopMatch = jest.fn();
+    const stopEngine = jest.fn();
+    const remainingPlayer = {
+      id: 'user-2',
+      profile: { nickname: 'Dasha' },
+    };
+    const socket = createSocket({
+      data: {
+        identity: { id: 'user-1', type: 'anonymous' },
+        roomId: 'ROOM1',
+        role: 'player',
+      },
+    });
+    const modeService = { join: jest.fn() };
+    const room = {
+      gameConfig: { mode: 'quickplay' },
+      status: 'playing',
+      state: { score: 100 },
+      players: new Map([['user-2', remainingPlayer]]),
+      match: { stop: stopMatch },
+      engine: { stop: stopEngine },
+    };
+    const roomService = {
+      getRoom: jest.fn(() => room),
+      removePlayer: jest.fn(),
+      removeSpectator: jest.fn(),
+      isEmpty: jest.fn(() => false),
+      deleteRoom: jest.fn(),
+      broadcast: jest.fn(),
+    };
+
+    registerGameHandlers(socket, { modeService, roomService });
+    getRegisteredHandler(socket, 'game:stop')();
+
+    expect(socket.leave).toHaveBeenCalledWith('ROOM1');
+    expect(socket.data.roomId).toBeUndefined();
+    expect(socket.data.role).toBeUndefined();
+    expect(roomService.removePlayer).toHaveBeenCalledWith('ROOM1', 'user-1');
+    expect(stopMatch).toHaveBeenCalled();
+    expect(stopEngine).toHaveBeenCalled();
+    expect(room.status).toBe('ended');
+    expect(roomService.broadcast).toHaveBeenCalledWith(
+      'ROOM1',
+      'game:end',
+      expect.objectContaining({
+        reason: 'player_left',
+        winnerId: 'user-2',
+      }),
+    );
+    expect(roomService.deleteRoom).not.toHaveBeenCalled();
   });
 });

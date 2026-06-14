@@ -134,6 +134,14 @@ const formatJoinedText = (createdAt: string | null) => {
   return `JOINED ${months} ${months === 1 ? "MONTH" : "MONTHS"} AGO`;
 };
 
+const formatPlayTime = (hours: number) => {
+  if (hours <= 0) return "0 hours";
+  if (hours < 1) return `${Math.round(hours * 60)} min`;
+
+  const rounded = Math.round(hours * 10) / 10;
+  return `${rounded.toLocaleString()} ${rounded === 1 ? "hour" : "hours"}`;
+};
+
 const parseErrorMessage = async (res: Response) => {
   try {
     const payload = (await res.json()) as { error?: string; message?: string };
@@ -530,7 +538,7 @@ export default function Profile() {
               </div>
               <dl>
                 <dt>PLAY TIME</dt>
-                <dd>{profile.playTimeHours} hours</dd>
+                <dd>{formatPlayTime(profile.playTimeHours)}</dd>
                 <dt>ONLINE GAMES</dt>
                 <dd>{profile.onlineGames}</dd>
                 <dt>OF WHICH WINS</dt>

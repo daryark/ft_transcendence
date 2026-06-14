@@ -30,7 +30,10 @@ export type CustomRoomPlayer = {
 export type CustomChatMessage = {
   id: string;
   author: string;
+  message?: string;
   text: string;
+  actor?: string;
+  system?: boolean;
 };
 
 export type CustomRoomSnapshot = {

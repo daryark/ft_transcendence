@@ -93,7 +93,7 @@ export function useGameSession() {
   const gameConfigRef = useRef(gameConfig);
   const countdownRef = useRef(countdownStep);
   const returnPath = getReturnPath(location.state, gameId);
-  const escProgress = useGameControls({
+  const controls = useGameControls({
     socket,
     gameId,
     gameState,
@@ -200,6 +200,7 @@ export function useGameSession() {
       ) {
         clearStoredActiveGame(gameId);
         setSessionError("This game is no longer available on the server.");
+        navigate(returnPath, { replace: true });
       }
     };
     const handleUpdate = (payload: GameUpdatePayload) => {
@@ -306,7 +307,7 @@ export function useGameSession() {
       socket.off("game:end", handleEnd);
       socket.off("server:error", handleServerError);
     };
-  }, [gameId, playerIdentityId, socket]);
+  }, [gameId, navigate, playerIdentityId, returnPath, socket]);
 
   const playerEntries = useMemo(() => Object.values(players), [players]);
   const selfPlayer =
@@ -354,7 +355,8 @@ export function useGameSession() {
     connectionStatus,
     networkStatus,
     sessionError,
-    escProgress,
+    escProgress: controls.escProgress,
+    focused: controls.focused,
     currentUser,
     selfPlayer,
     opponents,
@@ -366,7 +368,9 @@ export function useGameSession() {
     returnPath,
     exitGame,
     leaveResults: () => {
-      socket?.emit("mode:leave");
+      if (gameConfigRef.current?.mode !== "custom") {
+        socket?.emit("mode:leave");
+      }
       navigate(returnPath);
     },
     restartSolo: () => socket?.emit("room:start"),

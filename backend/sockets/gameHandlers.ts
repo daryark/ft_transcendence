@@ -6,6 +6,7 @@ import { GameMode } from "../game/config/gameConfig.types";
 import RoomService from "../game/services/roomService";
 import { ConfigPatch, ConfigPatchSchema } from "../game/config/config.schema";
 import startGame from "../game/domain/match/startGame";
+import { leaveSocketRoomNow } from "./roomSocketExit";
 
 export type ClientToServerEvents =
     | "mode:join"
@@ -84,9 +85,15 @@ export default function gameHandlers(
     socket.on("player:move", (input: unknown) => {
         if (!isInput(input)) return;
 
-        const { roomId, role } = socket.data as SocketData;
+        const { identity, roomId, role } = socket.data as SocketData;
         if (roomId && role === "player") {
             const room = roomService.getRoom(roomId);
+            if (room?.gameConfig?.mode === "custom" && identity) {
+                (room.engine as { pushInput?: (playerId: string, input: unknown) => void } | null)
+                    ?.pushInput?.(String(identity.id), input);
+                return;
+            }
+
             room?.engine?.pushInput(input);
         }
     });
@@ -111,16 +118,7 @@ export default function gameHandlers(
     });
 
     socket.on("mode:leave", () => {
-        const { identity, roomId, role } = socket.data as SocketData;
-        if (roomId && identity && role) {
-
-            role === "player"
-                ? roomService.removePlayer(roomId, identity.id)
-                : roomService.removeSpectator(roomId, identity.id);
-        }
-        if (roomId && roomService.isEmpty(roomId)) {
-            roomService.deleteRoom(roomId);
-        }
+        leaveSocketRoomNow(socket, roomService);
     });
 
     socket.on("room:start", () => {
@@ -134,16 +132,15 @@ export default function gameHandlers(
     });
 
     socket.on("game:stop", async () => {
-        const { roomId, identity, role } = socket.data as SocketData;
+        const { roomId } = socket.data as SocketData;
         if (!roomId) return;
 
         const room = roomService.getRoom(roomId);
         if (!room) return;
 
-        room.match?.stop();
-        room.engine?.stop();
-
         if (room.gameConfig.mode === "solo" && room.gameConfig.objective.winCondition === "none") {
+            room.match?.stop();
+            room.engine?.stop();
             roomService.broadcast(roomId, "game:end", {
                 roomId,
                 reason: "manual_exit",
@@ -160,14 +157,13 @@ export default function gameHandlers(
 
         // If solo mode -> delete entire room and do not persist stats
         if (room.gameConfig.mode === "solo") {
+            room.match?.stop();
+            room.engine?.stop();
             roomService.deleteRoom(roomId);
             return;
         }
 
-        // Multiplayer: remove the player from the room and do not persist stats
-        if (identity && role === "player") {
-            roomService.removePlayer(roomId, identity.id);
-        }
+        leaveSocketRoomNow(socket, roomService);
     });
 }
 

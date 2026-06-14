@@ -1,6 +1,21 @@
 import { Server, Socket } from "socket.io";
+import RoomService from "../game/services/roomService";
+import { appendCustomRoomChatMessage } from "../game/domain/mode/custom/index.js";
 
-export default function chatHandlers(io: Server, socket: Socket) {
+function getPlayerName(roomService: RoomService, roomId: string, playerId: string) {
+    const room = roomService.getRoom(roomId as never);
+    const player =
+        room?.players.get(playerId as never) ??
+        room?.spectators?.get(playerId as never);
+
+    return player?.profile?.nickname ?? String(playerId);
+}
+
+export default function chatHandlers(
+    io: Server,
+    socket: Socket,
+    { roomService }: { roomService: RoomService },
+) {
     socket.on("chat:message", (data: unknown) => {
         const { identity, roomId } = socket.data;
         const message =
@@ -16,10 +31,13 @@ export default function chatHandlers(io: Server, socket: Socket) {
             return;
         }
 
-        io.to(roomId).emit("chat:message", {
-            sender: String(identity.id),
+        const room = roomService.getRoom(roomId as never);
+        const payload = appendCustomRoomChatMessage(room, {
+            sender: getPlayerName(roomService, roomId, String(identity.id)),
             message,
         });
+
+        io.to(roomId).emit("chat:message", payload);
     });
 };
 

@@ -17,7 +17,7 @@ const emitSocketChange = () => {
   window.dispatchEvent(new Event(SOCKET_EVENT));
 };
 
-export const connectSocket = (token?: string) => {
+export const connectSocket = (token?: string, username?: string) => {
   const nextSocketToken = token ?? ANONYMOUS_SOCKET_KEY;
 
   if (socket && socketToken !== nextSocketToken) {
@@ -32,6 +32,7 @@ export const connectSocket = (token?: string) => {
       path: "/socket.io",
       auth: {
         ...(token ? { token } : {}),
+        ...(username ? { username } : {}),
       },
       transports: ["websocket", "polling"],
     });

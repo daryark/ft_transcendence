@@ -123,7 +123,7 @@ export async function searchUsers(options: SearchUsersOptions): Promise<SearchUs
 	]);
 
 	return {
-		items: users.map((user) => ({
+		items: users.map((user: { id: number; username: string; avatar_id: number | null }) => ({
 			id: user.id,
 			username: user.username,
 			avatarId: user.avatar_id ?? 0,

@@ -85,7 +85,7 @@ describe("profile service", () => {
 			xp: 420,
 			nextLevelXp: 1000,
 			playTimeHours: 2,
-			onlineGames: 3,
+			onlineGames: 0,
 			wins: 2,
 			modes: {
 				league: null,

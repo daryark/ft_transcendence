@@ -2,8 +2,49 @@ import type { Socket } from "socket.io";
 import PlayerService from "../game/services/playerService";
 import { resolveIdentity } from "../auth/identity";
 
+function getHandshakeUsername(socket: Socket) {
+    const username = socket.handshake.auth?.username;
+
+    return typeof username === "string" && username.trim().length > 0
+        ? username.trim().slice(0, 32)
+        : null;
+}
+
+async function getRegisteredSocketProfile(userId: string) {
+    const fallback = {
+        nickname: `User${userId.slice(0, 5)}`,
+        level: 1,
+        xp: 0,
+    };
+    const numericUserId = Number(userId);
+
+    if (!Number.isInteger(numericUserId) || numericUserId <= 0) {
+        return fallback;
+    }
+
+    try {
+        const { prisma } = await import("../prisma/prisma.js");
+        const user = await prisma.users.findUnique({
+            where: { id: numericUserId },
+            select: {
+                username: true,
+                level: true,
+                xp: true,
+            },
+        });
+
+        return {
+            nickname: user?.username ?? fallback.nickname,
+            level: user?.level ?? fallback.level,
+            xp: user?.xp ?? fallback.xp,
+        };
+    } catch {
+        return fallback;
+    }
+}
+
 export function socketAuth(playerService: PlayerService) {
-    return (socket: Socket, next: (err?: Error) => void) => {
+    return async (socket: Socket, next: (err?: Error) => void) => {
         try {
             const identity = resolveIdentity(socket.handshake.auth);
             let player = playerService.get(identity.id);
@@ -12,15 +53,20 @@ export function socketAuth(playerService: PlayerService) {
                 player = playerService.create({
                     socketId: socket.id,
                     id: identity.id,
+                    identityType: identity.type,
                     joinedAt: Date.now(),
                     connected: true
                 });
 
                 if (identity.type === "registered") {
-                    // TODO: Load profile from DB-backed user service when game sockets depend on it.
+                    playerService.addProfile(
+                        identity.id,
+                        await getRegisteredSocketProfile(identity.id),
+                    );
+                } else {
                     playerService.addProfile(identity.id, {
-                        nickname: `User${identity.id.slice(0, 5)}`,
-                        level: 1,
+                        nickname: getHandshakeUsername(socket) ?? `Guest${identity.id.slice(0, 5)}`,
+                        level: 0,
                         xp: 0
                     });
                 }

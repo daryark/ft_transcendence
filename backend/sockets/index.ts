@@ -46,7 +46,7 @@ export default function socketSetup(io: Server) {
         socket.emit('game:config', configDTO);
 
         gameHandlers(socket, { modeService, roomService });
-        chatHandlers(io, socket);
+        chatHandlers(io, socket, { roomService });
 
         disconnectHandlers(socket, { roomService, playerService });
     });

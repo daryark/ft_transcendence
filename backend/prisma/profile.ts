@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { prisma } from "./prisma";
-import type { Prisma } from "@prisma/client";
 
 const profileUpdateSchema = z
 	.object({
@@ -113,6 +112,27 @@ function toModeStats(score: number | null, achievedAt: Date | null): ProfileMode
 	};
 }
 
+function toFortyLinesStats(score: number | null, achievedAt: Date | null): ProfileModeStats {
+	if (score === null || score === undefined) {
+		return null;
+	}
+
+	return {
+		value: `${(score / 1000).toFixed(2)}s`,
+		achievedAgo: formatAchievedAgo(achievedAt),
+	};
+}
+
+function isBetterModeScore(
+	mode: keyof ProfileResponse["modes"],
+	score: number,
+	current?: { score: number; achievedAt: Date | null },
+) {
+	if (!current) return true;
+	if (mode === "fortyLines") return score < current.score;
+	return score > current.score;
+}
+
 function buildProfileResponse(
 	user: ProfileUserRecord,
 	matchRows: ProfileModeRow[],
@@ -134,7 +154,7 @@ function buildProfileResponse(
 		const score = row.score ?? 0;
 		const current = bestModeStats[key];
 
-		if (!current || score > current.score) {
+		if (isBetterModeScore(key, score, current)) {
 			bestModeStats[key] = {
 				score,
 				achievedAt: row.matches?.created_at ?? null,
@@ -151,13 +171,13 @@ function buildProfileResponse(
 		level: user.level ?? 1,
 		xp: user.xp ?? 0,
 		nextLevelXp: user.next_level_xp ?? 100,
-		playTimeHours: Math.floor((user.play_time_seconds ?? 0) / 3600),
-		onlineGames: matchRows.length,
+		playTimeHours: Math.round(((user.play_time_seconds ?? 0) / 3600) * 10) / 10,
+		onlineGames: matchRows.filter((row) => row.matches?.gamemode === "tetraLeague").length,
 		wins: user.wins ?? wins,
 		modes: {
 			league: null,
 			quickPlay: toModeStats(bestModeStats.quickPlay?.score ?? null, bestModeStats.quickPlay?.achievedAt ?? null),
-			fortyLines: toModeStats(bestModeStats.fortyLines?.score ?? null, bestModeStats.fortyLines?.achievedAt ?? null),
+			fortyLines: toFortyLinesStats(bestModeStats.fortyLines?.score ?? null, bestModeStats.fortyLines?.achievedAt ?? null),
 			blitz: toModeStats(bestModeStats.blitz?.score ?? null, bestModeStats.blitz?.achievedAt ?? null),
 			zen: toModeStats(bestModeStats.zen?.score ?? null, bestModeStats.zen?.achievedAt ?? null),
 		},
@@ -188,7 +208,7 @@ async function findUserByField(
 			select: select as any,
 		});
 
-		return result as Prisma.usersGetPayload<{ select: typeof select }> | null;
+		return result as ProfileUserRecord | null;
 	} catch (error) {
 		if (!isMissingCountryFieldError(error)) {
 			throw error;
@@ -211,7 +231,7 @@ async function findUserByField(
 			select: fallbackSelect as any,
 		});
 
-		return fallbackResult as Prisma.usersGetPayload<{ select: typeof fallbackSelect }> | null;
+		return fallbackResult as ProfileUserRecord | null;
 	}
 }
 
@@ -272,7 +292,7 @@ function buildMiniProfileResponse(user: ProfileUserRecord, matchRows: ProfileMod
 		const score = row.score ?? 0;
 		const current = bestModeStats[key];
 
-		if (!current || score > current.score) {
+		if (isBetterModeScore(key, score, current)) {
 			bestModeStats[key] = {
 				score,
 				achievedAt: row.matches?.created_at ?? null,
@@ -289,7 +309,7 @@ function buildMiniProfileResponse(user: ProfileUserRecord, matchRows: ProfileMod
 			modes: {
 				league: bestModeStats.league ? { tr: bestModeStats.league.score } : null,
 				quickPlay: toModeStats(bestModeStats.quickPlay?.score ?? null, bestModeStats.quickPlay?.achievedAt ?? null),
-				fortyLines: toModeStats(bestModeStats.fortyLines?.score ?? null, bestModeStats.fortyLines?.achievedAt ?? null),
+				fortyLines: toFortyLinesStats(bestModeStats.fortyLines?.score ?? null, bestModeStats.fortyLines?.achievedAt ?? null),
 				blitz: toModeStats(bestModeStats.blitz?.score ?? null, bestModeStats.blitz?.achievedAt ?? null),
 				zen: toModeStats(bestModeStats.zen?.score ?? null, bestModeStats.zen?.achievedAt ?? null),
 			},

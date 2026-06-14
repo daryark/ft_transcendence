@@ -54,6 +54,7 @@ export function useGameControls({
   navigate,
 }: GameControlsOptions) {
   const [escProgress, setEscProgress] = useState(0);
+  const [focused, setFocused] = useState(() => document.hasFocus());
   const gameStateRef = useRef(gameState);
   const countdownRef = useRef(countdownActive);
   const resultRef = useRef(resultActive);
@@ -230,5 +231,25 @@ export function useGameControls({
     };
   }, [socket]);
 
-  return escProgress;
+  useEffect(() => {
+    const refreshFocusState = () => {
+      setFocused(document.hasFocus() && document.visibilityState === "visible");
+    };
+
+    refreshFocusState();
+    window.addEventListener("focus", refreshFocusState);
+    window.addEventListener("blur", refreshFocusState);
+    document.addEventListener("visibilitychange", refreshFocusState);
+
+    return () => {
+      window.removeEventListener("focus", refreshFocusState);
+      window.removeEventListener("blur", refreshFocusState);
+      document.removeEventListener("visibilitychange", refreshFocusState);
+    };
+  }, []);
+
+  return {
+    escProgress,
+    focused,
+  };
 }

@@ -7,6 +7,7 @@ import {
 import type { GameSession } from "../hooks/useGameSession";
 import GameAbortOverlay from "../components/GameAbortOverlay";
 import GameCountdownOverlay from "../components/GameCountdownOverlay";
+import GameFocusOverlay from "../components/GameFocusOverlay";
 import GamePreviewPanel from "../components/GamePreviewPanel";
 
 type SoloGameViewProps = {
@@ -107,6 +108,7 @@ export default function SoloGameView({ session }: SoloGameViewProps) {
       )}
 
       <GameAbortOverlay progress={session.escProgress} />
+      <GameFocusOverlay active={!session.focused && !session.result} />
     </main>
   );
 }

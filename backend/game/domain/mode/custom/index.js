@@ -8,6 +8,8 @@ const JOIN_PREFIX = "JOIN:";
 const customRoomHosts = new Map();
 const customEngines = new Map();
 const customRoomScores = new Map();
+const customRoomMessages = new Map();
+const MAX_ROOM_MESSAGES = 100;
 
 function emitError(socket, reason) {
   socket.emit("server:error", { reason });
@@ -17,12 +19,40 @@ function getPlayerName(player) {
   return player?.profile?.nickname ?? String(player?.id ?? "PLAYER");
 }
 
-function getMatchTotalGames(room) {
-  const roundsToWin = room.matchConfig?.roundsToWin;
+function getRoomMessages(room) {
+  if (!customRoomMessages.has(room.id)) {
+    customRoomMessages.set(room.id, []);
+  }
 
-  return typeof roundsToWin === "number" && Number.isFinite(roundsToWin)
-    ? Math.max(1, roundsToWin * 2 - 1)
-    : 1;
+  return customRoomMessages.get(room.id);
+}
+
+export function appendCustomRoomChatMessage(room, message) {
+  if (!room || room.gameConfig.mode !== "custom") return message;
+
+  const messages = getRoomMessages(room);
+  const storedMessage = {
+    id: `${Date.now()}-${messages.length}`,
+    ...message,
+  };
+
+  messages.push(storedMessage);
+  if (messages.length > MAX_ROOM_MESSAGES) {
+    messages.splice(0, messages.length - MAX_ROOM_MESSAGES);
+  }
+
+  return storedMessage;
+}
+
+function emitSystemMessage(roomService, room, message, actor) {
+  const payload = appendCustomRoomChatMessage(room, {
+    sender: "SYS",
+    system: true,
+    actor: actor ? String(actor).toUpperCase() : undefined,
+    message,
+  });
+
+  roomService.broadcast(room.id, "chat:message", payload);
 }
 
 function getRoomScores(room) {
@@ -33,8 +63,17 @@ function getRoomScores(room) {
   return customRoomScores.get(room.id);
 }
 
-function serializePlayer(player, hostId, room) {
+function getPlayerRoomStats(room, playerId) {
   const scores = getRoomScores(room);
+  const id = String(playerId);
+  const stats = scores.get(id) ?? { wins: 0, games: 0 };
+
+  scores.set(id, stats);
+  return stats;
+}
+
+function serializePlayer(player, hostId, room) {
+  const stats = getPlayerRoomStats(room, player.id);
 
   return {
     id: player.id,
@@ -42,8 +81,8 @@ function serializePlayer(player, hostId, room) {
     rank: player.profile?.rank,
     isHost: player.id === hostId,
     connected: player.connected,
-    matchWins: scores.get(String(player.id)) ?? 0,
-    matchTotalGames: getMatchTotalGames(room),
+    matchWins: stats.wins,
+    matchTotalGames: stats.games,
   };
 }
 
@@ -67,11 +106,48 @@ function serializeRoom(room) {
       matchConfig: room.matchConfig,
       gameConfig: room.gameConfig,
     },
+    chatMessages: getRoomMessages(room),
   };
 }
 
 function broadcastRoomUpdate(roomService, room) {
   roomService.broadcast(room.id, "room:update", serializeRoom(room));
+}
+
+function isRegisteredPlayer(player) {
+  return player?.identityType === "registered";
+}
+
+function getNextHostId(room) {
+  const players = Array.from(room.players.values());
+
+  if (!room.roomConfig.public) {
+    return players[0]?.id ?? null;
+  }
+
+  return players.find(isRegisteredPlayer)?.id ?? null;
+}
+
+function ensureRoomHost(room) {
+  const currentHostId = customRoomHosts.get(room.id);
+  const currentHost = currentHostId ? room.players.get(currentHostId) : null;
+
+  if (
+    currentHost &&
+    (!room.roomConfig.public || isRegisteredPlayer(currentHost))
+  ) {
+    return currentHostId;
+  }
+
+  const nextHostId = getNextHostId(room);
+
+  if (nextHostId) {
+    customRoomHosts.set(room.id, nextHostId);
+  } else {
+    customRoomHosts.delete(room.id);
+  }
+
+  return nextHostId;
 }
 
 function toEngineGameConfig(gameConfig) {
@@ -172,9 +248,12 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
   if (activePlayerIds.length > 1) return false;
   const winnerId = activePlayerIds[0] ?? null;
 
+  for (const playerId of engine.playerEngines.keys()) {
+    getPlayerRoomStats(room, playerId).games += 1;
+  }
+
   if (winnerId) {
-    const scores = getRoomScores(room);
-    scores.set(String(winnerId), (scores.get(String(winnerId)) ?? 0) + 1);
+    getPlayerRoomStats(room, winnerId).wins += 1;
   }
 
   room.status = "ended";
@@ -186,11 +265,66 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
     winnerId,
   };
 
+  emitSystemMessage(roomService, room, "game finished");
   roomService.broadcast(room.id, "game:update", payload);
   roomService.broadcast(room.id, "game:end", payload);
   engine.stop();
   room.status = "lobby";
   room.engine = null;
+  broadcastRoomUpdate(roomService, room);
+  return true;
+}
+
+export function removeCustomRoomParticipant(
+  roomService,
+  roomId,
+  playerId,
+  role,
+) {
+  const room = roomService.getRoom(roomId);
+  if (!room || room.gameConfig.mode !== "custom") return false;
+
+  const normalizedPlayerId = String(playerId);
+  const engine = room.engine;
+
+  if (role === "player") {
+    const leavingPlayer = room.players.get(playerId);
+    if (!leavingPlayer) return false;
+
+    const leavingPlayerName = getPlayerName(leavingPlayer);
+    const playerEngine = engine?.playerEngines?.get?.(normalizedPlayerId);
+    playerEngine?.engine?.stop?.();
+    if (playerEngine?.room) {
+      playerEngine.room.status = "ended";
+    }
+    engine?.eliminatedPlayerIds?.add?.(normalizedPlayerId);
+    roomService.removePlayer(roomId, playerId);
+
+    if (room.players.size === 0) {
+      customRoomHosts.delete(room.id);
+      customRoomScores.delete(room.id);
+      customRoomMessages.delete(room.id);
+      stopCustomEngine(room.id);
+      roomService.deleteRoom(room.id);
+      return true;
+    }
+
+    ensureRoomHost(room);
+    emitSystemMessage(roomService, room, "left the room", leavingPlayerName);
+
+    if (engine && maybeEndVersus(room, roomService, engine, "game_over")) {
+      return true;
+    }
+
+    broadcastRoomUpdate(roomService, room);
+    return true;
+  }
+
+  const spectator = room.spectators?.get(playerId);
+  if (!spectator) return false;
+
+  roomService.removeSpectator(roomId, playerId);
+  emitSystemMessage(roomService, room, "left the room", getPlayerName(spectator));
   broadcastRoomUpdate(roomService, room);
   return true;
 }
@@ -284,6 +418,7 @@ function startCustomVersus(room, roomService) {
   room.state = getFirstPlayerState(engine);
   customEngines.set(room.id, engine);
 
+  emitSystemMessage(roomService, room, "game started");
   roomService.broadcast(
     room.id,
     "game:start",
@@ -334,14 +469,22 @@ function joinExistingRoom(socket, roomService, player, roomCode) {
     return null;
   }
 
+  const wasAlreadyPlayer = room.players.has(player.id);
+  const wasAlreadySpectator = room.spectators?.has(player.id) ?? false;
+
   if (!canJoinAsPlayer(room, player)) {
     if (room.spectators) {
       roomService.addSpectator(room.id, player);
       socket.join(room.id);
       socket.data.roomId = room.id;
       socket.data.role = "spectator";
+      if (!wasAlreadySpectator) {
+        emitSystemMessage(roomService, room, "joined the room", getPlayerName(player));
+      }
       socket.emit("room:update", serializeRoom(room));
-      broadcastRoomUpdate(roomService, room);
+      if (!wasAlreadySpectator) {
+        broadcastRoomUpdate(roomService, room);
+      }
       return roomService.getRoomState(room.id);
     }
 
@@ -350,12 +493,18 @@ function joinExistingRoom(socket, roomService, player, roomCode) {
   }
 
   roomService.addPlayer(room.id, player);
+  ensureRoomHost(room);
   socket.join(room.id);
   socket.data.roomId = room.id;
   socket.data.role = "player";
+  if (!wasAlreadyPlayer) {
+    emitSystemMessage(roomService, room, "joined the room", getPlayerName(player));
+  }
   socket.emit("room:update", serializeRoom(room));
-  broadcastRoomUpdate(roomService, room);
-  maybeAutoStart(roomService, room);
+  if (!wasAlreadyPlayer) {
+    broadcastRoomUpdate(roomService, room);
+    maybeAutoStart(roomService, room);
+  }
 
   return roomService.getRoomState(room.id);
 }
@@ -370,6 +519,7 @@ function createCustomRoom(socket, roomService, player, payload) {
   socket.join(room.id);
   socket.data.roomId = room.id;
   socket.data.role = "player";
+  emitSystemMessage(roomService, room, "joined the room", getPlayerName(player));
   socket.emit("room:update", serializeRoom(room));
   broadcastRoomUpdate(roomService, room);
   maybeAutoStart(roomService, room);

@@ -3,6 +3,7 @@ import GameBoard from "../../../components/GameBoard/GameBoard";
 import { formatPlayerName, getModeLabel } from "../gameUtils";
 import type { GameSession } from "../hooks/useGameSession";
 import GameAbortOverlay from "../components/GameAbortOverlay";
+import GameFocusOverlay from "../components/GameFocusOverlay";
 import GamePreviewPanel from "../components/GamePreviewPanel";
 
 type RoomGameViewProps = {
@@ -161,6 +162,7 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
       </section>
 
       <GameAbortOverlay progress={session.escProgress} />
+      <GameFocusOverlay active={!session.focused && !session.result} />
     </main>
   );
 }

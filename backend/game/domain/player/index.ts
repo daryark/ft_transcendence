@@ -18,6 +18,7 @@ export const PlayerProfileSchema = z.object({
 export const PlayerSchema = z.object({
   id: UserIdSchema,
   socketId: z.string().min(1),
+  identityType: z.enum(["registered", "anonymous"]).optional(),
   connected: z.boolean(),
   joinedAt: z.number().int().nonnegative(),
   disconnectedAt: z.number().int().nonnegative().optional(),

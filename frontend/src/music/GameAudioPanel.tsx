@@ -60,7 +60,14 @@ function VolumeControl({
 }
 
 export default function GameAudioPanel() {
-  const { bgmVolume, setBgmVolume, setSfxVolume, sfxVolume } = useMusic();
+  const {
+    bgmVolume,
+    muted,
+    setBgmVolume,
+    setMuted,
+    setSfxVolume,
+    sfxVolume,
+  } = useMusic();
   const [visible, setVisible] = useState(false);
   const fadeTimer = useRef<number | null>(null);
   const volumesRef = useRef({ bgmVolume, sfxVolume });
@@ -82,6 +89,7 @@ export default function GameAudioPanel() {
     const handleGlobalWheel = (event: WheelEvent) => {
       const direction = event.deltaY < 0 ? 1 : -1;
       const volumes = volumesRef.current;
+      setMuted(false);
       setBgmVolume(volumes.bgmVolume + direction * WHEEL_STEP);
       setSfxVolume(volumes.sfxVolume + direction * WHEEL_STEP);
       reveal();
@@ -92,7 +100,7 @@ export default function GameAudioPanel() {
       window.removeEventListener("wheel", handleGlobalWheel);
       if (fadeTimer.current !== null) window.clearTimeout(fadeTimer.current);
     };
-  }, [reveal, setBgmVolume, setSfxVolume]);
+  }, [reveal, setBgmVolume, setMuted, setSfxVolume]);
 
   return (
     <aside
@@ -100,17 +108,34 @@ export default function GameAudioPanel() {
       className={`game-audio-panel${visible ? " is-visible" : ""}`}
       onFocus={reveal}
     >
+      <button
+        aria-pressed={muted}
+        className="game-audio-panel__mute"
+        onClick={() => {
+          setMuted(!muted);
+          reveal();
+        }}
+        type="button"
+      >
+        {muted ? "SOUND OFF" : "SOUND ON"}
+      </button>
       <VolumeControl
         label="SFX"
-        onChange={setSfxVolume}
+        onChange={(value) => {
+          setMuted(false);
+          setSfxVolume(value);
+        }}
         onInteract={reveal}
-        value={sfxVolume}
+        value={muted ? 0 : sfxVolume}
       />
       <VolumeControl
         label="BGM"
-        onChange={setBgmVolume}
+        onChange={(value) => {
+          setMuted(false);
+          setBgmVolume(value);
+        }}
         onInteract={reveal}
-        value={bgmVolume}
+        value={muted ? 0 : bgmVolume}
       />
     </aside>
   );

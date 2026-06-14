@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import GameBoard from "../../../components/GameBoard/GameBoard";
 import type { ControlsConfig } from "../../../../shared/types/config.types";
 import { formatPlayerName } from "../gameUtils";
@@ -10,6 +11,7 @@ type PlayerBoardCardProps = {
   fallbackName: string;
   modifier: "self" | "opponent";
   controls: ControlsConfig;
+  scale?: number;
 };
 
 export default function PlayerBoardCard({
@@ -18,15 +20,22 @@ export default function PlayerBoardCard({
   fallbackName,
   modifier,
   controls,
+  scale = 1,
 }: PlayerBoardCardProps) {
+  const cellSize = Math.round(26 * scale);
+  const figureSize = Math.round(24 * scale);
+
   return (
     <article
       className={`versus-game__player versus-game__player--${modifier}`}
+      style={
+        { "--versus-card-scale": String(scale) } as CSSProperties
+      }
     >
       {controls.hold ? (
         <GamePreviewPanel
           className="versus-game__side-panel versus-game__side-panel--hold"
-          figureSize={24}
+          figureSize={figureSize}
           state={state}
           type="hold"
         />
@@ -36,7 +45,7 @@ export default function PlayerBoardCard({
 
       <div className="versus-game__board-wrap">
         <GameBoard
-          cellSize={26}
+          cellSize={cellSize}
           gameState={state}
           showGhost={controls.showShadowPiece}
         />
@@ -45,10 +54,10 @@ export default function PlayerBoardCard({
         </div>
       </div>
 
-      <div>
+      <div className="versus-game__queue-wrap">
         <GamePreviewPanel
           className="versus-game__side-panel versus-game__side-panel--next"
-          figureSize={24}
+          figureSize={figureSize}
           nextCount={controls.nextPieces}
           state={state}
           type="next"

@@ -1,11 +1,39 @@
+import { useEffect, useState, type CSSProperties } from "react";
 import { formatPlayerName, getModeLabel } from "../gameUtils";
 import type { GameSession } from "../hooks/useGameSession";
 import GameAbortOverlay from "../components/GameAbortOverlay";
+import GameFocusOverlay from "../components/GameFocusOverlay";
 import PlayerBoardCard from "../components/PlayerBoardCard";
 
 type DuelGameViewProps = {
   session: GameSession;
 };
+
+const TABLET_BREAKPOINT_PX = 860;
+const PLAYER_SCALE_FLOOR = 0.74;
+const VERSUS_BASE_WIDTH_PX = 76 * 16;
+const VERSUS_BASE_HEIGHT_PX = 48 * 16;
+
+function getVersusLayout() {
+  if (window.innerWidth <= TABLET_BREAKPOINT_PX) {
+    return {
+      opponentScale: PLAYER_SCALE_FLOOR,
+      selfScale: PLAYER_SCALE_FLOOR,
+    };
+  }
+
+  const widthScale = (window.innerWidth - 32) / VERSUS_BASE_WIDTH_PX;
+  const heightScale = (window.innerHeight - 64) / VERSUS_BASE_HEIGHT_PX;
+  const scale = Math.min(
+    1,
+    Math.max(PLAYER_SCALE_FLOOR, Math.min(widthScale, heightScale)),
+  );
+
+  return {
+    opponentScale: scale,
+    selfScale: scale,
+  };
+}
 
 export default function DuelGameView({ session }: DuelGameViewProps) {
   const {
@@ -15,6 +43,16 @@ export default function DuelGameView({ session }: DuelGameViewProps) {
     isSpectating,
     selfPlayer,
   } = session;
+  const [layout, setLayout] = useState(getVersusLayout);
+
+  useEffect(() => {
+    const updateScale = () => setLayout(getVersusLayout());
+
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, []);
+
   if (!gameState || !gameConfig || gameConfig.mode === "solo") return null;
 
   const visiblePlayers = isSpectating
@@ -27,9 +65,15 @@ export default function DuelGameView({ session }: DuelGameViewProps) {
       ].slice(0, 2);
   const firstPlayer = visiblePlayers[0];
   const secondPlayer = visiblePlayers[1];
+  const stageScale = Math.min(layout.selfScale, layout.opponentScale);
+  const style = {
+    "--versus-opponent-scale": String(layout.opponentScale),
+    "--versus-player-scale": String(stageScale),
+    "--versus-self-scale": String(layout.selfScale),
+  } as CSSProperties;
 
   return (
-    <main className="solo-game solo-game--versus">
+    <main className="solo-game solo-game--versus" style={style}>
       <header className="versus-game__topbar">
         <div className="versus-game__live">LIVE</div>
         <div className="versus-game__title">
@@ -61,40 +105,47 @@ export default function DuelGameView({ session }: DuelGameViewProps) {
       </header>
 
       <section className="versus-game__stage">
-        {firstPlayer ? (
-          <PlayerBoardCard
-            controls={gameConfig.controls}
-            fallbackName={isSpectating ? "PLAYER 1" : "YOU"}
-            modifier="self"
-            state={firstPlayer.state}
-            username={firstPlayer.username}
-          />
-        ) : (
-          <article className="versus-game__player versus-game__player--self">
-            <div className="versus-game__waiting">
-              WAITING FOR PLAYER
-            </div>
-          </article>
-        )}
+        <div className="versus-game__player-slot versus-game__player-slot--self">
+          {firstPlayer ? (
+            <PlayerBoardCard
+              controls={gameConfig.controls}
+              fallbackName={isSpectating ? "PLAYER 1" : "YOU"}
+              modifier="self"
+              scale={layout.selfScale}
+              state={firstPlayer.state}
+              username={firstPlayer.username}
+            />
+          ) : (
+            <article className="versus-game__player versus-game__player--self">
+              <div className="versus-game__waiting">
+                WAITING FOR PLAYER
+              </div>
+            </article>
+          )}
+        </div>
 
-        {secondPlayer ? (
-          <PlayerBoardCard
-            controls={gameConfig.controls}
-            fallbackName="PLAYER 2"
-            modifier="opponent"
-            state={secondPlayer.state}
-            username={secondPlayer.username}
-          />
-        ) : (
-          <article className="versus-game__player versus-game__player--opponent">
-            <div className="versus-game__waiting">
-              WAITING FOR OPPONENT
-            </div>
-          </article>
-        )}
+        <div className="versus-game__player-slot versus-game__player-slot--opponent">
+          {secondPlayer ? (
+            <PlayerBoardCard
+              controls={gameConfig.controls}
+              fallbackName="PLAYER 2"
+              modifier="opponent"
+              scale={layout.opponentScale}
+              state={secondPlayer.state}
+              username={secondPlayer.username}
+            />
+          ) : (
+            <article className="versus-game__player versus-game__player--opponent">
+              <div className="versus-game__waiting">
+                WAITING FOR OPPONENT
+              </div>
+            </article>
+          )}
+        </div>
       </section>
 
       <GameAbortOverlay progress={session.escProgress} />
+      <GameFocusOverlay active={!session.focused && !session.result} />
     </main>
   );
 }

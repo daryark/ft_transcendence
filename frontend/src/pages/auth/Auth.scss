@@ -136,6 +136,32 @@
   margin-top: 1rem;
 }
 
+.auth__password-field {
+  position: relative;
+  display: grid;
+}
+
+.auth__password-field input {
+  padding-right: 3rem;
+}
+
+.auth__password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0.35rem;
+  width: 2.2rem;
+  height: 2.2rem;
+  display: grid;
+  place-items: center;
+  transform: translateY(-50%);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.68);
+}
+
+.auth__password-toggle:hover {
+  color: #fff;
+}
+
 .auth__submit {
   background: var(--app-green);
   color: #081008;

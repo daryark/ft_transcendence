@@ -5,7 +5,11 @@ import { getSessionUser, subscribeToSession } from "../../../auth/session";
 import {
   getStoredGameConfig,
 } from "../../../socket/gameConfigStorage";
-import { getSocket } from "../../../socket/socketClient";
+import {
+  getSocket,
+  getSocketIdentityId,
+  subscribeToSocket,
+} from "../../../socket/socketClient";
 import type {
   ControlsConfig,
   GarbageConfig,
@@ -37,6 +41,24 @@ import "./MultiplayerMode.scss";
 
 const customRoomPath = (code: string) =>
   `/play/multiplayer/custom/${encodeURIComponent(code)}`;
+const CUSTOM_ACTIVE_ROOM_KEY = "tetra-custom-active-room-code";
+let customRoomRouteVisited = false;
+
+function normalizeChatMessage(
+  message: Partial<CustomChatMessage> & {
+    sender?: string;
+    message?: string;
+  },
+  index: number,
+): CustomChatMessage {
+  return {
+    id: message.id ?? `${Date.now()}-${index}`,
+    author: message.author ?? message.sender ?? "PLAYER",
+    actor: message.actor,
+    system: message.system,
+    text: message.text ?? message.message ?? "",
+  };
+}
 
 export default function Custom() {
   const navigate = useNavigate();
@@ -53,6 +75,7 @@ export default function Custom() {
     return room?.trim().toUpperCase() ?? "";
   }, [location.search, roomCodeParam]);
   const autoJoinAttemptedCodeRef = useRef("");
+  const leavingRoomRef = useRef(false);
   const [tab, setTab] = useState<CustomTab>("welcome");
   const [roomId, setRoomId] = useState<string | null>(null);
   const [roomCode, setRoomCode] = useState("");
@@ -65,11 +88,15 @@ export default function Custom() {
   const [players, setPlayers] = useState<CustomRoomPlayer[]>([]);
   const [chatMessages, setChatMessages] = useState<CustomChatMessage[]>([]);
   const [chatMessage, setChatMessage] = useState("");
+  const [socketIdentityId, setSocketIdentityId] = useState(() =>
+    getSocketIdentityId(),
+  );
 
   const inRoom = roomId !== null;
   const roomName = config.roomConfig.roomName?.trim() || "CUSTOM ROOM";
+  const currentIdentityId = socketIdentityId ?? (user ? String(user.id) : null);
   const isCurrentUserHost = players.some(
-    (player) => player.isHost && String(player.id) === String(user?.id),
+    (player) => player.isHost && String(player.id) === currentIdentityId,
   );
 
   useEffect(() => {
@@ -79,6 +106,34 @@ export default function Custom() {
       document.body.classList.remove("mp-custom-active");
     };
   }, []);
+
+  useEffect(
+    () =>
+      subscribeToSocket(() => {
+        setSocketIdentityId(getSocketIdentityId());
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    if (!routeRoomCode) {
+      customRoomRouteVisited = true;
+      return;
+    }
+
+    const activeRoomCode = window.sessionStorage.getItem(
+      CUSTOM_ACTIVE_ROOM_KEY,
+    );
+
+    if (activeRoomCode === routeRoomCode && !customRoomRouteVisited) {
+      window.sessionStorage.removeItem(CUSTOM_ACTIVE_ROOM_KEY);
+      navigate("/play/multiplayer/custom", { replace: true });
+      customRoomRouteVisited = true;
+      return;
+    }
+
+    customRoomRouteVisited = true;
+  }, [navigate, routeRoomCode]);
 
   const currentPlayer = useMemo<CustomRoomPlayer | null>(() => {
     if (!user) {
@@ -100,15 +155,24 @@ export default function Custom() {
     }
 
     const handleRoomUpdate = (snapshot: CustomRoomSnapshot) => {
+      if (leavingRoomRef.current) return;
+
       const nextRoomCode = snapshot.roomCode ?? "";
 
       setRoomId(snapshot.roomId ?? "pending-custom-room");
       setRoomCode(nextRoomCode);
+      if (nextRoomCode) {
+        window.sessionStorage.setItem(CUSTOM_ACTIVE_ROOM_KEY, nextRoomCode);
+      }
       setPlayers(snapshot.players ?? (currentPlayer ? [currentPlayer] : []));
       if (snapshot.config) {
         setConfig(snapshot.config);
       }
-      setChatMessages(snapshot.chatMessages ?? []);
+      setChatMessages(
+        (snapshot.chatMessages ?? []).map((message, index) =>
+          normalizeChatMessage(message, index),
+        ),
+      );
       setStatus("");
 
       if (nextRoomCode && location.pathname !== customRoomPath(nextRoomCode)) {
@@ -116,18 +180,30 @@ export default function Custom() {
       }
     };
 
-    const handleChatMessage = (data: { sender?: string; message?: string }) => {
+    const handleChatMessage = (data: {
+      actor?: string;
+      id?: string;
+      message?: string;
+      sender?: string;
+      system?: boolean;
+    }) => {
+      if (leavingRoomRef.current) return;
+
       setChatMessages((current) => [
         ...current,
         {
-          id: `${Date.now()}-${current.length}`,
+          id: data.id ?? `${Date.now()}-${current.length}`,
           author: data.sender ?? "PLAYER",
+          actor: data.actor,
+          system: data.system,
           text: data.message ?? "",
         },
       ]);
     };
 
     const handleError = (error: ServerError) => {
+      if (leavingRoomRef.current) return;
+
       setStatus(error.reason ?? "SERVER ERROR");
     };
 
@@ -312,6 +388,7 @@ export default function Custom() {
     });
     if (!approved) return;
 
+    leavingRoomRef.current = true;
     if (roomId) {
       getSocket()?.emit("mode:leave");
     }
@@ -321,6 +398,7 @@ export default function Custom() {
     setPlayers([]);
     setChatMessages([]);
     setStatus("");
+    window.sessionStorage.removeItem(CUSTOM_ACTIVE_ROOM_KEY);
     navigate("/play/multiplayer/custom", { replace: true });
   };
 
@@ -659,24 +737,34 @@ export default function Custom() {
           )}
         </section>
 
-        <button
-          className="mp-custom-save"
-          disabled={!isCurrentUserHost}
-          onClick={saveConfig}
-          type="button"
-        >
-          SAVE
-        </button>
+        {isCurrentUserHost && (
+          <button
+            className="mp-custom-save"
+            onClick={saveConfig}
+            type="button"
+          >
+            SAVE
+          </button>
+        )}
         {status && <div className="mp-custom-status">{status}</div>}
       </main>
 
       <aside className="mp-custom-chat">
         <h2>CHAT</h2>
         <div className="mp-custom-chat-log">
-          <p>Welcome to chat! Please remember to be civil to your opponents.</p>
+          <p>
+            <strong>[SYS]</strong>: Welcome to chat! Please remember to be civil to your opponents.
+          </p>
           {chatMessages.map((message) => (
             <p key={message.id}>
-              <strong>{message.author}</strong>: {message.text}
+              <strong>[{message.author}]</strong>:{" "}
+              {message.system && message.actor ? (
+                <>
+                  <strong>{message.actor}</strong>: {message.text}
+                </>
+              ) : (
+                message.text
+              )}
             </p>
           ))}
         </div>
@@ -696,14 +784,12 @@ export default function Custom() {
 
       <footer className="mp-custom-footer">
         <button type="button">PLAYING</button>
-        <button
-          disabled={!isCurrentUserHost}
-          onClick={startGame}
-          type="button"
-        >
-          START
-          <small>{players.length} PLAYER</small>
-        </button>
+        {isCurrentUserHost && (
+          <button onClick={startGame} type="button">
+            START
+            <small>{players.length} PLAYER</small>
+          </button>
+        )}
         <span>VERSUS KNOCKOUT</span>
       </footer>
     </section>

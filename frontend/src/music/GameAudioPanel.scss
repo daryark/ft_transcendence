@@ -15,6 +15,24 @@
   pointer-events: none;
 }
 
+.game-audio-panel__mute {
+  align-self: end;
+  min-height: 2rem;
+  padding: 0 0.65rem;
+  background: rgba(0, 0, 0, 0.78);
+  color: rgba(255, 255, 255, 0.88);
+  font-family: var(--app-font-display);
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.game-audio-panel__mute[aria-pressed="true"] {
+  background: #d8003f;
+  color: #fff;
+}
+
 .game-audio-panel.is-visible,
 .game-audio-panel:focus-within {
   opacity: 1;
