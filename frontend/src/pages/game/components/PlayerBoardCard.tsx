@@ -26,7 +26,7 @@ export default function PlayerBoardCard({
       {controls.hold ? (
         <GamePreviewPanel
           className="versus-game__side-panel versus-game__side-panel--hold"
-          figureSize={18}
+          figureSize={24}
           state={state}
           type="hold"
         />
@@ -48,7 +48,7 @@ export default function PlayerBoardCard({
       <div>
         <GamePreviewPanel
           className="versus-game__side-panel versus-game__side-panel--next"
-          figureSize={14}
+          figureSize={24}
           nextCount={controls.nextPieces}
           state={state}
           type="next"

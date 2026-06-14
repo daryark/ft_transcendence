@@ -66,7 +66,7 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
             {gameConfig.controls.hold && (
               <GamePreviewPanel
                 className="solo-game__panel room-game__hold"
-                figureSize={18}
+                figureSize={30}
                 state={targetState}
                 type="hold"
               />
@@ -109,7 +109,7 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
           <div className="room-game__right-rail">
             <GamePreviewPanel
               className="solo-game__panel room-game__next"
-              figureSize={16}
+              figureSize={30}
               nextCount={gameConfig.controls.nextPieces}
               state={targetState}
               type="next"

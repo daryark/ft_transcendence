@@ -13,7 +13,7 @@ export default function GamePreviewPanel({
   state,
   type,
   nextCount = 5,
-  figureSize = 16,
+  figureSize = 38,
   className = "",
 }: GamePreviewPanelProps) {
   if (type === "hold") {
@@ -21,11 +21,7 @@ export default function GamePreviewPanel({
       <aside className={className}>
         <h2>HOLD</h2>
         <div className="solo-game__preview">
-          {state.hold ? (
-            <MiniFigure figure={state.hold} size={figureSize} />
-          ) : (
-            <span className="solo-game__empty">EMPTY</span>
-          )}
+          {state.hold && <MiniFigure figure={state.hold} size={figureSize} />}
         </div>
       </aside>
     );

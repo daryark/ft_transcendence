@@ -1,21 +1,37 @@
 .mini-figure {
   display: grid;
-  gap: 2px;
   place-items: center;
 }
 
 .mini-figure__row {
   display: flex;
-  gap: 2px;
 }
 
 .mini-figure__cell {
+  position: relative;
   width: var(--cell-size);
   height: var(--cell-size);
+  border: 0;
+  background: transparent;
+}
+
+.mini-figure__cell--filled {
   border: 1px solid rgba(0, 0, 0, 0.34);
   border-radius: 0;
   background: var(--cell-color);
-  box-shadow:
-    inset 2px 2px 0 rgba(255, 255, 255, 0.18),
-    inset -2px -2px 0 rgba(0, 0, 0, 0.18);
+}
+
+.mini-figure__cell--filled::after {
+  position: absolute;
+  inset: var(--cell-inset);
+  content: "";
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.2))
+      top / 100% var(--cell-inset) no-repeat,
+    linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.2))
+      left / var(--cell-inset) 100% no-repeat,
+    linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2))
+      bottom / 100% var(--cell-inset) no-repeat,
+    linear-gradient(rgba(0, 0, 0, 0.2), rgba(0, 0, 0, 0.2))
+      right / var(--cell-inset) 100% no-repeat;
 }
