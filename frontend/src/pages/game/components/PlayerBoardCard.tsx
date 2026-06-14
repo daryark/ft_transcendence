@@ -48,11 +48,7 @@ export default function PlayerBoardCard({
       <div>
         <GamePreviewPanel
           className="versus-game__side-panel versus-game__side-panel--next"
-<<<<<<< HEAD
           figureSize={24}
-=======
-          figureSize={30}
->>>>>>> dev
           nextCount={controls.nextPieces}
           state={state}
           type="next"
