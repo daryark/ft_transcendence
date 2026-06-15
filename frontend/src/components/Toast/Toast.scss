@@ -17,6 +17,7 @@
   box-shadow: 0 0.75rem 2rem rgba(0, 0, 0, 0.42);
   font-weight: 800;
   text-align: left;
+  animation: toast-slide-in 320ms ease-out both;
 }
 
 .toast--success {
@@ -25,4 +26,102 @@
 
 .toast--error {
   border-color: #ff5964;
+}
+
+.toast--achievement {
+  min-height: 6.4rem;
+  display: grid;
+  grid-template-columns: 3.2rem minmax(0, 1fr);
+  align-items: center;
+  gap: 0.85rem;
+  border: 1px solid rgba(119, 232, 137, 0.58);
+  border-left-width: 0.35rem;
+  background:
+    linear-gradient(110deg, rgba(44, 113, 55, 0.42), transparent 58%),
+    rgba(6, 20, 10, 0.98);
+  color: #d9ffdd;
+  box-shadow:
+    0 0 1.25rem rgba(91, 232, 113, 0.25),
+    0 0.8rem 2rem rgba(0, 0, 0, 0.56);
+}
+
+.toast--achievement.toast--rare {
+  border-color: #74bde8;
+  box-shadow:
+    0 0 1.25rem rgba(70, 157, 214, 0.28),
+    0 0.8rem 2rem rgba(0, 0, 0, 0.56);
+}
+
+.toast--achievement.toast--epic {
+  border-color: #c18bf2;
+  box-shadow:
+    0 0 1.25rem rgba(177, 102, 239, 0.3),
+    0 0.8rem 2rem rgba(0, 0, 0, 0.56);
+}
+
+.toast__achievement-icon {
+  display: grid;
+  width: 3rem;
+  height: 3rem;
+  place-items: center;
+  border: 1px solid currentColor;
+  color: #baffbf;
+  font-family: var(--app-font-display);
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.toast__achievement-content {
+  min-width: 0;
+  display: grid;
+  gap: 0.12rem;
+}
+
+.toast__achievement-content small,
+.toast__achievement-content em {
+  color: #84b68a;
+  font-family: var(--app-font-display);
+  font-size: 0.66rem;
+  font-style: normal;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.toast__achievement-content strong {
+  overflow: hidden;
+  color: #effff0;
+  font-family: var(--app-font-display);
+  font-size: 1.05rem;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.toast__achievement-content > span {
+  color: #a7cdaa;
+  font-size: 0.76rem;
+  line-height: 1.25;
+}
+
+.toast__achievement-content em {
+  margin-top: 0.18rem;
+  color: #baffbf;
+}
+
+@keyframes toast-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(100% + 1.5rem));
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    animation: none;
+  }
 }

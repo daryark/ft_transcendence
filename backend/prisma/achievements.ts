@@ -115,10 +115,25 @@ export async function awardAchievements(
   const unlocked = ACHIEVEMENTS.filter(
     (achievement) => getProgress(achievement.code, context) >= achievement.target,
   );
+  const existingUnlocks = unlocked.length > 0
+    ? await tx.user_achievements.findMany({
+        where: {
+          user_id: userId,
+          achievement_id: { in: unlocked.map((achievement) => achievement.id) },
+        },
+        select: { achievement_id: true },
+      })
+    : [];
+  const existingIds = new Set(
+    existingUnlocks.map((unlock) => unlock.achievement_id),
+  );
+  const newlyUnlocked = unlocked.filter(
+    (achievement) => !existingIds.has(achievement.id),
+  );
 
-  if (unlocked.length > 0) {
+  if (newlyUnlocked.length > 0) {
     await tx.user_achievements.createMany({
-      data: unlocked.map((achievement) => ({
+      data: newlyUnlocked.map((achievement) => ({
         user_id: userId,
         achievement_id: achievement.id,
       })),
@@ -126,7 +141,7 @@ export async function awardAchievements(
     });
   }
 
-  return unlocked;
+  return newlyUnlocked;
 }
 
 export async function getUserAchievements(userId: number) {

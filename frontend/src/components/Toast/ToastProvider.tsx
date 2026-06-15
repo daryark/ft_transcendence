@@ -10,14 +10,23 @@ import "./Toast.scss";
 
 type ToastTone = "info" | "success" | "error";
 
+export type AchievementToast = {
+  id: number;
+  name: string;
+  description: string;
+  rarity: "common" | "rare" | "epic";
+};
+
 type Toast = {
   id: number;
   message: string;
   tone: ToastTone;
+  achievement?: AchievementToast;
 };
 
 type ToastContextValue = {
   showToast: (message: string, tone?: ToastTone) => void;
+  showAchievement: (achievement: AchievementToast) => void;
 };
 
 const ToastContext = createContext<ToastContextValue | null>(null);
@@ -33,7 +42,26 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }, 4200);
   }, []);
 
-  const value = useMemo(() => ({ showToast }), [showToast]);
+  const showAchievement = useCallback((achievement: AchievementToast) => {
+    const id = Date.now() + Math.random();
+    setToasts((current) => [
+      ...current,
+      {
+        id,
+        message: achievement.name,
+        tone: "success",
+        achievement,
+      },
+    ]);
+    window.setTimeout(() => {
+      setToasts((current) => current.filter((toast) => toast.id !== id));
+    }, 6500);
+  }, []);
+
+  const value = useMemo(
+    () => ({ showToast, showAchievement }),
+    [showAchievement, showToast],
+  );
 
   return (
     <ToastContext.Provider value={value}>
@@ -41,7 +69,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div className="toast-region" aria-live="polite" aria-atomic="false">
         {toasts.map((toast) => (
           <button
-            className={`toast toast--${toast.tone}`}
+            className={`toast toast--${toast.tone} ${
+              toast.achievement
+                ? `toast--achievement toast--${toast.achievement.rarity}`
+                : ""
+            }`}
             key={toast.id}
             onClick={() =>
               setToasts((current) =>
@@ -50,7 +82,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             }
             type="button"
           >
-            {toast.message}
+            {toast.achievement ? (
+              <>
+                <span className="toast__achievement-icon">
+                  {toast.achievement.id}
+                </span>
+                <span className="toast__achievement-content">
+                  <small>Achievement unlocked</small>
+                  <strong>{toast.achievement.name}</strong>
+                  <span>{toast.achievement.description}</span>
+                  <em>{toast.achievement.rarity}</em>
+                </span>
+              </>
+            ) : (
+              toast.message
+            )}
           </button>
         ))}
       </div>

@@ -20,3 +20,22 @@ export function emitSocialUpdate(
     socketServer.to(userSocketRoom(userId)).emit("social:update", payload);
   }
 }
+
+export function emitAchievementUnlocked(
+  userId: number | string,
+  achievements: Array<{
+    id: number;
+    code: string;
+    name: string;
+    description: string;
+    rarity: string;
+  }>,
+) {
+  if (!socketServer || achievements.length === 0) return;
+
+  for (const achievement of achievements) {
+    socketServer
+      .to(userSocketRoom(userId))
+      .emit("achievement:unlocked", achievement);
+  }
+}

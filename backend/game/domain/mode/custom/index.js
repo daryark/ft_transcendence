@@ -3,6 +3,7 @@ import { ConfigPatchSchema } from "../../../config/config.schema";
 import createEngine, { TICK_MS } from "../../engine/tetrisEngine";
 import { initGame } from "../../engine/state";
 import { isInput } from "../../engine/input";
+import { emitAchievementUnlocked } from "../../../../sockets/realtime";
 
 const JOIN_PREFIX = "JOIN:";
 const customRoomHosts = new Map();
@@ -271,8 +272,8 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
     }
 
     void import("../../../../prisma/playerStats.js")
-      .then(({ persistGameResult }) =>
-        persistGameResult({
+      .then(async ({ persistGameResult }) => {
+        const achievements = await persistGameResult({
           userId,
           mode: "customGame",
           score: state.score,
@@ -290,8 +291,9 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
             durationMs: Math.max(0, Date.now() - state.startedAt),
             clearedAfterHalfHeight: state.clearedAfterHalfHeight,
           },
-        }),
-      )
+        });
+        emitAchievementUnlocked(userId, achievements ?? []);
+      })
       .catch((error) => {
         console.error("Failed to persist custom game result", error);
       });

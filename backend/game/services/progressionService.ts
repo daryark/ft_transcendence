@@ -1,5 +1,6 @@
 import type Room from "../domain/room";
 import type { GameState } from "../domain/engine/state";
+import { emitAchievementUnlocked } from "../../sockets/realtime";
 
 export type ProgressionReason = "game_over" | "objective_complete" | "round_timeout";
 
@@ -80,8 +81,8 @@ function persistRegisteredResult(
         );
 
         void import("../../prisma/playerStats.js")
-            .then(({ persistGameResult }) =>
-                persistGameResult({
+            .then(async ({ persistGameResult }) => {
+                const achievements = await persistGameResult({
                     userId,
                     mode,
                     score,
@@ -110,8 +111,9 @@ function persistRegisteredResult(
                         clearedAfterHalfHeight:
                             input.state?.clearedAfterHalfHeight ?? false,
                     },
-                }),
-            )
+                });
+                emitAchievementUnlocked(userId, achievements ?? []);
+            })
             .catch((error) => {
                 console.error("Failed to persist game result", error);
             });

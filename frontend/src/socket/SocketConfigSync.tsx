@@ -7,9 +7,10 @@ import {
 import { saveGameConfig, type GameConfigDTO } from "./gameConfigStorage";
 import { connectSocket, disconnectSocket } from "./socketClient";
 import { useToast } from "../components/Toast/ToastProvider";
+import type { AchievementToast } from "../components/Toast/ToastProvider";
 
 export default function SocketConfigSync() {
-  const { showToast } = useToast();
+  const { showAchievement, showToast } = useToast();
   const [session, setSession] = useState<SessionData | null>(() =>
     getSession(),
   );
@@ -36,15 +37,20 @@ export default function SocketConfigSync() {
         "error",
       );
     };
+    const handleAchievementUnlocked = (achievement: AchievementToast) => {
+      showAchievement(achievement);
+    };
 
     socket.on("game:config", handleGameConfig);
+    socket.on("achievement:unlocked", handleAchievementUnlocked);
     socket.on("connect_error", handleConnectError);
 
     return () => {
       socket.off("game:config", handleGameConfig);
+      socket.off("achievement:unlocked", handleAchievementUnlocked);
       socket.off("connect_error", handleConnectError);
     };
-  }, [session, showToast]);
+  }, [session, showAchievement, showToast]);
 
   return null;
 }

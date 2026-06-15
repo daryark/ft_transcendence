@@ -26,6 +26,7 @@ export type ServerToClientEvents =
     | "round:end"
     | "room:update"
     | "social:update"
+    | "achievement:unlocked"
     | "server:error";
 
 export function emitError(socket: Socket, reason: string) {
