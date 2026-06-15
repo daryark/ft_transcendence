@@ -2,8 +2,10 @@ import { prisma } from "./prisma";
 
 type PersistGameResultInput = {
 	userId: number;
-	mode: "fortyLines" | "blitz" | "tetraLeague";
+	mode: "quickPlay" | "fortyLines" | "blitz" | "tetraLeague";
 	score: number;
+	metricValue?: number | null;
+	rankLabel?: string | null;
 	result: "win" | "lose" | "draw";
 };
 
@@ -22,11 +24,19 @@ export async function persistGameResult(input: PersistGameResultInput) {
 		select: { id: true },
 	});
 
-	await prisma.match_players.create({
+	await (prisma.match_players as any).create({
 		data: {
 			match_id: match.id,
 			user_id: input.userId,
 			score: Math.max(0, Math.floor(input.score)),
+			metric_value:
+				typeof input.metricValue === "number" && Number.isFinite(input.metricValue)
+					? input.metricValue
+					: null,
+			rank_label:
+				typeof input.rankLabel === "string" && input.rankLabel.trim().length > 0
+					? input.rankLabel.trim().slice(0, 16)
+					: null,
 			result: input.result,
 		},
 	});

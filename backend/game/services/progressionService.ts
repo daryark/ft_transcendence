@@ -44,6 +44,14 @@ function getSoloPersistMode(room: Room) {
     return null;
 }
 
+function getPersistMode(room: Room) {
+    const soloMode = getSoloPersistMode(room);
+    if (soloMode) return soloMode;
+    if (room.gameConfig.mode === "quickplay") return "quickPlay";
+    if (room.gameConfig.mode === "league") return "tetraLeague";
+    return null;
+}
+
 function getPersistedScore(room: Room, state: GameState | null) {
     if (!state) return 0;
     if (room.gameConfig.mode === "solo" && room.gameConfig.preset === "40Lines") {
@@ -53,32 +61,40 @@ function getPersistedScore(room: Room, state: GameState | null) {
     return state.score;
 }
 
-function persistRegisteredResult(input: MatchEndProgressionInput) {
-    const mode =
-        getSoloPersistMode(input.room) ??
-        (input.room.gameConfig.mode === "league" ? "tetraLeague" : null);
+function getQuickplayMeters(room: Room, state: GameState | null) {
+    if (room.gameConfig.mode !== "quickplay" || !state) return null;
 
+    return Number((state.lines + state.piecesPlaced / 100).toFixed(2));
+}
+
+async function persistRegisteredResult(input: MatchEndProgressionInput) {
+    const mode = getPersistMode(input.room);
     if (!mode) return;
 
     const result = input.reason === "objective_complete" ? "win" : "lose";
     const score = getPersistedScore(input.room, input.state);
+    const metricValue = getQuickplayMeters(input.room, input.state);
 
     for (const player of input.room.players.values()) {
         const userId = getRegisteredUserId(player.id, player.identityType);
         if (!userId) continue;
 
-        void import("../../prisma/playerStats.js")
-            .then(({ persistGameResult }) =>
-                persistGameResult({
-                    userId,
-                    mode,
-                    score,
-                    result,
-                }),
-            )
-            .catch((error) => {
-                console.error("Failed to persist game result", error);
+        try {
+            const { persistGameResult } = await import("../../prisma/playerStats.js");
+            await persistGameResult({
+                userId,
+                mode,
+                score,
+                metricValue,
+                rankLabel:
+                    input.room.gameConfig.mode === "league"
+                        ? player.profile?.rank ?? "D"
+                        : null,
+                result,
             });
+        } catch (error) {
+            console.error("Failed to persist game result", error);
+        }
     }
 }
 
@@ -93,7 +109,6 @@ export default function createProgressionService(room: Room) {
 
     function onMatchEnd(input: MatchEndProgressionInput): PlayerProgressionSnapshot[] {
         const outcome: "win" | "defeat" = input.reason === "objective_complete" ? "win" : "defeat";
-        persistRegisteredResult(input);
 
         return Array.from(input.room.players.values())
             .filter(isRegisteredProgressionPlayer)
@@ -124,5 +139,6 @@ export default function createProgressionService(room: Room) {
     return {
         onMatchStart,
         onMatchEnd,
+        persistMatchEnd: persistRegisteredResult,
     };
 }

@@ -28,12 +28,12 @@ VALUES
 	('active'),
 	('finished');
 
-INSERT INTO match_players (match_id, user_id, score, result)
+INSERT INTO match_players (match_id, user_id, score, metric_value, rank_label, result)
 VALUES
-	(1, 1, 12, 'win'),
-	(1, 2, 7, 'lose'),
-	(2, 2, 9, 'draw'),
-	(2, 3, 9, 'draw');
+	(1, 1, 12, 12.5, NULL, 'win'),
+	(1, 2, 7, 7.75, NULL, 'lose'),
+	(2, 2, 9, NULL, 'C', 'draw'),
+	(2, 3, 9, NULL, 'C', 'draw');
 
 INSERT INTO messages (sender_id, receiver_id, content)
 VALUES
@@ -56,6 +56,8 @@ SELECT
 	m.status,
 	mp.user_id,
 	mp.score,
+	mp.metric_value,
+	mp.rank_label,
 	mp.result
 FROM matches m
 JOIN match_players mp ON mp.match_id = m.id

@@ -31,14 +31,14 @@ VALUES
 ON CONFLICT DO NOTHING;
 
 -- Insert match players
-INSERT INTO match_players (match_id, user_id, score, result)
+INSERT INTO match_players (match_id, user_id, score, metric_value, rank_label, result)
 VALUES
-	(1, 1, 15, 'win'),
-	(1, 2, 8, 'lose'),
-	(2, 2, 12, 'draw'),
-	(2, 3, 12, 'draw'),
-	(3, 1, 20, 'win'),
-	(3, 4, 5, 'lose')
+	(1, 1, 15, 15.5, NULL, 'win'),
+	(1, 2, 8, 8.25, NULL, 'lose'),
+	(2, 2, 12, NULL, 'B', 'draw'),
+	(2, 3, 12, NULL, 'C+', 'draw'),
+	(3, 1, 20, NULL, NULL, 'win'),
+	(3, 4, 5, NULL, NULL, 'lose')
 ON CONFLICT DO NOTHING;
 
 -- Insert sample messages

@@ -118,7 +118,7 @@ describe('startGame solo flow', () => {
     ['registered', true],
   ] as const)(
     'game:end sends the correct result for a %s player',
-    (identityType, expectsProgression) => {
+    async (identityType, expectsProgression) => {
       jest.useFakeTimers();
       const player = {
         id: 'user-1' as UserId,
@@ -137,6 +137,7 @@ describe('startGame solo flow', () => {
       startGame(room, roomService);
       room.state!.lines = 40;
       room.match!.evaluate(room.state!);
+      await Promise.resolve();
 
       const gameEndCall = roomService.broadcast.mock.calls.find(
         ([, event]: [string, string]) => event === 'game:end',

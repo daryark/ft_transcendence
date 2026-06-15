@@ -231,24 +231,29 @@ export default function createMatchService(
     stopEngine();
     room.status = "ended";
 
-    const progression = progressionService.onMatchEnd({
+    const matchEndInput = {
       room,
       state: room.state,
       reason,
       completedRounds,
       stockLeft,
-    });
+    };
+    const progression = progressionService.onMatchEnd(matchEndInput);
 
     if (room.state) {
       emitGameUpdate(room.state);
     }
 
-    roomService.broadcast(room.id, "game:end", {
-      roomId: room.id,
-      reason,
-      state: room.state,
-      result: buildGameEndResult(reason, progression),
-    });
+    void progressionService
+      .persistMatchEnd(matchEndInput)
+      .finally(() => {
+        roomService.broadcast(room.id, "game:end", {
+          roomId: room.id,
+          reason,
+          state: room.state,
+          result: buildGameEndResult(reason, progression),
+        });
+      });
   }
 
   function completeRound(state: GameState, reason: RoundEndReason) {

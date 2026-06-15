@@ -461,7 +461,7 @@ describe('gameHandlers', () => {
     expect(stopEngine).not.toHaveBeenCalled();
   });
 
-  test('game:stop removes player and ends any non-custom multiplayer room', () => {
+  test('game:stop removes player and ends any non-custom multiplayer room', async () => {
     const stopMatch = jest.fn();
     const stopEngine = jest.fn();
     const remainingPlayer = {
@@ -495,6 +495,7 @@ describe('gameHandlers', () => {
 
     registerGameHandlers(socket, { modeService, roomService });
     getRegisteredHandler(socket, 'game:stop')();
+    await Promise.resolve();
 
     expect(socket.leave).toHaveBeenCalledWith('ROOM1');
     expect(socket.data.roomId).toBeUndefined();

@@ -71,6 +71,8 @@ CREATE TABLE IF NOT EXISTS match_players (
 	match_id INT NOT NULL,
 	user_id INT NOT NULL,
 	score INT DEFAULT 0,
+	metric_value DOUBLE PRECISION DEFAULT NULL,
+	rank_label VARCHAR(16) DEFAULT NULL,
 	result player_result DEFAULT NULL,
 
 	CONSTRAINT fk_match_players_match
@@ -81,6 +83,10 @@ CREATE TABLE IF NOT EXISTS match_players (
 		FOREIGN KEY (user_id) REFERENCES users(id)
 		ON DELETE CASCADE
 );
+
+ALTER TABLE match_players
+	ADD COLUMN IF NOT EXISTS metric_value DOUBLE PRECISION DEFAULT NULL,
+	ADD COLUMN IF NOT EXISTS rank_label VARCHAR(16) DEFAULT NULL;
 
 -- MESSAGES
 CREATE TABLE IF NOT EXISTS messages (
@@ -168,17 +174,17 @@ VALUES
 	('finished', 'blitz'),
 	('finished', 'zen');
 
-INSERT INTO match_players (match_id, user_id, score, result)
+INSERT INTO match_players (match_id, user_id, score, metric_value, rank_label, result)
 VALUES
-	(1, 1, 15, 'win'),
-	(1, 2, 8, 'lose'),
-	(2, 2, 12, 'draw'),
-	(2, 3, 12, 'draw'),
-	(3, 3, 20, 'win'),
-	(3, 4, 5, 'lose'),
-	(4, 1, 18, 'win'),
-	(4, 4, 7, 'lose'),
-	(5, 2, 16, 'win'),
-	(5, 1, 11, 'lose');
+	(1, 1, 15, 15.5, NULL, 'win'),
+	(1, 2, 8, 8.25, NULL, 'lose'),
+	(2, 2, 12, NULL, 'B', 'draw'),
+	(2, 3, 12, NULL, 'C+', 'draw'),
+	(3, 3, 20000, NULL, NULL, 'win'),
+	(3, 4, 28000, NULL, NULL, 'lose'),
+	(4, 1, 18000, NULL, NULL, 'win'),
+	(4, 4, 7000, NULL, NULL, 'lose'),
+	(5, 2, 16, NULL, NULL, 'win'),
+	(5, 1, 11, NULL, NULL, 'lose');
 
 COMMIT;

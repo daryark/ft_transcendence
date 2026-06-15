@@ -50,6 +50,7 @@ describe("profile service", () => {
 		mockedPrisma.match_players.findMany.mockResolvedValue([
 			{
 				score: 18,
+				metric_value: 18.5,
 				result: "lose",
 				matches: {
 					gamemode: "quickPlay",
@@ -58,6 +59,7 @@ describe("profile service", () => {
 			},
 			{
 				score: 34,
+				metric_value: 34.25,
 				result: "win",
 				matches: {
 					gamemode: "quickPlay",
@@ -66,10 +68,31 @@ describe("profile service", () => {
 			},
 			{
 				score: 60,
+				metric_value: null,
 				result: "win",
 				matches: {
 					gamemode: "blitz",
 					created_at: new Date("2026-06-01T12:00:00.000Z"),
+				},
+			},
+			{
+				score: 1200,
+				metric_value: null,
+				rank_label: "B",
+				result: "win",
+				matches: {
+					gamemode: "tetraLeague",
+					created_at: new Date("2026-05-29T12:00:00.000Z"),
+				},
+			},
+			{
+				score: 1100,
+				metric_value: null,
+				rank_label: "C+",
+				result: "lose",
+				matches: {
+					gamemode: "tetraLeague",
+					created_at: new Date("2026-05-28T12:00:00.000Z"),
 				},
 			},
 		]);
@@ -85,11 +108,13 @@ describe("profile service", () => {
 			xp: 420,
 			nextLevelXp: 1000,
 			playTimeHours: 2,
-			onlineGames: 0,
-			wins: 2,
+			onlineGames: 2,
+			wins: 1,
+			leagueGames: 2,
+			leagueWins: 1,
 			modes: {
-				league: null,
-				quickPlay: { value: "34", achievedAgo: "3 days ago" },
+				league: { tr: 1200, glicko: 1200, rank: "B" },
+				quickPlay: { value: "34.25 m", achievedAgo: "3 days ago" },
 				fortyLines: null,
 				blitz: { value: "60", achievedAgo: "1 days ago" },
 				zen: null,
@@ -134,7 +159,9 @@ describe("profile service", () => {
 			avatarId: 2,
 			playTimeHours: 3,
 			onlineGames: 0,
-			wins: 4,
+			wins: 0,
+			leagueGames: 0,
+			leagueWins: 0,
 		});
 	});
 });

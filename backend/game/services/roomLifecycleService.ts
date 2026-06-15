@@ -15,9 +15,67 @@ function getPlayerResult(player: Player | undefined) {
         : undefined;
 }
 
+function getRegisteredUserId(player: Player | undefined) {
+    if (!player || player.identityType === "anonymous") return null;
+
+    const userId = Number(player.id);
+    return Number.isInteger(userId) && userId > 0 ? userId : null;
+}
+
+function getPersistMode(room: NonNullable<ReturnType<RoomService["getRoom"]>>) {
+    if (room.gameConfig.mode === "quickplay") return "quickPlay";
+    if (room.gameConfig.mode === "league") return "tetraLeague";
+    return null;
+}
+
+function getQuickplayMeters(room: NonNullable<ReturnType<RoomService["getRoom"]>>) {
+    if (room.gameConfig.mode !== "quickplay" || !room.state) return null;
+
+    return Number((room.state.lines + room.state.piecesPlaced / 100).toFixed(2));
+}
+
+async function persistMultiplayerExitResult(
+    room: NonNullable<ReturnType<RoomService["getRoom"]>>,
+    winner: Player | undefined,
+    loser: Player | undefined,
+) {
+    const mode = getPersistMode(room);
+    if (!mode) return;
+
+    const metricValue = getQuickplayMeters(room);
+    const score = room.state?.score ?? 0;
+    const rows = [
+        { player: winner, result: "win" as const },
+        { player: loser, result: "lose" as const },
+    ];
+
+    for (const row of rows) {
+        const userId = getRegisteredUserId(row.player);
+        if (!userId) continue;
+
+        try {
+            const { persistGameResult } = await import("../../prisma/playerStats.js");
+            await persistGameResult({
+                userId,
+                mode,
+                score,
+                metricValue,
+                rankLabel:
+                    room.gameConfig.mode === "league"
+                        ? row.player?.profile?.rank ?? "D"
+                        : null,
+                result: row.result,
+            });
+        } catch (error) {
+            console.error("Failed to persist multiplayer exit result", error);
+        }
+    }
+}
+
 function endMultiplayerRoomAfterPlayerExit(
     roomService: RoomService,
     roomId: RoomId,
+    loser: Player | undefined,
     reason = "player_left",
 ) {
     const room = roomService.getRoom(roomId);
@@ -33,17 +91,20 @@ function endMultiplayerRoomAfterPlayerExit(
     room.engine = null;
     room.status = "ended";
 
-    roomService.broadcast(roomId, "game:end", {
-        roomId,
-        reason,
-        state: room.state,
-        winnerId: winner ? String(winner.id) : null,
-        result: {
-            outcome: winner ? "win" : "defeat",
-            stats: null,
-            player: getPlayerResult(winner),
-        },
-    });
+    void persistMultiplayerExitResult(room, winner, loser)
+        .finally(() => {
+            roomService.broadcast(roomId, "game:end", {
+                roomId,
+                reason,
+                state: room.state,
+                winnerId: winner ? String(winner.id) : null,
+                result: {
+                    outcome: winner ? "win" : "defeat",
+                    stats: null,
+                    player: getPlayerResult(winner),
+                },
+            });
+        });
 }
 
 export function leaveRoomParticipant(
@@ -68,6 +129,7 @@ export function leaveRoomParticipant(
     }
 
     const wasPlaying = room.status === "playing";
+    const leavingPlayer = room.players?.get?.(playerId);
     roomService.removePlayer(roomId, playerId);
 
     if (roomService.isEmpty(roomId)) {
@@ -76,7 +138,7 @@ export function leaveRoomParticipant(
     }
 
     if (room.gameConfig.mode !== "solo" && wasPlaying) {
-        endMultiplayerRoomAfterPlayerExit(roomService, roomId);
+        endMultiplayerRoomAfterPlayerExit(roomService, roomId, leavingPlayer);
     }
 
     return true;

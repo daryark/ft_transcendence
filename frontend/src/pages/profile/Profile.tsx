@@ -52,6 +52,8 @@ type PlayerProfile = {
   playTimeHours: number;
   onlineGames: number;
   wins: number;
+  leagueGames?: number;
+  leagueWins?: number;
   modes: ProfileModes;
 };
 
@@ -167,8 +169,10 @@ const normalizeProfile = (payload: ApiProfileResponse): PlayerProfile => {
     xp: profile.xp ?? 0,
     nextLevelXp: profile.nextLevelXp ?? 0,
     playTimeHours: profile.playTimeHours ?? 0,
-    onlineGames: profile.onlineGames ?? 0,
-    wins: profile.wins ?? 0,
+    onlineGames: profile.leagueGames ?? profile.onlineGames ?? 0,
+    wins: profile.leagueWins ?? profile.wins ?? 0,
+    leagueGames: profile.leagueGames ?? profile.onlineGames ?? 0,
+    leagueWins: profile.leagueWins ?? profile.wins ?? 0,
 
     modes: profile.modes ?? {},
   };
@@ -539,10 +543,10 @@ export default function Profile() {
               <dl>
                 <dt>PLAY TIME</dt>
                 <dd>{formatPlayTime(profile.playTimeHours)}</dd>
-                <dt>ONLINE GAMES</dt>
-                <dd>{profile.onlineGames}</dd>
-                <dt>OF WHICH WINS</dt>
-                <dd>{profile.wins}</dd>
+                <dt>TOTAL LEAGUE GAMES</dt>
+                <dd>{profile.leagueGames ?? profile.onlineGames}</dd>
+                <dt>LEAGUE WINS</dt>
+                <dd>{profile.leagueWins ?? profile.wins}</dd>
               </dl>
               <small>User ID: {profile.id || "local-preview"}</small>
             </section>

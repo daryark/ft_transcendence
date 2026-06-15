@@ -393,7 +393,9 @@ const ProfileModal = ({
                 <span>TETRA LEAGUE</span>
                 <strong>
                   {league?.rank ? `${league.rank.toUpperCase()} ` : ""}
-                  {league?.tr ? `${formatModeValue(league.tr)}TR` : "NO DATA"}
+                  {typeof league?.tr === "number"
+                    ? `${formatModeValue(league.tr)}TR`
+                    : "NO DATA"}
                 </strong>
               </article>
               <article>

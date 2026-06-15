@@ -31,6 +31,8 @@ export type ProfileResponse = {
 	playTimeHours: number;
 	onlineGames: number;
 	wins: number;
+	leagueGames: number;
+	leagueWins: number;
 	modes: {
 		league: { tr: number; glicko: number; rank: string } | null;
 		quickPlay: ProfileModeStats;
@@ -57,6 +59,8 @@ type ProfileUserRecord = {
 
 type ProfileModeRow = {
 	score: number | null;
+	metric_value?: number | null;
+	rank_label?: string | null;
 	result: string | null;
 	matches: {
 		gamemode: string | null;
@@ -66,10 +70,31 @@ type ProfileModeRow = {
 
 const modeAliases: Record<string, keyof ProfileResponse["modes"]> = {
 	quickPlay: "quickPlay",
+	tetraLeague: "league",
 	fortyLines: "fortyLines",
 	blitz: "blitz",
 	zen: "zen",
 };
+
+const leagueRankOrder = [
+	"D",
+	"D+",
+	"C-",
+	"C",
+	"C+",
+	"B-",
+	"B",
+	"B+",
+	"A-",
+	"A",
+	"A+",
+	"S-",
+	"S",
+	"S+",
+	"SS",
+	"U",
+	"X",
+];
 
 function isMissingCountryFieldError(error: unknown): boolean {
 	const message = error instanceof Error ? error.message : String(error);
@@ -112,6 +137,17 @@ function toModeStats(score: number | null, achievedAt: Date | null): ProfileMode
 	};
 }
 
+function toQuickPlayStats(metricValue: number | null, achievedAt: Date | null): ProfileModeStats {
+	if (metricValue === null || metricValue === undefined) {
+		return null;
+	}
+
+	return {
+		value: `${metricValue.toFixed(2)} m`,
+		achievedAgo: formatAchievedAgo(achievedAt),
+	};
+}
+
 function toFortyLinesStats(score: number | null, achievedAt: Date | null): ProfileModeStats {
 	if (score === null || score === undefined) {
 		return null;
@@ -123,13 +159,31 @@ function toFortyLinesStats(score: number | null, achievedAt: Date | null): Profi
 	};
 }
 
+function getRankWeight(rank: string | null | undefined) {
+	if (!rank) return -1;
+
+	return leagueRankOrder.indexOf(rank.toUpperCase());
+}
+
 function isBetterModeScore(
 	mode: keyof ProfileResponse["modes"],
 	score: number,
-	current?: { score: number; achievedAt: Date | null },
+	current?: { score: number; achievedAt: Date | null; rankLabel?: string | null; metricValue?: number | null },
+	next?: { rankLabel?: string | null; metricValue?: number | null },
 ) {
 	if (!current) return true;
 	if (mode === "fortyLines") return score < current.score;
+	if (mode === "league") {
+		const currentRankWeight = getRankWeight(current.rankLabel);
+		const nextRankWeight = getRankWeight(next?.rankLabel);
+
+		if (nextRankWeight !== currentRankWeight) {
+			return nextRankWeight > currentRankWeight;
+		}
+	}
+	if (mode === "quickPlay") {
+		return (next?.metricValue ?? score) > (current.metricValue ?? current.score);
+	}
 	return score > current.score;
 }
 
@@ -137,15 +191,19 @@ function buildProfileResponse(
 	user: ProfileUserRecord,
 	matchRows: ProfileModeRow[],
 ): ProfileResponse {
-	const bestModeStats: Partial<Record<keyof ProfileResponse["modes"], { score: number; achievedAt: Date | null }>> = {};
-	let wins = 0;
+	const bestModeStats: Partial<Record<keyof ProfileResponse["modes"], { score: number; achievedAt: Date | null; rankLabel?: string | null; metricValue?: number | null }>> = {};
+	let leagueGames = 0;
+	let leagueWins = 0;
 
 	for (const row of matchRows) {
-		if (row.result === "win") {
-			wins += 1;
+		const mode = row.matches?.gamemode;
+		if (mode === "tetraLeague") {
+			leagueGames += 1;
+			if (row.result === "win") {
+				leagueWins += 1;
+			}
 		}
 
-		const mode = row.matches?.gamemode;
 		if (!mode || !(mode in modeAliases)) {
 			continue;
 		}
@@ -153,10 +211,15 @@ function buildProfileResponse(
 		const key = modeAliases[mode as keyof typeof modeAliases];
 		const score = row.score ?? 0;
 		const current = bestModeStats[key];
+		const next = {
+			metricValue: row.metric_value ?? null,
+			rankLabel: row.rank_label ?? null,
+		};
 
-		if (isBetterModeScore(key, score, current)) {
+		if (isBetterModeScore(key, score, current, next)) {
 			bestModeStats[key] = {
 				score,
+				...next,
 				achievedAt: row.matches?.created_at ?? null,
 			};
 		}
@@ -172,11 +235,19 @@ function buildProfileResponse(
 		xp: user.xp ?? 0,
 		nextLevelXp: user.next_level_xp ?? 100,
 		playTimeHours: Math.round(((user.play_time_seconds ?? 0) / 3600) * 10) / 10,
-		onlineGames: matchRows.filter((row) => row.matches?.gamemode === "tetraLeague").length,
-		wins: user.wins ?? wins,
+		onlineGames: leagueGames,
+		wins: leagueWins,
+		leagueGames,
+		leagueWins,
 		modes: {
-			league: null,
-			quickPlay: toModeStats(bestModeStats.quickPlay?.score ?? null, bestModeStats.quickPlay?.achievedAt ?? null),
+			league: bestModeStats.league
+				? {
+					tr: bestModeStats.league.score,
+					glicko: bestModeStats.league.score,
+					rank: bestModeStats.league.rankLabel ?? "D",
+				}
+				: null,
+			quickPlay: toQuickPlayStats(bestModeStats.quickPlay?.metricValue ?? null, bestModeStats.quickPlay?.achievedAt ?? null),
 			fortyLines: toFortyLinesStats(bestModeStats.fortyLines?.score ?? null, bestModeStats.fortyLines?.achievedAt ?? null),
 			blitz: toModeStats(bestModeStats.blitz?.score ?? null, bestModeStats.blitz?.achievedAt ?? null),
 			zen: toModeStats(bestModeStats.zen?.score ?? null, bestModeStats.zen?.achievedAt ?? null),
@@ -240,6 +311,8 @@ async function loadUserProfileRows(userId: number): Promise<ProfileModeRow[]> {
 		where: { user_id: userId },
 		select: {
 			score: true,
+			metric_value: true,
+			rank_label: true,
 			result: true,
 			matches: {
 				select: {
@@ -280,7 +353,7 @@ export type MiniProfileResponse = {
 };
 
 function buildMiniProfileResponse(user: ProfileUserRecord, matchRows: ProfileModeRow[]): MiniProfileResponse {
-	const bestModeStats: Partial<Record<keyof ProfileResponse["modes"], { score: number; achievedAt: Date | null }>> = {};
+	const bestModeStats: Partial<Record<keyof ProfileResponse["modes"], { score: number; achievedAt: Date | null; rankLabel?: string | null; metricValue?: number | null }>> = {};
 
 	for (const row of matchRows) {
 		const mode = row.matches?.gamemode;
@@ -291,10 +364,15 @@ function buildMiniProfileResponse(user: ProfileUserRecord, matchRows: ProfileMod
 		const key = modeAliases[mode as keyof typeof modeAliases];
 		const score = row.score ?? 0;
 		const current = bestModeStats[key];
+		const next = {
+			metricValue: row.metric_value ?? null,
+			rankLabel: row.rank_label ?? null,
+		};
 
-		if (isBetterModeScore(key, score, current)) {
+		if (isBetterModeScore(key, score, current, next)) {
 			bestModeStats[key] = {
 				score,
+				...next,
 				achievedAt: row.matches?.created_at ?? null,
 			};
 		}
@@ -307,8 +385,13 @@ function buildMiniProfileResponse(user: ProfileUserRecord, matchRows: ProfileMod
 			avatarId: user.avatar_id ?? 0,
 			level: user.level ?? 1,
 			modes: {
-				league: bestModeStats.league ? { tr: bestModeStats.league.score } : null,
-				quickPlay: toModeStats(bestModeStats.quickPlay?.score ?? null, bestModeStats.quickPlay?.achievedAt ?? null),
+				league: bestModeStats.league
+					? {
+						tr: bestModeStats.league.score,
+						rank: bestModeStats.league.rankLabel ?? "D",
+					}
+					: null,
+				quickPlay: toQuickPlayStats(bestModeStats.quickPlay?.metricValue ?? null, bestModeStats.quickPlay?.achievedAt ?? null),
 				fortyLines: toFortyLinesStats(bestModeStats.fortyLines?.score ?? null, bestModeStats.fortyLines?.achievedAt ?? null),
 				blitz: toModeStats(bestModeStats.blitz?.score ?? null, bestModeStats.blitz?.achievedAt ?? null),
 				zen: toModeStats(bestModeStats.zen?.score ?? null, bestModeStats.zen?.achievedAt ?? null),

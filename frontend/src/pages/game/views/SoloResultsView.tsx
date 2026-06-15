@@ -71,7 +71,7 @@ export default function SoloResultsView({
         </div>
       </section>
 
-      {gameConfig.objective.allowRetry && (
+      {gameConfig.preset !== "zen" && (
         <nav
           className="solo-game-results__actions"
           aria-label="Result actions"
