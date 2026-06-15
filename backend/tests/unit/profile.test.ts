@@ -89,9 +89,9 @@ describe("profile service", () => {
 			wins: 2,
 			modes: {
 				league: null,
-				quickPlay: { value: "34", achievedAgo: "3 days ago" },
+				quickPlay: { value: "34 m", achievedAgo: "3 days ago" },
 				fortyLines: null,
-				blitz: { value: "60", achievedAgo: "1 days ago" },
+				blitz: { value: "60 pts", achievedAgo: "1 days ago" },
 				zen: null,
 			},
 		});

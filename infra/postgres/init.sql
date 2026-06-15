@@ -112,6 +112,61 @@ TRUNCATE TABLE
 	users
 RESTART IDENTITY CASCADE;
 
+-- 50 complete profiles. Countries repeat deliberately so country leaderboards
+-- contain enough players to be useful during development.
+WITH seed_users (seed_number, username, country) AS (
+	VALUES
+		(1, 'alice', 'France'),
+		(2, 'bob', 'Brazil'),
+		(3, 'carol', 'Japan'),
+		(4, 'dave', 'Canada'),
+		(5, 'eva', 'Germany'),
+		(6, 'frank', 'Spain'),
+		(7, 'gwen', 'Chile'),
+		(8, 'hugo', 'Italy'),
+		(9, 'ivy', 'Morocco'),
+		(10, 'jules', 'Poland'),
+		(11, 'kai', 'Germany'),
+		(12, 'luna', 'France'),
+		(13, 'milo', 'Brazil'),
+		(14, 'nora', 'Japan'),
+		(15, 'omar', 'Canada'),
+		(16, 'pia', 'Spain'),
+		(17, 'quinn', 'Chile'),
+		(18, 'ravi', 'Italy'),
+		(19, 'sara', 'Morocco'),
+		(20, 'theo', 'Poland'),
+		(21, 'uma', 'Germany'),
+		(22, 'victor', 'France'),
+		(23, 'willow', 'Brazil'),
+		(24, 'xavier', 'Japan'),
+		(25, 'yasmin', 'Canada'),
+		(26, 'zane', 'Spain'),
+		(27, 'nova_27', 'Chile'),
+		(28, 'pixel_ace', 'Italy'),
+		(29, 'blockstorm', 'Morocco'),
+		(30, 'line_clearer', 'Poland'),
+		(31, 'tetra_mage', 'Germany'),
+		(32, 'fastdrop', 'France'),
+		(33, 'spin_master', 'Brazil'),
+		(34, 'combo_queen', 'Japan'),
+		(35, 'stacksmith', 'Canada'),
+		(36, 'ghost_piece', 'Spain'),
+		(37, 'harddropper', 'Chile'),
+		(38, 'zen_builder', 'Italy'),
+		(39, 'blitz_runner', 'Morocco'),
+		(40, 'league_pro', 'Poland'),
+		(41, 'quickfox', 'Germany'),
+		(42, 'matrix_42', 'France'),
+		(43, 'cyan_stack', 'Brazil'),
+		(44, 'violet_t', 'Japan'),
+		(45, 'orange_l', 'Canada'),
+		(46, 'green_z', 'Spain'),
+		(47, 'red_s', 'Chile'),
+		(48, 'blue_j', 'Italy'),
+		(49, 'yellow_o', 'Morocco'),
+		(50, 'final_boss', 'Poland')
+)
 INSERT INTO users (
 	email,
 	username,
@@ -122,63 +177,211 @@ INSERT INTO users (
 	xp,
 	next_level_xp,
 	play_time_seconds,
-	wins
+	wins,
+	created_at
 )
-VALUES -- Password hash generated from bcrypt with 10 salt rounds for "Password123!"
-	('alice@example.com', 'alice', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 1, 'France', 12, 1800, 2400, 5400, 2),
-	('bob@example.com', 'bob', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 2, 'Brazil', 10, 1400, 2000, 4200, 1),
-	('carol@example.com', 'carol', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 3, 'Japan', 11, 1600, 2200, 4800, 1),
-	('dave@example.com', 'dave', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 4, 'Canada', 9, 1200, 1800, 3600, 0),
-	('eva@example.com', 'eva', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 5, 'Germany', 4, 320, 800, 900, 0),
-	('frank@example.com', 'frank', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 6, 'Spain', 3, 260, 700, 600, 0),
-	('gwen@example.com', 'gwen', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 7, 'Chile', 5, 480, 900, 1200, 0),
-	('hugo@example.com', 'hugo', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 8, 'Italy', 7, 760, 1300, 1800, 0),
-	('ivy@example.com', 'ivy', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 9, 'Morocco', 2, 120, 500, 240, 0),
-	('jules@example.com', 'jules', '$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm', 10, 'Poland', 6, 640, 1100, 1500, 0);
+SELECT
+	username || '@example.com',
+	username,
+	-- bcrypt, 10 salt rounds, Password123!
+	'$2b$10$GMbTuXBbvNJ52n2gK3fjz.vnaZFUOrwg9qs89SbliIF/QUY86rkSm',
+	((seed_number - 1) % 16) + 1,
+	country,
+	((seed_number * 7) % 40) + 1,
+	(seed_number * 347) % 10000,
+	(((seed_number * 7) % 40) + 2) * 500,
+	seed_number * 1387,
+	0,
+	TIMESTAMP '2024-01-06 12:00:00' + ((seed_number - 1) * INTERVAL '9 days')
+FROM seed_users
+ORDER BY seed_number;
+
+-- GitHub-only, 42-only and linked-to-both-provider account scenarios.
+INSERT INTO oauth_accounts (user_id, provider, provider_user_id, provider_data)
+SELECT
+	id,
+	'github',
+	'github_seed_' || id,
+	jsonb_build_object(
+		'seed', 'startup',
+		'provider', 'github',
+		'username', username,
+		'externalId', 100000 + id
+	)
+FROM users
+WHERE id <= 30;
 
 INSERT INTO oauth_accounts (user_id, provider, provider_user_id, provider_data)
-VALUES
-	(1, 'github', 'alice_github', '{"seed":"startup","username":"alice"}'::jsonb),
-	(2, 'github', 'bob_github', '{"seed":"startup","username":"bob"}'::jsonb),
-	(3, 'github', 'carol_github', '{"seed":"startup","username":"carol"}'::jsonb),
-	(4, 'github', 'dave_github', '{"seed":"startup","username":"dave"}'::jsonb);
+SELECT
+	id,
+	'42',
+	'42_seed_' || id,
+	jsonb_build_object(
+		'seed', 'startup',
+		'provider', '42',
+		'login', username,
+		'campus', 'Berlin'
+	)
+FROM users
+WHERE id BETWEEN 26 AND 45 OR id <= 5;
 
-INSERT INTO friends (user_id, friend_id, status)
-VALUES
-	(1, 2, 'accepted'),
-	(1, 3, 'pending'),
-	(2, 3, 'accepted'),
-	(3, 4, 'blocked'),
-	(4, 1, 'accepted');
+-- Alice has accepted, incoming/outgoing pending, and blocked relationships.
+-- The second group gives other users realistic friend graphs as well.
+INSERT INTO friends (user_id, friend_id, status, created_at)
+SELECT
+	1,
+	friend_id,
+	CASE
+		WHEN friend_id <= 25 THEN 'accepted'::friend_status
+		WHEN friend_id <= 38 THEN 'pending'::friend_status
+		ELSE 'blocked'::friend_status
+	END,
+	TIMESTAMP '2025-02-01 09:00:00' + (friend_id * INTERVAL '3 hours')
+FROM generate_series(2, 50) AS friend_id;
 
-INSERT INTO messages (sender_id, receiver_id, content)
-VALUES
-	(1, 2, 'Hey Bob, want to play?'),
-	(2, 1, 'Sure Alice, let''s go!'),
-	(3, 1, 'Good game earlier'),
-	(4, 2, 'Can we talk about the last match?'),
-	(1, 3, 'Rematch after lunch?'),
-	(2, 4, 'I am ready when you are.');
+INSERT INTO friends (user_id, friend_id, status, created_at)
+SELECT
+	user_id,
+	user_id + 24,
+	CASE
+		WHEN user_id % 5 = 0 THEN 'pending'::friend_status
+		ELSE 'accepted'::friend_status
+	END,
+	TIMESTAMP '2025-03-01 10:00:00' + (user_id * INTERVAL '5 hours')
+FROM generate_series(2, 25) AS user_id;
 
-INSERT INTO matches (status, gamemode)
-VALUES
-	('finished', 'quickPlay'),
-	('finished', 'tetraLeague'),
-	('finished', 'fortyLines'),
-	('finished', 'blitz'),
-	('finished', 'zen');
+-- Three chronological messages for every accepted Alice conversation.
+INSERT INTO messages (sender_id, receiver_id, content, created_at)
+SELECT
+	CASE WHEN message_number = 2 THEN friend_id ELSE 1 END,
+	CASE WHEN message_number = 2 THEN 1 ELSE friend_id END,
+	CASE message_number
+		WHEN 1 THEN 'Hi! Want to play a quick match?'
+		WHEN 2 THEN 'Sure, invite me when you are ready.'
+		ELSE 'Good game! Let us play again later.'
+	END,
+	TIMESTAMP '2025-04-01 18:00:00'
+		+ (friend_id * INTERVAL '1 day')
+		+ (message_number * INTERVAL '7 minutes')
+FROM generate_series(2, 25) AS friend_id
+CROSS JOIN generate_series(1, 3) AS message_number;
+
+-- Additional conversations between regular friends exercise conversation lists.
+INSERT INTO messages (sender_id, receiver_id, content, created_at)
+SELECT
+	user_id,
+	user_id + 24,
+	'Seed conversation between friends ' || user_id || ' and ' || (user_id + 24),
+	TIMESTAMP '2025-05-01 14:00:00' + (user_id * INTERVAL '2 hours')
+FROM generate_series(2, 25) AS user_id
+WHERE user_id % 5 <> 0;
+
+-- 25 finished two-player matches for every mode. All 50 users participate
+-- once per mode, producing full global, country and friends leaderboards.
+WITH modes (gamemode, mode_number) AS (
+	VALUES
+		('quickPlay'::gamemode, 1),
+		('tetraLeague'::gamemode, 2),
+		('fortyLines'::gamemode, 3),
+		('blitz'::gamemode, 4),
+		('zen'::gamemode, 5),
+		('customGame'::gamemode, 6)
+)
+INSERT INTO matches (status, gamemode, created_at)
+SELECT
+	'finished',
+	gamemode,
+	TIMESTAMP '2025-06-01 12:00:00'
+		+ ((mode_number - 1) * INTERVAL '30 days')
+		+ (pair_number * INTERVAL '6 hours')
+FROM modes
+CROSS JOIN generate_series(1, 25) AS pair_number
+ORDER BY mode_number, pair_number;
 
 INSERT INTO match_players (match_id, user_id, score, result)
-VALUES
-	(1, 1, 15, 'win'),
-	(1, 2, 8, 'lose'),
-	(2, 2, 12, 'draw'),
-	(2, 3, 12, 'draw'),
-	(3, 3, 20, 'win'),
-	(3, 4, 5, 'lose'),
-	(4, 1, 18, 'win'),
-	(4, 4, 7, 'lose'),
-	(5, 2, 16, 'win'),
-	(5, 1, 11, 'lose');
+SELECT
+	match_id,
+	pair_number,
+	(mode_number * 10000) + (pair_number * 731),
+	CASE
+		WHEN pair_number % 7 = 0 THEN 'draw'::player_result
+		WHEN pair_number % 2 = 0 THEN 'win'::player_result
+		ELSE 'lose'::player_result
+	END
+FROM (
+	SELECT
+		id AS match_id,
+		((id - 1) / 25) + 1 AS mode_number,
+		((id - 1) % 25) + 1 AS pair_number
+	FROM matches
+	WHERE status = 'finished'
+) AS finished_matches;
+
+INSERT INTO match_players (match_id, user_id, score, result)
+SELECT
+	match_id,
+	51 - pair_number,
+	(mode_number * 10000) + ((26 - pair_number) * 683),
+	CASE
+		WHEN pair_number % 7 = 0 THEN 'draw'::player_result
+		WHEN pair_number % 2 = 0 THEN 'lose'::player_result
+		ELSE 'win'::player_result
+	END
+FROM (
+	SELECT
+		id AS match_id,
+		((id - 1) / 25) + 1 AS mode_number,
+		((id - 1) % 25) + 1 AS pair_number
+	FROM matches
+	WHERE status = 'finished'
+) AS finished_matches;
+
+-- One currently active match per mode, with NULL results representing games
+-- that have not ended yet.
+WITH modes (gamemode, mode_number) AS (
+	VALUES
+		('quickPlay'::gamemode, 1),
+		('tetraLeague'::gamemode, 2),
+		('fortyLines'::gamemode, 3),
+		('blitz'::gamemode, 4),
+		('zen'::gamemode, 5),
+		('customGame'::gamemode, 6)
+)
+INSERT INTO matches (status, gamemode, created_at)
+SELECT
+	'active',
+	gamemode,
+	TIMESTAMP '2026-06-15 15:00:00' + (mode_number * INTERVAL '10 minutes')
+FROM modes
+ORDER BY mode_number;
+
+INSERT INTO match_players (match_id, user_id, score, result)
+SELECT
+	id,
+	((id - 151) * 2) + 1,
+	0,
+	NULL
+FROM matches
+WHERE status = 'active';
+
+INSERT INTO match_players (match_id, user_id, score, result)
+SELECT
+	id,
+	((id - 151) * 2) + 2,
+	0,
+	NULL
+FROM matches
+WHERE status = 'active';
+
+-- Keep denormalized profile wins consistent with the finished match history.
+UPDATE users
+SET wins = player_wins.total
+FROM (
+	SELECT user_id, COUNT(*)::INT AS total
+	FROM match_players
+	WHERE result = 'win'
+	GROUP BY user_id
+) AS player_wins
+WHERE users.id = player_wins.user_id;
 
 COMMIT;

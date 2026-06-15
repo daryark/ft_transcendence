@@ -168,7 +168,11 @@ api.get("/leaderboards", async (req: ApiRequest, res: Response) => {
         id: entry.id ?? null,
         name: entry.name ?? entry.nickname,
         score: entry.score,
-        country: entry.country ?? null,
+        country: entry.country ?? "",
+        achievedAt:
+          entry.achievedAt instanceof Date
+            ? entry.achievedAt.toISOString()
+            : null,
       }))
     );
   } catch (error) {

@@ -15,23 +15,14 @@
   z-index: 30;
 }
 
-.channel__block,
-.channel__row {
+.channel__menu {
   display: grid;
   gap: 0.8rem;
-}
-
-.channel__row {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 @media (max-width: 900px) {
   .channel {
     width: calc(100vw - 1.5rem);
     padding-top: 3.8rem;
-  }
-
-  .channel__row {
-    grid-template-columns: 1fr;
   }
 }

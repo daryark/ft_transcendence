@@ -24,6 +24,8 @@ const titles: Record<string, string> = {
   custom: "CUSTOM GAME",
   channel: "TETRA CHANNEL",
   leaderboards: "LEADERBOARDS",
+  statistics: "MY STATISTICS",
+  achievements: "ACHIEVEMENTS",
   about: "ABOUT",
   auth: "AUTH",
 };
@@ -33,6 +35,10 @@ const getPageTitle = (pathname: string) => {
 
   if (parts.length === 0 || pathname === "/play") {
     return "HOME";
+  }
+
+  if (parts[0] === "channel" && parts[1] === "leaderboards") {
+    return titles.leaderboards;
   }
 
   const lastPart = parts[parts.length - 1];
@@ -81,6 +87,10 @@ const Header = () => {
 
     const controller = new AbortController();
     void apiJson<{
+      miniprofile?: {
+        level?: number;
+        modes?: { league?: { rank?: string } | null };
+      };
       profile?: {
         level?: number;
         modes?: { league?: { rank?: string } | null };
@@ -91,7 +101,7 @@ const Header = () => {
       signal: controller.signal,
     })
       .then((payload) => {
-        const profile = payload.profile ?? payload;
+        const profile = payload.miniprofile ?? payload.profile ?? payload;
         setPlayerMeta({
           level: profile.level ?? 0,
           rank: profile.modes?.league?.rank ?? "UNRANKED",

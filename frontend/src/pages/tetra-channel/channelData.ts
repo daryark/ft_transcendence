@@ -1,29 +1,20 @@
 export const channelButtons = [
   {
-    id: "statistics",
-    title: "Statistics",
-    description: "Your game stats",
-    route: "/channel/statistics",
-  },
-  {
     id: "leaderboards",
     title: "Leaderboards",
     description: "Top players ranking",
     route: "/channel/leaderboards/fortyLines/global",
   },
   {
-    id: "me",
-    title: "Me",
-    route: "/channel/me",
-  },
-  {
-    id: "players",
-    title: "Players",
-    route: "/channel/players",
+    id: "statistics",
+    title: "My Statistics",
+    description: "Your best results",
+    route: "/channel/statistics",
   },
   {
     id: "achievements",
     title: "Achievements",
+    description: "Your unlocked milestones",
     route: "/channel/achievements",
   },
 ];
