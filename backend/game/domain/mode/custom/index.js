@@ -256,6 +256,47 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
     getPlayerRoomStats(room, winnerId).wins += 1;
   }
 
+  for (const [playerId, playerEngine] of engine.playerEngines.entries()) {
+    const player = playerEngine.player;
+    const userId = Number(playerId);
+    const state = playerEngine.room.state;
+
+    if (
+      player?.identityType !== "registered" ||
+      !Number.isInteger(userId) ||
+      userId <= 0 ||
+      !state
+    ) {
+      continue;
+    }
+
+    void import("../../../../prisma/playerStats.js")
+      .then(({ persistGameResult }) =>
+        persistGameResult({
+          userId,
+          mode: "customGame",
+          score: state.score,
+          result: winnerId === playerId ? "win" : "lose",
+          stats: {
+            lines: state.lines,
+            piecesPlaced: state.piecesPlaced,
+            hardDrops: state.hardDrops,
+            holds: state.holds,
+            maxCombo: state.maxCombo,
+            maxLinesCleared: state.maxLinesCleared,
+            clearedTwoAtOnce: state.clearedTwoAtOnce,
+            clearedThreeAtOnce: state.clearedThreeAtOnce,
+            tetrises: state.tetrises,
+            durationMs: Math.max(0, Date.now() - state.startedAt),
+            clearedAfterHalfHeight: state.clearedAfterHalfHeight,
+          },
+        }),
+      )
+      .catch((error) => {
+        console.error("Failed to persist custom game result", error);
+      });
+  }
+
   room.status = "ended";
   room.state = getFirstPlayerState(engine);
 

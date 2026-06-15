@@ -44,6 +44,14 @@ function getSoloPersistMode(room: Room) {
     return null;
 }
 
+function getPersistMode(room: Room) {
+    const soloMode = getSoloPersistMode(room);
+    if (soloMode) return soloMode;
+    if (room.gameConfig.mode === "quickplay") return "quickPlay";
+    if (room.gameConfig.mode === "league") return "tetraLeague";
+    return null;
+}
+
 function getPersistedScore(room: Room, state: GameState | null) {
     if (!state) return 0;
     if (room.gameConfig.mode === "solo" && room.gameConfig.preset === "40Lines") {
@@ -53,10 +61,11 @@ function getPersistedScore(room: Room, state: GameState | null) {
     return state.score;
 }
 
-function persistRegisteredResult(input: MatchEndProgressionInput) {
-    const mode =
-        getSoloPersistMode(input.room) ??
-        (input.room.gameConfig.mode === "league" ? "tetraLeague" : null);
+function persistRegisteredResult(
+    input: MatchEndProgressionInput,
+    progression: PlayerProgressionSnapshot[],
+) {
+    const mode = getPersistMode(input.room);
 
     if (!mode) return;
 
@@ -66,6 +75,9 @@ function persistRegisteredResult(input: MatchEndProgressionInput) {
     for (const player of input.room.players.values()) {
         const userId = getRegisteredUserId(player.id, player.identityType);
         if (!userId) continue;
+        const playerProgression = progression.find(
+            (snapshot) => snapshot.playerId === player.id,
+        );
 
         void import("../../prisma/playerStats.js")
             .then(({ persistGameResult }) =>
@@ -73,7 +85,31 @@ function persistRegisteredResult(input: MatchEndProgressionInput) {
                     userId,
                     mode,
                     score,
+                    achievementScore: input.state?.score ?? 0,
                     result,
+                    progression: playerProgression
+                        ? {
+                            level: playerProgression.level,
+                            xp: playerProgression.xp,
+                            won: playerProgression.outcome === "win",
+                        }
+                        : undefined,
+                    stats: {
+                        lines: input.state?.lines ?? 0,
+                        piecesPlaced: input.state?.piecesPlaced ?? 0,
+                        hardDrops: input.state?.hardDrops ?? 0,
+                        holds: input.state?.holds ?? 0,
+                        maxCombo: input.state?.maxCombo ?? 0,
+                        maxLinesCleared: input.state?.maxLinesCleared ?? 0,
+                        clearedTwoAtOnce: input.state?.clearedTwoAtOnce ?? false,
+                        clearedThreeAtOnce: input.state?.clearedThreeAtOnce ?? false,
+                        tetrises: input.state?.tetrises ?? 0,
+                        durationMs: input.state
+                            ? Math.max(0, Date.now() - input.state.startedAt)
+                            : 0,
+                        clearedAfterHalfHeight:
+                            input.state?.clearedAfterHalfHeight ?? false,
+                    },
                 }),
             )
             .catch((error) => {
@@ -93,9 +129,7 @@ export default function createProgressionService(room: Room) {
 
     function onMatchEnd(input: MatchEndProgressionInput): PlayerProgressionSnapshot[] {
         const outcome: "win" | "defeat" = input.reason === "objective_complete" ? "win" : "defeat";
-        persistRegisteredResult(input);
-
-        return Array.from(input.room.players.values())
+        const progression = Array.from(input.room.players.values())
             .filter(isRegisteredProgressionPlayer)
             .map((player) => {
                 const profile = player.profile!;
@@ -119,6 +153,9 @@ export default function createProgressionService(room: Room) {
                     xp: profile.xp,
                 };
             });
+
+        persistRegisteredResult(input, progression);
+        return progression;
     }
 
     return {

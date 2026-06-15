@@ -24,6 +24,7 @@ const { listFriends, createFriendRequest, acceptFriendRequestById, rejectFriendR
 const oauthController = require("./auth/oauthController");
 // lightweight helpers
 const { getLeaderboard } = require("./prisma/leaderboard");
+const { getUserAchievements } = require("./prisma/achievements");
 
 function getAuthenticatedUserId(req: ApiRequest): number | null {
   const authUser = req.user as any;
@@ -134,6 +135,24 @@ api.post("/auth/github/exchange", oauthController.exchangeOAuthCode);
 
 api.get("/auth/me", authenticateToken, (req: ApiRequest, res: Response) => {
   res.json({ user: req.user });
+});
+
+api.get("/achievements", authenticateToken, async (req: ApiRequest, res: Response) => {
+  try {
+    const userId = getAuthenticatedUserId(req);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const achievements = await getUserAchievements(userId);
+    return res.json({ achievements });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return res.status(500).json({
+      message: "Failed to load achievements",
+      error: message,
+    });
+  }
 });
 
 // to check

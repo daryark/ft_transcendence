@@ -223,6 +223,14 @@ export default function createEngine(room: Room, roomService: RoomService) {
       });
     });
 
+    if (
+      state.board
+        .slice(0, Math.ceil(state.rows / 2))
+        .some((row) => row.some((cell) => cell !== 0))
+    ) {
+      state.reachedHalfHeight = true;
+    }
+
     const { newBoard, newBuffer, cleared, scoreAdd } = clearLines(
       state.board,
       1,
@@ -236,6 +244,16 @@ export default function createEngine(room: Room, roomService: RoomService) {
 
     if (cleared > 0) {
       pendingLinesCleared += cleared;
+      state.maxLinesCleared = Math.max(state.maxLinesCleared, cleared);
+      state.clearedTwoAtOnce = state.clearedTwoAtOnce || cleared === 2;
+      state.clearedThreeAtOnce = state.clearedThreeAtOnce || cleared === 3;
+      state.currentCombo += 1;
+      state.maxCombo = Math.max(state.maxCombo, state.currentCombo);
+      state.tetrises += cleared === 4 ? 1 : 0;
+      state.clearedAfterHalfHeight =
+        state.clearedAfterHalfHeight || state.reachedHalfHeight;
+    } else {
+      state.currentCombo = 0;
     }
 
     if (scoreAdd > 0) {
@@ -254,6 +272,7 @@ export default function createEngine(room: Room, roomService: RoomService) {
 
   function hardDrop(state: GameState) {
     clearLockTimeout();
+    state.hardDrops += 1;
 
     while (tryMoveCurrent(state, 0, 1)) {
       state.score += 2;
@@ -267,6 +286,7 @@ export default function createEngine(room: Room, roomService: RoomService) {
   function holdCurrent(state: GameState) {
     if (!room.gameConfig.controls.hold || !state.canHold) return;
 
+    state.holds += 1;
     const held = state.hold;
     state.hold = resetPiece(state.current.type, state.cols);
     state.canHold = false;

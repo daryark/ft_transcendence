@@ -21,6 +21,16 @@ export interface GameState {
   score: number;
   lines: number;
   piecesPlaced: number;
+  hardDrops: number;
+  holds: number;
+  currentCombo: number;
+  maxCombo: number;
+  maxLinesCleared: number;
+  clearedTwoAtOnce: boolean;
+  clearedThreeAtOnce: boolean;
+  tetrises: number;
+  reachedHalfHeight: boolean;
+  clearedAfterHalfHeight: boolean;
   round: number;
   startedAt: number;
   update: GameUpdateStats;
@@ -30,6 +40,14 @@ export interface GameStats {
   score: number;
   lines: number;
   piecesPlaced: number;
+  hardDrops: number;
+  holds: number;
+  maxCombo: number;
+  maxLinesCleared: number;
+  clearedTwoAtOnce: boolean;
+  clearedThreeAtOnce: boolean;
+  tetrises: number;
+  clearedAfterHalfHeight: boolean;
   elapsedMs: number;
   remainingMs: number | null;
   piecesPerSecond: number;
@@ -53,6 +71,9 @@ export function buildGameStats(
   state: Pick<
     GameState,
     "score" | "lines" | "piecesPlaced" | "round" | "startedAt"
+    | "hardDrops" | "holds" | "maxCombo" | "maxLinesCleared"
+    | "clearedTwoAtOnce" | "clearedThreeAtOnce" | "tetrises"
+    | "clearedAfterHalfHeight"
   >,
   objective?: SoloConfig["objective"],
 ): GameStats {
@@ -92,6 +113,14 @@ export function buildGameStats(
     score: state.score,
     lines: state.lines,
     piecesPlaced: state.piecesPlaced,
+    hardDrops: state.hardDrops,
+    holds: state.holds,
+    maxCombo: state.maxCombo,
+    maxLinesCleared: state.maxLinesCleared,
+    clearedTwoAtOnce: state.clearedTwoAtOnce,
+    clearedThreeAtOnce: state.clearedThreeAtOnce,
+    tetrises: state.tetrises,
+    clearedAfterHalfHeight: state.clearedAfterHalfHeight,
     elapsedMs,
     remainingMs:
       objectiveStats?.type === "time" ? objectiveStats.remaining : null,
@@ -127,12 +156,30 @@ export function initGame(
     score: 0,
     lines: 0,
     piecesPlaced: 0,
+    hardDrops: 0,
+    holds: 0,
+    currentCombo: 0,
+    maxCombo: 0,
+    maxLinesCleared: 0,
+    clearedTwoAtOnce: false,
+    clearedThreeAtOnce: false,
+    tetrises: 0,
+    reachedHalfHeight: false,
+    clearedAfterHalfHeight: false,
     round,
     startedAt,
     update: {
       score: 0,
       lines: 0,
       piecesPlaced: 0,
+      hardDrops: 0,
+      holds: 0,
+      maxCombo: 0,
+      maxLinesCleared: 0,
+      clearedTwoAtOnce: false,
+      clearedThreeAtOnce: false,
+      tetrises: 0,
+      clearedAfterHalfHeight: false,
       elapsedMs: 0,
       remainingMs: null,
       piecesPerSecond: 0,
