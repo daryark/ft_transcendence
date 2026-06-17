@@ -72,8 +72,10 @@ export const DEFAULT_CUSTOM_CONFIG: CustomEditableConfig = {
       garbageMaxCap: 10,
       garbagePassthrough: true,
       allClearGarbage: 5,
-      garbageDelay: 100,
-      garbageDelayOnClear: 20,
+      garbageDelay: 500,
+      garbageDelayOnClear: 100,
+      garbageTargeting: "even",
+      garbageColumnChangeChance: 0.35,
     },
   },
 };
@@ -156,10 +158,20 @@ export function readCustomEditableConfig(
           true,
         ),
         allClearGarbage: toNumber(sourceGarbage.allClearGarbage, 5),
-        garbageDelay: toNumber(sourceGarbage.garbageDelay, 100),
+        garbageDelay: toNumber(sourceGarbage.garbageDelay, 500),
         garbageDelayOnClear: toNumber(
           sourceGarbage.garbageDelayOnClear,
-          20,
+          100,
+        ),
+        garbageTargeting:
+          sourceGarbage.garbageTargeting === "payback" ||
+          sourceGarbage.garbageTargeting === "even" ||
+          sourceGarbage.garbageTargeting === "random"
+            ? sourceGarbage.garbageTargeting
+            : "even",
+        garbageColumnChangeChance: toNumber(
+          sourceGarbage.garbageColumnChangeChance,
+          0.35,
         ),
       },
     },

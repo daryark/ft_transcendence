@@ -148,6 +148,11 @@ export default class RoomService {
   }
 
   private cleanRoomState(room: Room): void {
+    for (const player of room.waitingPlayers?.values() || []) {
+      player.roomId = undefined;
+      player.role = undefined;
+    }
+    room.waitingPlayers?.clear();
     room.status = "ended";
     room.engine = null;
     room.match = null;

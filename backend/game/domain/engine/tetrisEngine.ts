@@ -117,7 +117,9 @@ export default function createEngine(room: Room, roomService: RoomService) {
 
   function ensureNextQueue(state: GameState) {
     while (state.next.length < 7) {
-      state.next.push(...createBag().map((t) => createFigure(t, state.cols)));
+      const bag = createBag(state.bagSeed, state.nextBagIndex ?? 0);
+      state.nextBagIndex = (state.nextBagIndex ?? 0) + 1;
+      state.next.push(...bag.map((t) => createFigure(t, state.cols)));
     }
   }
 

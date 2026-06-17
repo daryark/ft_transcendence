@@ -168,7 +168,7 @@ const ProfileHeader = ({
       ) : (
         <>
           <div className="profileLevel">
-            <span className="levelBadge">{profileDetails?.level ?? 0}</span>
+            <span className="levelBadge">{profileDetails?.level ?? 1}</span>
           </div>
 
           {error && <div className="profileStatsNotice">{error}</div>}

@@ -3,6 +3,7 @@ import { ConfigPatchSchema } from "../../../config/config.schema";
 import createEngine, { TICK_MS } from "../../engine/tetrisEngine";
 import { initGame } from "../../engine/state";
 import { isInput } from "../../engine/input";
+import { createGarbageService } from "../../../services/garbageService.js";
 
 const JOIN_PREFIX = "JOIN:";
 const customRoomHosts = new Map();
@@ -10,6 +11,8 @@ const customEngines = new Map();
 const customRoomScores = new Map();
 const customRoomMessages = new Map();
 const MAX_ROOM_MESSAGES = 100;
+const COUNTDOWN_STEP_MS = 900;
+const COUNTDOWN_STEPS = 5;
 
 function emitError(socket, reason) {
   socket.emit("server:error", { reason });
@@ -63,6 +66,37 @@ function getRoomScores(room) {
   return customRoomScores.get(room.id);
 }
 
+function getWaitingPlayers(room) {
+  if (!room.waitingPlayers) {
+    room.waitingPlayers = new Map();
+  }
+
+  return room.waitingPlayers;
+}
+
+function getVisibleRoomPlayers(room) {
+  return [
+    ...Array.from(room.players.values()),
+    ...Array.from(getWaitingPlayers(room).values()),
+    ...Array.from(room.spectators?.values() ?? []),
+  ];
+}
+
+function promoteWaitingPlayers(room) {
+  const waitingPlayers = getWaitingPlayers(room);
+
+  for (const player of waitingPlayers.values()) {
+    if (!room.players.has(player.id)) {
+      player.role = "player";
+      player.roomId = room.id;
+      room.players.set(player.id, player);
+    }
+  }
+
+  waitingPlayers.clear();
+  ensureRoomHost(room);
+}
+
 function getPlayerRoomStats(room, playerId) {
   const scores = getRoomScores(room);
   const id = String(playerId);
@@ -79,6 +113,7 @@ function serializePlayer(player, hostId, room) {
     id: player.id,
     username: getPlayerName(player),
     rank: player.profile?.rank,
+    role: player.role,
     isHost: player.id === hostId,
     connected: player.connected,
     matchWins: stats.wins,
@@ -95,7 +130,7 @@ function serializeRoom(room) {
     roomName: room.roomConfig.roomName,
     visibility: room.roomConfig.public ? "public" : "private",
     status: room.status,
-    players: Array.from(room.players.values()).map((player) =>
+    players: getVisibleRoomPlayers(room).map((player) =>
       serializePlayer(player, hostId, room),
     ),
     spectators: Array.from(room.spectators?.values() ?? []).map((spectator) =>
@@ -163,8 +198,10 @@ function toEngineGameConfig(gameConfig) {
 
 function createPlayerEngineRoom(room, player, startedAt) {
   const { boardHeight, boardWidth } = room.gameConfig.general;
-  const state = initGame(boardHeight, boardWidth);
-  state.startedAt = startedAt;
+  const round = room.roundNumber ?? 1;
+  const state = initGame(boardHeight, boardWidth, round, startedAt, {
+    bagSeed: `${room.id}:round:${round}`,
+  });
 
   return {
     id: `${room.id}:${player.id}`,
@@ -177,6 +214,14 @@ function createPlayerEngineRoom(room, player, startedAt) {
     matchConfig: room.matchConfig,
     gameConfig: toEngineGameConfig(room.gameConfig),
   };
+}
+
+function calculateCustomXpDelta(elapsedMs, isWinner) {
+  const survivedSeconds = Math.max(0, elapsedMs / 1000);
+  const survivalXp = Math.min(900, survivedSeconds * 4);
+  const winnerBonus = isWinner ? 100 : 0;
+
+  return Math.round(150 + survivalXp + winnerBonus);
 }
 
 function getFirstPlayerState(engine) {
@@ -247,6 +292,9 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
   const activePlayerIds = getActivePlayerIds(engine);
   if (activePlayerIds.length > 1) return false;
   const winnerId = activePlayerIds[0] ?? null;
+  const roundsToWin = room.matchConfig?.roundsToWin ?? 1;
+  const roundWins = room.roundWins ?? new Map();
+  const round = room.roundNumber ?? 1;
 
   for (const playerId of engine.playerEngines.keys()) {
     getPlayerRoomStats(room, playerId).games += 1;
@@ -254,16 +302,103 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
 
   if (winnerId) {
     getPlayerRoomStats(room, winnerId).wins += 1;
+    roundWins.set(String(winnerId), (roundWins.get(String(winnerId)) ?? 0) + 1);
+  }
+  room.roundWins = roundWins;
+
+  const serializedRoundWins = Object.fromEntries(roundWins.entries());
+
+  if (
+    winnerId &&
+    room.players.size > 1 &&
+    (roundWins.get(String(winnerId)) ?? 0) < roundsToWin
+  ) {
+    const payload = {
+      ...serializeVersusGame(room, engine),
+      reason,
+      round,
+      mode: room.gameConfig.mode,
+      winnerId,
+      roundWins: serializedRoundWins,
+      roundsToWin,
+      label: null,
+    };
+
+    roomService.broadcast(room.id, "round:end", payload);
+    engine.stop();
+    room.engine = null;
+    room.roundNumber = round + 1;
+    setTimeout(() => {
+      if (room.status !== "playing") return;
+      const nextEngine = createVersusEngine(room, roomService);
+      room.engine = nextEngine;
+      room.state = getFirstPlayerState(nextEngine);
+      customEngines.set(room.id, nextEngine);
+      roomService.broadcast(room.id, "game:start", serializeVersusGame(room, nextEngine));
+    }, 2400);
+    return true;
   }
 
   room.status = "ended";
   room.state = getFirstPlayerState(engine);
+  const sharedElapsedMs = Math.max(
+    0,
+    ...Array.from(engine.playerEngines.values()).map((playerEngine) => {
+      const state = playerEngine.room?.state;
+      return (
+        state?.update?.elapsedMs ??
+        (state?.startedAt ? Math.max(0, Date.now() - state.startedAt) : 0)
+      );
+    }),
+  );
 
   const payload = {
     ...serializeVersusGame(room, engine),
     reason,
     winnerId,
+    result: {
+      outcome: winnerId ? "win" : "defeat",
+      stats: room.state?.update,
+      progression: [],
+    },
   };
+
+  for (const player of room.players.values()) {
+    const userId = Number(player.id);
+    if (!Number.isInteger(userId) || userId <= 0 || player.identityType === "anonymous") {
+      continue;
+    }
+
+    const playerId = String(player.id);
+    const playerState = engine.playerEngines.get(playerId)?.room?.state;
+    const isWinner = playerId === String(winnerId);
+    const xpDelta = calculateCustomXpDelta(sharedElapsedMs, isWinner);
+
+    payload.result.progression.push({
+      playerId,
+      xpDelta,
+      rankXpDelta: 0,
+      level: player.profile?.level ?? 1,
+      xp: player.profile?.xp ?? 0,
+    });
+
+    void import("../../../../prisma/playerStats.js")
+      .then(({ persistGameResult }) =>
+        persistGameResult({
+          userId,
+          mode: "customGame",
+          score: playerState?.score ?? 0,
+          elapsedMs: sharedElapsedMs,
+          lines: playerState?.lines ?? 0,
+          piecesPlaced: playerState?.piecesPlaced ?? 0,
+          roundsPlayed: round,
+          result: isWinner ? "win" : "lose",
+        }),
+      )
+      .catch((error) => {
+        console.error("Failed to persist custom progression", error);
+      });
+  }
 
   emitSystemMessage(roomService, room, "game finished");
   roomService.broadcast(room.id, "game:update", payload);
@@ -271,6 +406,9 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
   engine.stop();
   room.status = "lobby";
   room.engine = null;
+  room.roundWins = undefined;
+  room.roundNumber = undefined;
+  promoteWaitingPlayers(room);
   broadcastRoomUpdate(roomService, room);
   return true;
 }
@@ -288,7 +426,9 @@ export function removeCustomRoomParticipant(
   const engine = room.engine;
 
   if (role === "player") {
-    const leavingPlayer = room.players.get(playerId);
+    const waitingPlayers = getWaitingPlayers(room);
+    const waitingPlayer = waitingPlayers.get(playerId);
+    const leavingPlayer = room.players.get(playerId) ?? waitingPlayer;
     if (!leavingPlayer) return false;
 
     const leavingPlayerName = getPlayerName(leavingPlayer);
@@ -298,9 +438,15 @@ export function removeCustomRoomParticipant(
       playerEngine.room.status = "ended";
     }
     engine?.eliminatedPlayerIds?.add?.(normalizedPlayerId);
-    roomService.removePlayer(roomId, playerId);
+    if (waitingPlayer) {
+      waitingPlayer.roomId = undefined;
+      waitingPlayer.role = undefined;
+      waitingPlayers.delete(playerId);
+    } else {
+      roomService.removePlayer(roomId, playerId);
+    }
 
-    if (room.players.size === 0) {
+    if (room.players.size === 0 && waitingPlayers.size === 0) {
       customRoomHosts.delete(room.id);
       customRoomScores.delete(room.id);
       customRoomMessages.delete(room.id);
@@ -330,14 +476,31 @@ export function removeCustomRoomParticipant(
 }
 
 function createVersusEngine(room, roomService) {
-  const startedAt = Date.now();
+  const startedAt = Date.now() + COUNTDOWN_STEP_MS * COUNTDOWN_STEPS;
   const playerEngines = new Map();
   const eliminatedPlayerIds = new Set();
+  const lastPiecesPlaced = new Map();
+  const stockLeft = new Map();
+  const garbageService = createGarbageService(room.gameConfig.garbage);
+
+  function getStateMap() {
+    const states = new Map();
+
+    for (const [playerId, playerEngine] of playerEngines.entries()) {
+      if (playerEngine.room.state) {
+        states.set(playerId, playerEngine.room.state);
+      }
+    }
+
+    return states;
+  }
 
   const versusEngine = {
     startedAt,
     playerEngines,
     eliminatedPlayerIds,
+    garbageService,
+    stockLeft,
     interval: null,
     pushInput(playerId, input) {
       if (room.status !== "playing") return;
@@ -362,31 +525,96 @@ function createVersusEngine(room, roomService) {
     },
   };
 
+  function respawnPlayer(playerId, playerEngine) {
+    const nextRoom = createPlayerEngineRoom(room, playerEngine.player, startedAt);
+    const playerRoomService = playerEngine.roomService;
+
+    garbageService.syncState(playerId, nextRoom.state, Date.now());
+    lastPiecesPlaced.set(playerId, 0);
+    playerEngine.engine?.stop?.();
+    const nextEngine = createEngine(nextRoom, playerRoomService);
+    nextRoom.engine = nextEngine;
+    playerEngine.room = nextRoom;
+    playerEngine.engine = nextEngine;
+  }
+
+  function handlePlayerOut(playerId, playerEngine, reason = "game_over") {
+    if (eliminatedPlayerIds.has(playerId)) return false;
+
+    const remainingStock = stockLeft.get(playerId) ?? 0;
+    if (remainingStock > 0) {
+      stockLeft.set(playerId, remainingStock - 1);
+      respawnPlayer(playerId, playerEngine);
+      return false;
+    }
+
+    eliminatedPlayerIds.add(playerId);
+    playerEngine.engine?.stop?.();
+    playerEngine.room.status = "ended";
+    return maybeEndVersus(room, roomService, versusEngine, reason);
+  }
+
   for (const player of room.players.values()) {
     const playerId = String(player.id);
     const playerRoom = createPlayerEngineRoom(room, player, startedAt);
+    const playerEngine = {
+      player,
+      room: playerRoom,
+      engine: null,
+      roomService: null,
+    };
+    garbageService.syncState(playerId, playerRoom.state, startedAt);
+    lastPiecesPlaced.set(playerId, playerRoom.state?.piecesPlaced ?? 0);
+    stockLeft.set(playerId, room.matchConfig?.stock ?? 0);
     const playerRoomService = {
       broadcast(_roomId, event, payload) {
+        if (event === "game:update") {
+          const state = payload ?? playerEngine.room.state;
+          playerEngine.room.state = state;
+
+          const previousPiecesPlaced = lastPiecesPlaced.get(playerId) ?? 0;
+          const nextPiecesPlaced = state?.piecesPlaced ?? previousPiecesPlaced;
+
+          if (nextPiecesPlaced > previousPiecesPlaced) {
+            garbageService.handlePieceLocked({
+              playerId,
+              state,
+              linesCleared: state?.update?.linesCleared ?? 0,
+              activePlayerIds: getActivePlayerIds(versusEngine),
+              stateMap: getStateMap(),
+            });
+            lastPiecesPlaced.set(playerId, nextPiecesPlaced);
+
+            if (state?.gameOver && handlePlayerOut(playerId, playerEngine)) {
+              return;
+            }
+            if (maybeEndVersus(room, roomService, versusEngine)) {
+              return;
+            }
+          }
+        }
+
         if (event === "game:end") {
-          eliminatedPlayerIds.add(playerId);
-          playerRoom.status = "ended";
-          playerRoom.state = payload?.state ?? playerRoom.state;
-          maybeEndVersus(room, roomService, versusEngine, payload?.reason);
+          playerEngine.room.state = payload?.state ?? playerEngine.room.state;
+          handlePlayerOut(playerId, playerEngine, payload?.reason);
         }
       },
     };
 
-    const playerEngine = createEngine(playerRoom, playerRoomService);
-    playerRoom.engine = playerEngine;
-    playerEngines.set(playerId, {
-      player,
-      room: playerRoom,
-      engine: playerEngine,
-    });
+    playerEngine.roomService = playerRoomService;
+    playerEngine.engine = createEngine(playerRoom, playerRoomService);
+    playerRoom.engine = playerEngine.engine;
+    playerEngines.set(playerId, playerEngine);
   }
 
   versusEngine.interval = setInterval(() => {
     if (room.status !== "playing") return;
+
+    for (const [playerId, playerEngine] of playerEngines.entries()) {
+      if (playerEngine.room.state?.gameOver) {
+        if (handlePlayerOut(playerId, playerEngine)) return;
+      }
+    }
 
     room.state = getFirstPlayerState(versusEngine);
     if (maybeEndVersus(room, roomService, versusEngine)) return;
@@ -403,6 +631,7 @@ function createVersusEngine(room, roomService) {
 
 function startCustomVersus(room, roomService) {
   if (room.status === "playing") return;
+  promoteWaitingPlayers(room);
   if (room.players.size < 2) {
     roomService.broadcast(room.id, "server:error", {
       reason: "NEED_TWO_PLAYERS",
@@ -412,6 +641,8 @@ function startCustomVersus(room, roomService) {
 
   stopCustomEngine(room.id);
   room.status = "playing";
+  room.roundWins = new Map();
+  room.roundNumber = 1;
 
   const engine = createVersusEngine(room, roomService);
   room.engine = engine;
@@ -450,15 +681,15 @@ function getMaxPlayers(room) {
 }
 
 function canJoinAsPlayer(room, player) {
-  if (room.status !== "lobby") {
-    return false;
-  }
-
   if (room.players.has(player.id)) {
     return true;
   }
 
-  return room.players.size < getMaxPlayers(room);
+  if (getWaitingPlayers(room).has(player.id)) {
+    return true;
+  }
+
+  return room.players.size + getWaitingPlayers(room).size < getMaxPlayers(room);
 }
 
 function joinExistingRoom(socket, roomService, player, roomCode) {
@@ -470,6 +701,8 @@ function joinExistingRoom(socket, roomService, player, roomCode) {
   }
 
   const wasAlreadyPlayer = room.players.has(player.id);
+  const waitingPlayers = getWaitingPlayers(room);
+  const wasAlreadyWaiting = waitingPlayers.has(player.id);
   const wasAlreadySpectator = room.spectators?.has(player.id) ?? false;
 
   if (!canJoinAsPlayer(room, player)) {
@@ -492,16 +725,22 @@ function joinExistingRoom(socket, roomService, player, roomCode) {
     return null;
   }
 
-  roomService.addPlayer(room.id, player);
-  ensureRoomHost(room);
+  if (room.status === "playing" && !wasAlreadyPlayer) {
+    player.roomId = room.id;
+    player.role = "player";
+    waitingPlayers.set(player.id, player);
+  } else {
+    roomService.addPlayer(room.id, player);
+    ensureRoomHost(room);
+  }
   socket.join(room.id);
   socket.data.roomId = room.id;
   socket.data.role = "player";
-  if (!wasAlreadyPlayer) {
+  if (!wasAlreadyPlayer && !wasAlreadyWaiting) {
     emitSystemMessage(roomService, room, "joined the room", getPlayerName(player));
   }
   socket.emit("room:update", serializeRoom(room));
-  if (!wasAlreadyPlayer) {
+  if (!wasAlreadyPlayer && !wasAlreadyWaiting) {
     broadcastRoomUpdate(roomService, room);
     maybeAutoStart(roomService, room);
   }
@@ -512,6 +751,7 @@ function joinExistingRoom(socket, roomService, player, roomCode) {
 function createCustomRoom(socket, roomService, player, payload) {
   const config = applyConfigPatch(createConfig("custom"), payload);
   const room = roomService.createRoom(config);
+  room.spectators ??= new Map();
 
   customRoomHosts.set(room.id, player.id);
   customRoomScores.set(room.id, new Map());
@@ -525,6 +765,52 @@ function createCustomRoom(socket, roomService, player, payload) {
   maybeAutoStart(roomService, room);
 
   return roomService.getRoomState(room.id);
+}
+
+export function switchCustomRoomRole(roomService, roomId, playerId, nextRole) {
+  const room = roomService.getRoom(roomId);
+  if (!room || room.gameConfig.mode !== "custom") return { ok: false, reason: "ROOM_NOT_FOUND" };
+
+  room.spectators ??= new Map();
+  const waitingPlayers = getWaitingPlayers(room);
+  const player = room.players.get(playerId) ?? waitingPlayers.get(playerId) ?? room.spectators.get(playerId);
+  if (!player) return { ok: false, reason: "PLAYER_NOT_FOUND" };
+
+  if (nextRole === "spectator") {
+    if (room.status === "playing" && room.players.has(playerId)) {
+      return { ok: false, reason: "PLAYER_IN_ACTIVE_GAME" };
+    }
+
+    waitingPlayers.delete(playerId);
+    room.players.delete(playerId);
+    player.role = "spectator";
+    player.roomId = room.id;
+    room.spectators.set(playerId, player);
+    ensureRoomHost(room);
+    broadcastRoomUpdate(roomService, room);
+    return { ok: true, role: "spectator" };
+  }
+
+  if (nextRole === "player") {
+    if (!canJoinAsPlayer(room, player)) {
+      return { ok: false, reason: "ROOM_FULL" };
+    }
+
+    room.spectators.delete(playerId);
+    player.role = "player";
+    player.roomId = room.id;
+    if (room.status === "playing") {
+      waitingPlayers.set(playerId, player);
+    } else {
+      room.players.set(playerId, player);
+    }
+    ensureRoomHost(room);
+    broadcastRoomUpdate(roomService, room);
+    maybeAutoStart(roomService, room);
+    return { ok: true, role: "player" };
+  }
+
+  return { ok: false, reason: "INVALID_ROLE" };
 }
 
 function maybeAutoStart(roomService, room) {
@@ -543,6 +829,7 @@ function maybeAutoStart(roomService, room) {
 function registerCustomRoomEvents(socket, roomService) {
   socket.removeAllListeners("room:updateConfig"); //! do i need it on other modes?
   socket.removeAllListeners("room:start"); //! is it native socket.io fn?
+  socket.removeAllListeners("room:switchRole");
   socket.removeAllListeners("player:move");
 
   socket.on("room:updateConfig", (payload = {}) => {
@@ -561,11 +848,6 @@ function registerCustomRoomEvents(socket, roomService) {
 
     if (customRoomHosts.get(room.id) !== identity.id) {
       emitError(socket, "ONLY_HOST_CAN_EDIT_ROOM");
-      return;
-    }
-
-    if (room.status !== "lobby") {
-      emitError(socket, "ROOM_ALREADY_STARTED");
       return;
     }
 
@@ -599,6 +881,20 @@ function registerCustomRoomEvents(socket, roomService) {
     }
 
     startCustomVersus(room, roomService);
+  });
+
+  socket.on("room:switchRole", (payload = {}) => {
+    const roomId = socket.data.roomId;
+    const identity = socket.data.identity;
+    if (!roomId || !identity) return;
+
+    const nextRole = payload?.role;
+    const result = switchCustomRoomRole(roomService, roomId, identity.id, nextRole);
+    if (!result.ok) {
+      emitError(socket, result.reason);
+      return;
+    }
+    socket.data.role = result.role;
   });
 
   socket.on("player:move", (input) => {

@@ -45,6 +45,10 @@ function copyCarryStats(nextState: GameState, previousState: GameState) {
 }
 
 function getStartDelayMs(room: Room) {
+  if (room.gameConfig.mode !== "solo") {
+    return COUNTDOWN_STEP_MS * COUNTDOWN_STEPS;
+  }
+
   if (
     room.gameConfig.mode === "solo" &&
     (room.gameConfig.preset === "40Lines" ||
@@ -110,6 +114,19 @@ export default function createMatchService(
   function emitRoundEnd(state: GameState, reason: RoundEndReason) {
     if (!roundEventsEnabled) return;
 
+    const playerIds = Array.from(room.players.keys()).map(String);
+    const winnerId = reason === "game_over" && playerIds.length === 2
+      ? playerIds[1]
+      : playerIds[0] ?? null;
+    const roundWins = Object.fromEntries(
+      playerIds.map((playerId) => [
+        playerId,
+        playerId === winnerId ? completedRounds + 1 : completedRounds,
+      ]),
+    );
+    const roundsToWin = matchConfig.roundsToWin ?? 1;
+    const leadingScore = Math.max(0, ...Object.values(roundWins));
+
     roomService.broadcast(room.id, "round:end", {
       roomId: room.id,
       round: state.round,
@@ -118,6 +135,18 @@ export default function createMatchService(
       completedRounds,
       stockLeft,
       matchConfig: room.matchConfig,
+      mode: room.gameConfig.mode,
+      winnerId,
+      roundWins,
+      roundsToWin,
+      label:
+        room.gameConfig.mode !== "league"
+          ? null
+          : playerIds.length === 2 && Object.values(roundWins).every((score) => score === roundsToWin - 1)
+          ? "tiebreaker"
+          : leadingScore === roundsToWin - 1
+            ? "match_point"
+            : null,
     });
   }
 
@@ -205,11 +234,17 @@ export default function createMatchService(
     }
   }
 
+  function getRoundBagSeed(round: number) {
+    return `${room.id}:round:${round}`;
+  }
+
   function restartSameRound(previousState: GameState) {
     const nextState = initGame(
       previousState.rows,
       previousState.cols,
       previousState.round,
+      Date.now(),
+      { bagSeed: getRoundBagSeed(previousState.round) },
     );
     copyCarryStats(nextState, previousState);
     startRound(nextState, true);
@@ -220,6 +255,8 @@ export default function createMatchService(
       previousState.rows,
       previousState.cols,
       previousState.round + 1,
+      Date.now(),
+      { bagSeed: getRoundBagSeed(previousState.round + 1) },
     );
     copyCarryStats(nextState, previousState);
     startRound(nextState, false);
@@ -316,6 +353,7 @@ export default function createMatchService(
       boardWidth,
       1,
       Date.now() + getStartDelayMs(room),
+      { bagSeed: getRoundBagSeed(1) },
     );
     initialState.update = buildRoomStats(room, initialState);
 

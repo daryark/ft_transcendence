@@ -2,13 +2,19 @@ export function ToggleField({
   label,
   checked,
   disabled,
+  readOnly,
   onChange,
 }: {
   label: string;
   checked: boolean;
   disabled?: boolean;
+  readOnly?: boolean;
   onChange: (value: boolean) => void;
 }) {
+  if (readOnly) {
+    return <ReadOnlyField label={label} value={checked} />;
+  }
+
   return (
     <label className="mp-custom-setting">
       <span>{label}</span>
@@ -30,6 +36,7 @@ export function NumberField({
   min,
   max,
   step = 1,
+  readOnly,
   onChange,
 }: {
   label: string;
@@ -37,8 +44,13 @@ export function NumberField({
   min?: number;
   max?: number;
   step?: number;
+  readOnly?: boolean;
   onChange: (value: number) => void;
 }) {
+  if (readOnly) {
+    return <ReadOnlyField label={label} value={value} />;
+  }
+
   return (
     <label className="mp-custom-setting">
       <span>{label}</span>
@@ -60,12 +72,18 @@ export function NumberField({
 export function TextField({
   label,
   value,
+  readOnly,
   onChange,
 }: {
   label: string;
   value: string;
+  readOnly?: boolean;
   onChange: (value: string) => void;
 }) {
+  if (readOnly) {
+    return <ReadOnlyField label={label} value={value} />;
+  }
+
   return (
     <label className="mp-custom-setting mp-custom-setting--wide">
       <span>{label}</span>
@@ -75,5 +93,22 @@ export function TextField({
         value={value}
       />
     </label>
+  );
+}
+
+export function ReadOnlyField({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | number | boolean | null | undefined;
+}) {
+  return (
+    <div className="mp-custom-setting mp-custom-setting--readonly">
+      <span>{label}</span>
+      <strong>
+        {typeof value === "boolean" ? (value ? "ON" : "OFF") : value ?? "NONE"}
+      </strong>
+    </div>
   );
 }

@@ -15,7 +15,11 @@ export default function join(
 ): RoomServiceRoomState | null {
     const config: Config = applyConfigPatch(createConfig('quickplay'), payload);
     const room: Room = roomService.findRoom((existingRoom) => {
-        return existingRoom.gameConfig.mode === "quickplay" && existingRoom.status === "playing";
+        return (
+            existingRoom.gameConfig.mode === "quickplay" &&
+            existingRoom.status === "lobby" &&
+            existingRoom.players.size < 2
+        );
     }) ?? roomService.createRoom(config);
 
     const player = playerService.get(socket.data.identity.id);

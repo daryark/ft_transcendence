@@ -1,14 +1,33 @@
-import { useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import GameBoard from "../../../components/GameBoard/GameBoard";
 import { formatPlayerName, getModeLabel } from "../gameUtils";
 import type { GameSession } from "../hooks/useGameSession";
 import GameAbortOverlay from "../components/GameAbortOverlay";
 import GameFocusOverlay from "../components/GameFocusOverlay";
+import GameGarbageQueue from "../components/GameGarbageQueue";
 import GamePreviewPanel from "../components/GamePreviewPanel";
 
 type RoomGameViewProps = {
   session: GameSession;
 };
+
+const TABLET_BREAKPOINT_PX = 860;
+const ROOM_PACKAGE_SCALE_FLOOR = 0.74;
+const ROOM_BASE_WIDTH_PX = 54 * 16;
+const ROOM_BASE_HEIGHT_PX = 45 * 16;
+
+function getRoomPackageScale() {
+  if (window.innerWidth <= TABLET_BREAKPOINT_PX) {
+    return ROOM_PACKAGE_SCALE_FLOOR;
+  }
+
+  const widthScale = (window.innerWidth - 360) / ROOM_BASE_WIDTH_PX;
+  const heightScale = (window.innerHeight - 96) / ROOM_BASE_HEIGHT_PX;
+  return Math.min(
+    1,
+    Math.max(ROOM_PACKAGE_SCALE_FLOOR, Math.min(widthScale, heightScale)),
+  );
+}
 
 export default function RoomGameView({ session }: RoomGameViewProps) {
   const {
@@ -22,6 +41,16 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(
     null,
   );
+  const [packageScale, setPackageScale] = useState(getRoomPackageScale);
+
+  useEffect(() => {
+    const updateScale = () => setPackageScale(getRoomPackageScale());
+
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, []);
+
   if (!gameState || !gameConfig || gameConfig.mode === "solo") return null;
 
   const selectedTarget = alivePlayers.find(
@@ -36,9 +65,14 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
   );
   const opponentCellSize =
     previewPlayers.length <= 2 ? 13 : previewPlayers.length <= 3 ? 10 : 8;
+  const mainCellSize = Math.round(32 * packageScale);
+  const previewFigureSize = Math.round(30 * packageScale);
+  const style = {
+    "--room-package-scale": String(packageScale),
+  } as CSSProperties;
 
   return (
-    <main className="solo-game room-game">
+    <main className="solo-game room-game" style={style}>
       <header className="versus-game__topbar">
         <div className="versus-game__live">LIVE</div>
         <div className="versus-game__title">
@@ -52,13 +86,15 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
               ` / ${eliminatedPlayers.length} OUT`}
           </span>
         </div>
-        <button
-          className="versus-game__exit"
-          onClick={session.exitGame}
-          type="button"
-        >
-          EXIT
-        </button>
+        {gameConfig.mode === "custom" && isSpectating && (
+          <button
+            className="versus-game__exit"
+            onClick={session.leaveActiveGameView}
+            type="button"
+          >
+            LOBBY
+          </button>
+        )}
       </header>
 
       <section className="room-game__stage">
@@ -67,7 +103,7 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
             {gameConfig.controls.hold && (
               <GamePreviewPanel
                 className="solo-game__panel room-game__hold"
-                figureSize={30}
+                figureSize={previewFigureSize}
                 state={targetState}
                 type="hold"
               />
@@ -92,11 +128,19 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
           </div>
 
           <div className="room-game__main-board">
-            <GameBoard
-              cellSize={32}
-              gameState={targetState}
-              showGhost={gameConfig.controls.showShadowPiece}
-            />
+            <div className="room-game__board-stack">
+              <GameGarbageQueue
+                alwaysVisible
+                cellSize={mainCellSize}
+                queue={targetState.garbageQueue}
+                rows={targetState.rows}
+              />
+              <GameBoard
+                cellSize={mainCellSize}
+                gameState={targetState}
+                showGhost={gameConfig.controls.showShadowPiece}
+              />
+            </div>
             <div className="versus-game__name">
               {formatPlayerName(
                 targetPlayer?.username ??
@@ -110,7 +154,7 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
           <div className="room-game__right-rail">
             <GamePreviewPanel
               className="solo-game__panel room-game__next"
-              figureSize={30}
+              figureSize={previewFigureSize}
               nextCount={gameConfig.controls.nextPieces}
               state={targetState}
               type="next"
@@ -134,11 +178,19 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
                 onClick={() => setSelectedTargetId(String(player.id))}
                 type="button"
               >
-                <GameBoard
-                  cellSize={opponentCellSize}
-                  gameState={player.state}
-                  showGhost={false}
-                />
+                <div className="room-game__opponent-board-stack">
+                  <GameGarbageQueue
+                    alwaysVisible
+                    cellSize={opponentCellSize}
+                    queue={player.state.garbageQueue}
+                    rows={player.state.rows}
+                  />
+                  <GameBoard
+                    cellSize={opponentCellSize}
+                    gameState={player.state}
+                    showGhost={false}
+                  />
+                </div>
                 <div className="room-game__opponent-name">
                   {formatPlayerName(player.username, "PLAYER")}
                 </div>
@@ -162,7 +214,9 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
       </section>
 
       <GameAbortOverlay progress={session.escProgress} />
-      <GameFocusOverlay active={!session.focused && !session.result} />
+      <GameFocusOverlay
+        active={!isSpectating && !session.focused && !session.result}
+      />
     </main>
   );
 }

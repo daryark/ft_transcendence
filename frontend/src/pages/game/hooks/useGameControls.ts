@@ -27,6 +27,7 @@ type GameControlsOptions = {
   countdownActive: boolean;
   resultActive: boolean;
   returnPath: string;
+  exitPath?: string;
   navigate: NavigateFunction;
 };
 
@@ -51,6 +52,7 @@ export function useGameControls({
   countdownActive,
   resultActive,
   returnPath,
+  exitPath,
   navigate,
 }: GameControlsOptions) {
   const [escProgress, setEscProgress] = useState(0);
@@ -99,7 +101,7 @@ export function useGameControls({
           socket.emit("game:stop");
           clearStoredActiveGame(gameId);
           clearEsc();
-          navigate(returnPath);
+          navigate(exitPath ?? returnPath, { replace: true });
         }
       }, 100);
     };
@@ -122,7 +124,7 @@ export function useGameControls({
       window.removeEventListener("keyup", handleKeyUp);
       clearEsc();
     };
-  }, [gameId, navigate, returnPath, socket]);
+  }, [exitPath, gameId, navigate, returnPath, socket]);
 
   useEffect(() => {
     if (!socket) return undefined;

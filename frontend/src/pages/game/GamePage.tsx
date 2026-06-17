@@ -10,6 +10,20 @@ import SoloResultsView from "./views/SoloResultsView";
 import "./SoloGame.scss";
 import { EmptyState, Skeleton } from "../../components/StateView/StateView";
 import GameAudioPanel from "../../music/GameAudioPanel";
+import RoundResultOverlay from "./components/RoundResultOverlay";
+import GameCountdownOverlay from "./components/GameCountdownOverlay";
+
+function CountdownLayer({ value }: { value: string | null }) {
+  if (!value) return null;
+
+  return (
+    <GameCountdownOverlay
+      key={`countdown-${value}`}
+      value={value}
+      variant={value.length <= 2 ? "number" : undefined}
+    />
+  );
+}
 
 export default function GamePage() {
   const session = useGameSession();
@@ -55,7 +69,6 @@ export default function GamePage() {
   if (result && gameConfig && gameConfig.mode !== "solo") {
     return (
       <MultiplayerGameOver
-        connectionStatus={session.connectionStatus}
         modeLabel={getModeLabel(gameConfig)}
         onNext={session.leaveResults}
         players={session.players}
@@ -66,12 +79,7 @@ export default function GamePage() {
     );
   }
 
-  const multiplayerPlayerCount = Object.keys(session.players).length;
-  const shouldUseDuelLayout =
-    gameConfig?.mode === "league" ||
-    (gameConfig?.mode !== "solo" &&
-      (session.alivePlayers.length === 2 ||
-        multiplayerPlayerCount === 2));
+  const shouldUseDuelLayout = gameConfig?.mode === "league";
 
   const networkOverlay =
     session.networkStatus !== "online" ? (
@@ -89,6 +97,8 @@ export default function GamePage() {
     return (
       <>
         <DuelGameView session={session} />
+        <RoundResultOverlay result={session.roundResult} />
+        <CountdownLayer value={session.countdownStep} />
         {networkOverlay}
         <GameAudioPanel />
       </>
@@ -102,6 +112,8 @@ export default function GamePage() {
     return (
       <>
         <RoomGameView session={session} />
+        <RoundResultOverlay result={session.roundResult} />
+        <CountdownLayer value={session.countdownStep} />
         {networkOverlay}
         <GameAudioPanel />
       </>

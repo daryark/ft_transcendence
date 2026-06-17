@@ -26,7 +26,7 @@ import {
   RANK_OPTIONS,
   readCustomEditableConfig,
 } from "./custom/config";
-import { NumberField, TextField, ToggleField } from "./custom/fields";
+import { NumberField, ReadOnlyField, TextField, ToggleField } from "./custom/fields";
 import type {
   CustomChatMessage,
   CustomEditableConfig,
@@ -79,6 +79,8 @@ export default function Custom() {
   const [tab, setTab] = useState<CustomTab>("welcome");
   const [roomId, setRoomId] = useState<string | null>(null);
   const [roomCode, setRoomCode] = useState("");
+  const [roomStatus, setRoomStatus] =
+    useState<CustomRoomSnapshot["status"]>("lobby");
   const [status, setStatus] = useState(() =>
     routeRoomCode ? "JOINING ROOM" : "",
   );
@@ -98,6 +100,16 @@ export default function Custom() {
   const isCurrentUserHost = players.some(
     (player) => player.isHost && String(player.id) === currentIdentityId,
   );
+  const currentRoomPlayer = players.find(
+    (player) => String(player.id) === currentIdentityId,
+  );
+  const currentRoomRole = currentRoomPlayer?.role ?? "player";
+  const activeRoomPlayers = players.filter(
+    (player) => player.role !== "spectator",
+  );
+  const copyableRoomCode =
+    roomCode || (roomId && roomId !== "pending-custom-room" ? roomId : "");
+  const settingProps = { readOnly: !isCurrentUserHost };
 
   useEffect(() => {
     document.body.classList.add("mp-custom-active");
@@ -157,9 +169,10 @@ export default function Custom() {
     const handleRoomUpdate = (snapshot: CustomRoomSnapshot) => {
       if (leavingRoomRef.current) return;
 
-      const nextRoomCode = snapshot.roomCode ?? "";
+      const nextRoomCode = snapshot.roomCode ?? snapshot.roomId ?? "";
 
       setRoomId(snapshot.roomId ?? "pending-custom-room");
+      setRoomStatus(snapshot.status ?? "lobby");
       setRoomCode(nextRoomCode);
       if (nextRoomCode) {
         window.sessionStorage.setItem(CUSTOM_ACTIVE_ROOM_KEY, nextRoomCode);
@@ -204,13 +217,17 @@ export default function Custom() {
     const handleError = (error: ServerError) => {
       if (leavingRoomRef.current) return;
 
-      setStatus(error.reason ?? "SERVER ERROR");
+      const message = error.reason ?? "SERVER ERROR";
+      setStatus(message);
+      showToast(message, "error");
     };
 
     const handleGameStart = (payload: GameStartPayload) => {
       const nextRoomId = payload.roomId ?? roomId;
+      const isActivePlayer =
+        !!currentIdentityId && !!payload.players?.[String(currentIdentityId)];
 
-      if (!nextRoomId) return;
+      if (!nextRoomId || !isActivePlayer) return;
 
       navigate(`/game/${nextRoomId}`, {
         state: {
@@ -231,7 +248,15 @@ export default function Custom() {
       socket.off("server:error", handleError);
       socket.off("game:start", handleGameStart);
     };
-  }, [currentPlayer, location.pathname, navigate, roomCode, roomId]);
+  }, [
+    currentIdentityId,
+    currentPlayer,
+    location.pathname,
+    navigate,
+    roomCode,
+    roomId,
+    showToast,
+  ]);
 
   useEffect(() => {
     if (
@@ -350,6 +375,7 @@ export default function Custom() {
 
     setConfig(nextConfig);
     setRoomId("pending-custom-room");
+    setRoomStatus("lobby");
     setRoomCode("");
     setPlayers(currentPlayer ? [currentPlayer] : []);
     setTab("welcome");
@@ -362,8 +388,8 @@ export default function Custom() {
   };
 
   const saveConfig = () => {
-    setStatus("SAVING");
     getSocket()?.emit("room:updateConfig", createBackendConfigPatch(config));
+    showToast("Room settings saved for the next game.", "success");
   };
 
   const startGame = () => {
@@ -394,12 +420,42 @@ export default function Custom() {
     }
 
     setRoomId(null);
+    setRoomStatus("lobby");
     setRoomCode("");
     setPlayers([]);
     setChatMessages([]);
     setStatus("");
     window.sessionStorage.removeItem(CUSTOM_ACTIVE_ROOM_KEY);
     navigate("/play/multiplayer/custom", { replace: true });
+  };
+
+  const spectateActiveGame = () => {
+    const socket = getSocket();
+    if (!socket || !roomId) return;
+
+    const handleResume = (payload: GameStartPayload) => {
+      if (payload.roomId !== roomId) return;
+
+      socket.off("game:resume", handleResume);
+      navigate(`/game/${roomId}`, {
+        state: {
+          ...payload,
+          from: customRoomPath(roomCode || roomId),
+        },
+      });
+    };
+
+    socket.on("game:resume", handleResume);
+    socket.emit("game:resume");
+  };
+
+  const playZenWhileWaiting = () => {
+    navigate("/play/solo/zen");
+  };
+
+  const switchRoomRole = () => {
+    const nextRole = currentRoomRole === "spectator" ? "player" : "spectator";
+    getSocket()?.emit("room:switchRole", { role: nextRole });
   };
 
   if (!inRoom) {
@@ -446,13 +502,13 @@ export default function Custom() {
         </button>
         <button
           className="mp-custom-code"
-          disabled={!roomCode}
+          disabled={!copyableRoomCode}
           onClick={async () => {
-            if (!roomCode) {
+            if (!copyableRoomCode) {
               return;
             }
 
-            const inviteUrl = `${window.location.origin}/play/multiplayer/custom/${roomCode}`;
+            const inviteUrl = `${window.location.origin}/play/multiplayer/custom/${copyableRoomCode}`;
             try {
               await navigator.clipboard.writeText(inviteUrl);
               setStatus("ROOM URL COPIED");
@@ -465,20 +521,26 @@ export default function Custom() {
           type="button"
         >
           <small>CLICK TO COPY URL</small>
-          {roomCode || "WAITING FOR ROOM CODE"}
+          {copyableRoomCode || "WAITING FOR ROOM CODE"}
         </button>
       </header>
 
       <aside className="mp-custom-players">
-        <h2>PLAYERS ({players.length})</h2>
+        <h2>PLAYERS ({activeRoomPlayers.length})</h2>
         <div className="mp-custom-player-list">
           {players.map((player) => (
-            <div className="mp-custom-player" key={player.id}>
+            <div
+              className={`mp-custom-player ${
+                player.role === "spectator" ? "mp-custom-player--spectator" : ""
+              }`}
+              key={player.id}
+            >
               <strong>{player.username}</strong>
               <span>
                 {player.matchWins ?? 0}/{player.matchTotalGames ?? 0}
               </span>
               {player.isHost && <em>HOST</em>}
+              {player.role === "spectator" && <em>SPECTATOR</em>}
             </div>
           ))}
         </div>
@@ -533,11 +595,13 @@ export default function Custom() {
             <div className="mp-custom-settings">
               <h2>GENERAL</h2>
               <TextField
+                {...settingProps}
                 label="ROOM NAME"
                 onChange={(value) => updateRoom({ roomName: value })}
                 value={config.roomConfig.roomName ?? ""}
               />
               <NumberField
+                {...settingProps}
                 label="PLAYER LIMIT"
                 min={0}
                 onChange={(value) =>
@@ -546,41 +610,52 @@ export default function Custom() {
                 value={config.roomConfig.maxPlayers ?? 0}
               />
               <NumberField
+                {...settingProps}
                 label="AUTO START"
                 min={0}
                 onChange={(value) => updateRoom({ autoStart: value })}
                 value={config.roomConfig.autoStart ?? 0}
               />
               <ToggleField
+                {...settingProps}
                 checked={config.roomConfig.public}
                 label="PUBLIC ROOM"
                 onChange={(value) => updateRoom({ public: value })}
               />
               <ToggleField
+                {...settingProps}
                 checked={config.roomConfig.anonymousAllowed}
                 label="ALLOW ANONYMOUS USERS TO JOIN"
                 onChange={(value) => updateRoom({ anonymousAllowed: value })}
               />
               <ToggleField
+                {...settingProps}
                 checked={config.roomConfig.unrankedAllowed}
                 label="ALLOW UNRANKED USERS TO PLAY"
                 onChange={(value) => updateRoom({ unrankedAllowed: value })}
               />
-              <label className="mp-custom-setting">
-                <span>RANK LIMIT</span>
-                <select
-                  onChange={(event) =>
-                    updateRoom({ rankLimit: event.target.value })
-                  }
-                  value={config.roomConfig.rankLimit ?? ""}
-                >
-                  {RANK_OPTIONS.map((rank) => (
-                    <option key={rank || "none"} value={rank}>
-                      {rank || "NONE"}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {isCurrentUserHost ? (
+                <label className="mp-custom-setting">
+                  <span>RANK LIMIT</span>
+                  <select
+                    onChange={(event) =>
+                      updateRoom({ rankLimit: event.target.value })
+                    }
+                    value={config.roomConfig.rankLimit ?? ""}
+                  >
+                    {RANK_OPTIONS.map((rank) => (
+                      <option key={rank || "none"} value={rank}>
+                        {rank || "NONE"}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <ReadOnlyField
+                  label="RANK LIMIT"
+                  value={config.roomConfig.rankLimit || "NONE"}
+                />
+              )}
             </div>
           )}
 
@@ -588,24 +663,28 @@ export default function Custom() {
             <div className="mp-custom-settings">
               <h2>MATCH</h2>
               <NumberField
+                {...settingProps}
                 label="ROUNDS TO WIN"
                 min={1}
                 onChange={(value) => updateMatch({ roundsToWin: value })}
                 value={config.matchConfig?.roundsToWin ?? 1}
               />
               <NumberField
+                {...settingProps}
                 label="WIN BY ROUNDS"
                 min={0}
                 onChange={(value) => updateMatch({ winByRounds: value })}
                 value={config.matchConfig?.winByRounds ?? 0}
               />
               <NumberField
+                {...settingProps}
                 label="GOLDEN POINT"
                 min={0}
                 onChange={(value) => updateMatch({ goldenPoint: value })}
                 value={config.matchConfig?.goldenPoint ?? 0}
               />
               <NumberField
+                {...settingProps}
                 label="STOCK"
                 min={0}
                 onChange={(value) => updateMatch({ stock: value })}
@@ -619,11 +698,13 @@ export default function Custom() {
               <section>
                 <h2>GAME</h2>
                 <TextField
+                {...settingProps}
                   label="BAG TYPE"
                   onChange={(value) => updateGeneral({ bagType: value })}
                   value={config.gameConfig.general.bagType}
                 />
                 <NumberField
+                {...settingProps}
                   label="BOARD WIDTH"
                   max={20}
                   min={4}
@@ -631,6 +712,7 @@ export default function Custom() {
                   value={config.gameConfig.general.boardWidth}
                 />
                 <NumberField
+                {...settingProps}
                   label="BOARD HEIGHT"
                   max={40}
                   min={4}
@@ -638,11 +720,13 @@ export default function Custom() {
                   value={config.gameConfig.general.boardHeight}
                 />
                 <ToggleField
+                {...settingProps}
                   checked={config.gameConfig.controls.hold}
                   label="HOLD"
                   onChange={(value) => updateControls({ hold: value })}
                 />
                 <NumberField
+                {...settingProps}
                   label="NEXT PIECES"
                   max={7}
                   min={0}
@@ -650,6 +734,7 @@ export default function Custom() {
                   value={config.gameConfig.controls.nextPieces}
                 />
                 <ToggleField
+                {...settingProps}
                   checked={config.gameConfig.controls.showShadowPiece}
                   label="SHADOW PIECE"
                   onChange={(value) => updateControls({ showShadowPiece: value })}
@@ -659,12 +744,14 @@ export default function Custom() {
               <section>
                 <h2>GRAVITY</h2>
                 <NumberField
+                {...settingProps}
                   label="LOCK DELAY"
                   min={0}
                   onChange={(value) => updateGravity({ lockDelay: value })}
                   value={config.gameConfig.gravity.lockDelay}
                 />
                 <NumberField
+                {...settingProps}
                   label="GRAVITY"
                   min={0}
                   onChange={(value) => updateGravity({ gravity: value })}
@@ -672,6 +759,7 @@ export default function Custom() {
                   value={config.gameConfig.gravity.gravity}
                 />
                 <NumberField
+                {...settingProps}
                   label="GRAVITY INCREASE"
                   min={0}
                   onChange={(value) => updateGravity({ gravityIncrease: value })}
@@ -679,6 +767,7 @@ export default function Custom() {
                   value={config.gameConfig.gravity.gravityIncrease}
                 />
                 <NumberField
+                {...settingProps}
                   label="GRAVITY MARGIN TIME"
                   min={0}
                   onChange={(value) => updateGravity({ gravitMarginTime: value })}
@@ -689,6 +778,7 @@ export default function Custom() {
               <section>
                 <h2>GARBAGE</h2>
                 <NumberField
+                {...settingProps}
                   label="GARBAGE MULT"
                   min={0}
                   onChange={(value) => updateGarbage({ garbageMult: value })}
@@ -696,41 +786,81 @@ export default function Custom() {
                   value={config.gameConfig.garbage.garbageMult}
                 />
                 <NumberField
+                {...settingProps}
                   label="GARBAGE CAP"
                   min={0}
                   onChange={(value) => updateGarbage({ garbageCap: value })}
                   value={config.gameConfig.garbage.garbageCap}
                 />
                 <NumberField
+                {...settingProps}
                   label="GARBAGE MAX CAP"
                   min={0}
                   onChange={(value) => updateGarbage({ garbageMaxCap: value })}
                   value={config.gameConfig.garbage.garbageMaxCap}
                 />
                 <ToggleField
+                {...settingProps}
                   checked={config.gameConfig.garbage.garbagePassthrough}
                   label="GARBAGE PASSTHROUGH"
                   onChange={(value) => updateGarbage({ garbagePassthrough: value })}
                 />
                 <NumberField
+                {...settingProps}
                   label="ALL CLEAR GARBAGE"
                   min={0}
                   onChange={(value) => updateGarbage({ allClearGarbage: value })}
                   value={config.gameConfig.garbage.allClearGarbage}
                 />
                 <NumberField
+                {...settingProps}
                   label="GARBAGE DELAY"
                   min={0}
                   onChange={(value) => updateGarbage({ garbageDelay: value })}
                   value={config.gameConfig.garbage.garbageDelay}
                 />
                 <NumberField
+                {...settingProps}
                   label="DELAY ON CLEAR"
                   min={0}
                   onChange={(value) =>
                     updateGarbage({ garbageDelayOnClear: value })
                   }
                   value={config.gameConfig.garbage.garbageDelayOnClear}
+                />
+                {isCurrentUserHost ? (
+                  <label className="mp-custom-setting">
+                    <span>TARGETING</span>
+                    <select
+                      onChange={(event) =>
+                        updateGarbage({
+                          garbageTargeting: event.target
+                            .value as GarbageConfig["garbageTargeting"],
+                        })
+                      }
+                      value={config.gameConfig.garbage.garbageTargeting}
+                    >
+                      <option value="payback">PAYBACK</option>
+                      <option value="even">EVEN</option>
+                      <option value="random">RANDOM</option>
+                    </select>
+                  </label>
+                ) : (
+                  <ReadOnlyField
+                    label="TARGETING"
+                    value={config.gameConfig.garbage.garbageTargeting.toUpperCase()}
+                  />
+                )}
+                <NumberField
+                {...settingProps}
+                  label="HOLE CHANGE CHANCE"
+                  max={1}
+                  min={0}
+                  onChange={(value) =>
+                    updateGarbage({ garbageColumnChangeChance: value })
+                  }
+                  step={0.05}
+                  value={config.gameConfig.garbage.garbageColumnChangeChance}
                 />
               </section>
             </div>
@@ -746,7 +876,6 @@ export default function Custom() {
             SAVE
           </button>
         )}
-        {status && <div className="mp-custom-status">{status}</div>}
       </main>
 
       <aside className="mp-custom-chat">
@@ -783,13 +912,33 @@ export default function Custom() {
       </aside>
 
       <footer className="mp-custom-footer">
-        <button type="button">PLAYING</button>
-        {isCurrentUserHost && (
+        <button
+          className={`mp-custom-role-toggle mp-custom-role-toggle--${currentRoomRole}`}
+          onClick={switchRoomRole}
+          type="button"
+        >
+          {currentRoomRole === "spectator" ? "SPECTATING" : "PLAYING"}
+          <small>
+            {currentRoomRole === "spectator"
+              ? "switch to player mode"
+              : "switch to spectating mode"}
+          </small>
+        </button>
+        {roomStatus === "playing" ? (
+          <>
+            <button onClick={spectateActiveGame} type="button">
+              SPECTATE
+            </button>
+            <button onClick={playZenWhileWaiting} type="button">
+              ZEN
+            </button>
+          </>
+        ) : isCurrentUserHost ? (
           <button onClick={startGame} type="button">
             START
-            <small>{players.length} PLAYER</small>
+            <small>{activeRoomPlayers.length} PLAYER</small>
           </button>
-        )}
+        ) : null}
         <span>VERSUS KNOCKOUT</span>
       </footer>
     </section>

@@ -25,6 +25,8 @@ export type MultiplayerMode = "quickplay" | "league" | "custom";
 
 export type GameMode = MultiplayerMode | "solo";
 
+export type GarbageTargetingMode = "payback" | "even" | "random";
+
 
 interface BaseGameConfig {
     general: GameGeneralConfig;
@@ -80,6 +82,8 @@ interface GameGarbageConfig {
     allClearGarbage: number; //amnt of lines send on all clear
     garbageDelay: number; //delay before garbage enters the board after being sent, in ms
     garbageDelayOnClear: number; //delay in ms on each clear(per clear, not per line)
+    garbageTargeting: GarbageTargetingMode;
+    garbageColumnChangeChance: number; //0-1, chance that the next garbage line changes hole column
 }
 
 interface GameSurvivalConfig {

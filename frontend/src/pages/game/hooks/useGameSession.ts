@@ -25,10 +25,12 @@ import type {
   GameStartPayload,
   GameState,
   GameStats,
+  RoundEndPayload,
   VersusPlayerState,
 } from "../types";
 import { useConfirm } from "../../../components/Confirm/ConfirmProvider";
 import { useToast } from "../../../components/Toast/ToastProvider";
+import { emitXpPopup } from "../../../components/XpPopup/xpPopupEvents";
 import { useNetworkStatus } from "../../../network/NetworkProvider";
 import { useGameControls } from "./useGameControls";
 
@@ -52,6 +54,14 @@ function getInitialPayload(locationState: unknown, gameId?: string) {
   }
 
   return readStoredActiveGame(gameId) ?? {};
+}
+
+function getMultiplayerExitPath(config: GameConfig | null) {
+  if (config?.mode === "custom") return "/play/multiplayer/custom";
+  if (config?.mode === "quickplay") return "/play/multiplayer/quick";
+  if (config?.mode === "league") return "/play/multiplayer/league";
+
+  return null;
 }
 
 export function useGameSession() {
@@ -80,6 +90,7 @@ export function useGameSession() {
     Record<string, VersusPlayerState>
   >(() => initialPayload.players ?? {});
   const [result, setResult] = useState<GameResult | null>(null);
+  const [roundResult, setRoundResult] = useState<RoundEndPayload | null>(null);
   const [countdownStep, setCountdownStep] = useState<CountdownStep>(() => {
     if (initialPayload.roomId !== gameId) return null;
     return getCountdownSequence(initialPayload.config ?? null)[0] ?? null;
@@ -93,6 +104,7 @@ export function useGameSession() {
   const gameConfigRef = useRef(gameConfig);
   const countdownRef = useRef(countdownStep);
   const returnPath = getReturnPath(location.state, gameId);
+  const multiplayerExitPath = getMultiplayerExitPath(gameConfig);
   const controls = useGameControls({
     socket,
     gameId,
@@ -100,6 +112,7 @@ export function useGameSession() {
     countdownActive: Boolean(countdownStep),
     resultActive: Boolean(result),
     returnPath,
+    exitPath: multiplayerExitPath ?? undefined,
     navigate,
   });
 
@@ -280,11 +293,28 @@ export function useGameSession() {
         };
 
       if (state) setGameState(state);
+      const progression = payload.result?.progression ?? [];
+      const selfProgression = progression.find(
+        (entry) => String(entry.playerId) === String(playerIdentityId),
+      );
+
+      if (selfProgression?.xpDelta) {
+        emitXpPopup(selfProgression.xpDelta);
+      }
+
       setResult({
         reason: payload.reason,
         stats: finalStats,
         winnerId: payload.winnerId,
       });
+    };
+    const handleRoundEnd = (payload: RoundEndPayload) => {
+      if (payload.roomId !== gameId) return;
+
+      setRoundResult(payload);
+      window.setTimeout(() => {
+        setRoundResult((current) => (current === payload ? null : current));
+      }, 2400);
     };
 
     if (socket.connected) {
@@ -296,6 +326,7 @@ export function useGameSession() {
     socket.on("game:start", handleStart);
     socket.on("game:resume", handleResume);
     socket.on("game:end", handleEnd);
+    socket.on("round:end", handleRoundEnd);
     socket.on("server:error", handleServerError);
 
     return () => {
@@ -305,6 +336,7 @@ export function useGameSession() {
       socket.off("game:start", handleStart);
       socket.off("game:resume", handleResume);
       socket.off("game:end", handleEnd);
+      socket.off("round:end", handleRoundEnd);
       socket.off("server:error", handleServerError);
     };
   }, [gameId, navigate, playerIdentityId, returnPath, socket]);
@@ -342,7 +374,12 @@ export function useGameSession() {
 
     socket?.emit("game:stop");
     clearStoredActiveGame(gameId);
-    navigate(returnPath);
+    navigate(multiplayerExitPath ?? returnPath, { replace: true });
+  };
+
+  const leaveActiveGameView = () => {
+    clearStoredActiveGame(gameId);
+    navigate(returnPath, { replace: true });
   };
 
   return {
@@ -351,6 +388,7 @@ export function useGameSession() {
     gameConfig,
     players,
     result,
+    roundResult,
     countdownStep,
     connectionStatus,
     networkStatus,
@@ -367,6 +405,7 @@ export function useGameSession() {
     isSpectating,
     returnPath,
     exitGame,
+    leaveActiveGameView,
     leaveResults: () => {
       if (gameConfigRef.current?.mode !== "custom") {
         socket?.emit("mode:leave");

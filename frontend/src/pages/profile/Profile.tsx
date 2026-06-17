@@ -165,7 +165,7 @@ const normalizeProfile = (payload: ApiProfileResponse): PlayerProfile => {
   return {
     ...profile,
     avatarId: clampAvatarId(profile.avatarId),
-    level: profile.level ?? 0,
+    level: profile.level ?? 1,
     xp: profile.xp ?? 0,
     nextLevelXp: profile.nextLevelXp ?? 0,
     playTimeHours: profile.playTimeHours ?? 0,

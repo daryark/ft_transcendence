@@ -26,7 +26,7 @@ export default function SoloResultsView({
       <header className="solo-game-results__top">
         <h1>RESULTS</h1>
         <div className="solo-game-results__status">
-          <span>SOCKET</span>
+          <span>GAME</span>
           <strong>{session.connectionStatus}</strong>
         </div>
         <button

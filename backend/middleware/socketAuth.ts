@@ -66,7 +66,7 @@ export function socketAuth(playerService: PlayerService) {
                 } else {
                     playerService.addProfile(identity.id, {
                         nickname: getHandshakeUsername(socket) ?? `Guest${identity.id.slice(0, 5)}`,
-                        level: 0,
+                        level: 1,
                         xp: 0
                     });
                 }

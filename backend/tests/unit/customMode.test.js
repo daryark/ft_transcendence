@@ -177,4 +177,50 @@ describe('custom room lifecycle', () => {
       }),
     ]);
   });
+
+  test('lets players join a running custom room as waiting players for the next game', () => {
+    const io = createIo();
+    const roomService = new RoomService(io);
+    const host = createPlayer('host');
+    const activeOpponent = createPlayer('active');
+    const waitingPlayer = createPlayer('waiting');
+    const players = new Map([
+      [host.id, host],
+      [activeOpponent.id, activeOpponent],
+      [waitingPlayer.id, waitingPlayer],
+    ]);
+    const playerService = createPlayerService(players);
+
+    joinCustom(createSocket(host), { roomService, playerService }, {
+      roomConfig: { public: false, roomName: 'Private' },
+    });
+    const room = Array.from(roomService['rooms'].values())[0];
+    joinCustom(createSocket(activeOpponent), { roomService, playerService }, {
+      roomConfig: { roomName: `JOIN:${room.id}` },
+    });
+
+    room.status = 'playing';
+    room.engine = {
+      playerEngines: new Map([
+        [host.id, { room: { status: 'playing', state: { gameOver: false } } }],
+        [activeOpponent.id, { room: { status: 'playing', state: { gameOver: false } } }],
+      ]),
+      eliminatedPlayerIds: new Set(),
+      stop: jest.fn(),
+    };
+
+    const waitingSocket = createSocket(waitingPlayer);
+    joinCustom(waitingSocket, { roomService, playerService }, {
+      roomConfig: { roomName: `JOIN:${room.id}` },
+    });
+
+    expect(room.players.has(waitingPlayer.id)).toBe(false);
+    expect(room.waitingPlayers.has(waitingPlayer.id)).toBe(true);
+    expect(waitingSocket.data.role).toBe('player');
+    expect(getLastRoomUpdate(io).players).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: waitingPlayer.id }),
+      ]),
+    );
+  });
 });

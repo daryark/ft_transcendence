@@ -22,6 +22,7 @@ export type CustomRoomPlayer = {
   username: string;
   country?: string;
   rank?: string;
+  role?: "player" | "spectator";
   isHost?: boolean;
   matchWins?: number;
   matchTotalGames?: number;
@@ -41,6 +42,7 @@ export type CustomRoomSnapshot = {
   roomCode?: string;
   roomName?: string;
   visibility?: Visibility;
+  status?: "lobby" | "playing" | "ended";
   players?: CustomRoomPlayer[];
   config?: CustomEditableConfig;
   chatMessages?: CustomChatMessage[];

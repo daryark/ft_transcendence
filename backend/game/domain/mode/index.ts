@@ -1,6 +1,7 @@
 import solo from "./solo";
 import quickplay from "./quickplay";
 import custom from "./custom";
+import league from "./league";
 
 
 import { GameMode } from "../../config/gameConfig.types";
@@ -10,6 +11,7 @@ const modes: Partial<Record<GameMode, ModeJoinHandler>> = {
   solo,
   quickplay,
   custom,
+  league,
 
 };
 

@@ -1,5 +1,9 @@
 import type Room from "../domain/room";
 import type { GameState } from "../domain/engine/state";
+import {
+    applyXpToLevel,
+    calculateXpDelta,
+} from "./playerProgression";
 
 export type ProgressionReason = "game_over" | "objective_complete" | "round_timeout";
 
@@ -23,8 +27,6 @@ export interface PlayerProgressionSnapshot {
     level: number;
     xp: number;
 }
-
-const XP_PER_LEVEL = 100;
 
 function getRegisteredUserId(playerId: string, identityType?: string) {
     if (identityType && identityType !== "registered") return null;
@@ -67,6 +69,18 @@ function getQuickplayMeters(room: Room, state: GameState | null) {
     return Number((state.lines + state.piecesPlaced / 100).toFixed(2));
 }
 
+function getProgressionMode(room: Room) {
+    return getPersistMode(room) ?? "customGame";
+}
+
+function getProgressionMetric(room: Room, state: GameState | null) {
+    if (room.gameConfig.mode === "quickplay") {
+        return getQuickplayMeters(room, state);
+    }
+
+    return null;
+}
+
 async function persistRegisteredResult(input: MatchEndProgressionInput) {
     const mode = getPersistMode(input.room);
     if (!mode) return;
@@ -86,6 +100,10 @@ async function persistRegisteredResult(input: MatchEndProgressionInput) {
                 mode,
                 score,
                 metricValue,
+                elapsedMs: input.state?.update?.elapsedMs,
+                lines: input.state?.lines ?? 0,
+                piecesPlaced: input.state?.piecesPlaced ?? 0,
+                roundsPlayed: Math.max(1, input.completedRounds),
                 rankLabel:
                     input.room.gameConfig.mode === "league"
                         ? player.profile?.rank ?? "D"
@@ -109,17 +127,33 @@ export default function createProgressionService(room: Room) {
 
     function onMatchEnd(input: MatchEndProgressionInput): PlayerProgressionSnapshot[] {
         const outcome: "win" | "defeat" = input.reason === "objective_complete" ? "win" : "defeat";
+        const result = outcome === "win" ? "win" : "lose";
+        const mode = getProgressionMode(input.room);
+        const score = getPersistedScore(input.room, input.state);
+        const metricValue = getProgressionMetric(input.room, input.state);
+        const elapsedMs =
+            input.state?.update?.elapsedMs ??
+            (input.state ? Math.max(0, Date.now() - input.state.startedAt) : 0);
 
         return Array.from(input.room.players.values())
             .filter(isRegisteredProgressionPlayer)
             .map((player) => {
                 const profile = player.profile!;
-                const xpDelta = outcome === "win" ? 100 : 25;
-                const totalXp = profile.xp + xpDelta;
-                const levelsGained = Math.floor(totalXp / XP_PER_LEVEL);
+                const xpDelta = calculateXpDelta({
+                    userId: Number(player.id),
+                    mode,
+                    result,
+                    score,
+                    metricValue,
+                    elapsedMs,
+                    lines: input.state?.lines ?? 0,
+                    piecesPlaced: input.state?.piecesPlaced ?? 0,
+                    roundsPlayed: Math.max(1, input.completedRounds),
+                });
+                const levelResult = applyXpToLevel(profile.level, profile.xp, xpDelta);
 
-                profile.level += levelsGained;
-                profile.xp = totalXp % XP_PER_LEVEL;
+                profile.level = levelResult.level;
+                profile.xp = levelResult.xp;
 
                 return {
                     playerId: player.id,

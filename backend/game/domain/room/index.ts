@@ -18,6 +18,7 @@ export default interface Room {
 
     players: Map<UserId, Player>;
     spectators?: Map<UserId, Player>;
+    waitingPlayers?: Map<UserId, Player>;
 
     state: GameState | null; //createEngine returns state
     engine: Engine | null;

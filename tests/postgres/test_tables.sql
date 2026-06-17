@@ -12,11 +12,11 @@ TRUNCATE TABLE
 	users
 RESTART IDENTITY CASCADE;
 
-INSERT INTO users (email, username, password_hash)
+INSERT INTO users (email, username, password_hash, league_elo, league_rank)
 VALUES
-	('alice@example.com', 'alice', 'hash_alice'),
-	('bob@example.com', 'bob', 'hash_bob'),
-	('carol@example.com', 'carol', 'hash_carol');
+	('alice@example.com', 'alice', 'hash_alice', 1000, 'D'),
+	('bob@example.com', 'bob', 'hash_bob', 1050, 'D+'),
+	('carol@example.com', 'carol', 'hash_carol', 1100, 'C-');
 
 INSERT INTO friends (user_id, friend_id, status)
 VALUES

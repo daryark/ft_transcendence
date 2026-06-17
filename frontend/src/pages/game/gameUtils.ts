@@ -17,6 +17,7 @@ export const TIME_WARNING_SECONDS = new Set([
 export type CountdownStep =
   | "CLEAR 40 LINES!"
   | "TWO-MINUTE BLITZ"
+  | "READY"
   | (typeof COUNTDOWN_NUMBERS)[number]
   | null;
 
@@ -36,6 +37,9 @@ export function isMultiplayerPayload(
 export function getCountdownSequence(
   config: GameConfig | null,
 ): CountdownStep[] {
+  if (config?.mode && config.mode !== "solo") {
+    return ["READY", ...COUNTDOWN_NUMBERS];
+  }
   if (config?.mode !== "solo") return [];
   if (config.preset === "40Lines") {
     return ["CLEAR 40 LINES!", ...COUNTDOWN_NUMBERS];

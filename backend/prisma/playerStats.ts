@@ -2,11 +2,16 @@ import { prisma } from "./prisma";
 
 type PersistGameResultInput = {
 	userId: number;
-	mode: "quickPlay" | "fortyLines" | "blitz" | "tetraLeague";
+	mode: "quickPlay" | "fortyLines" | "blitz" | "tetraLeague" | "customGame";
 	score: number;
 	metricValue?: number | null;
 	rankLabel?: string | null;
 	result: "win" | "lose" | "draw";
+	elapsedMs?: number;
+	lines?: number;
+	piecesPlaced?: number;
+	roundsPlayed?: number;
+	opponentElo?: number;
 };
 
 function isPositiveUserId(userId: number) {
@@ -40,6 +45,24 @@ export async function persistGameResult(input: PersistGameResultInput) {
 			result: input.result,
 		},
 	});
+
+	try {
+		const { awardPlayerProgression } = await import("../game/services/playerProgression.js");
+		await awardPlayerProgression({
+			userId: input.userId,
+			mode: input.mode,
+			result: input.result,
+			score: input.score,
+			metricValue: input.metricValue,
+			elapsedMs: input.elapsedMs,
+			lines: input.lines,
+			piecesPlaced: input.piecesPlaced,
+			roundsPlayed: input.roundsPlayed,
+			opponentElo: input.opponentElo,
+		});
+	} catch (error) {
+		console.error("Failed to award player progression", error);
+	}
 }
 
 export async function incrementPlayTimeSeconds(userId: number, seconds: number) {

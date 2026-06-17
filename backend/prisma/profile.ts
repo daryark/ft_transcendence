@@ -53,6 +53,8 @@ type ProfileUserRecord = {
 	level: number | null;
 	xp: number | null;
 	next_level_xp: number | null;
+	league_elo?: number | null;
+	league_rank?: string | null;
 	play_time_seconds: number | null;
 	wins: number | null;
 };
@@ -240,13 +242,11 @@ function buildProfileResponse(
 		leagueGames,
 		leagueWins,
 		modes: {
-			league: bestModeStats.league
-				? {
-					tr: bestModeStats.league.score,
-					glicko: bestModeStats.league.score,
-					rank: bestModeStats.league.rankLabel ?? "D",
-				}
-				: null,
+			league: {
+				tr: user.league_elo ?? bestModeStats.league?.score ?? 1000,
+				glicko: user.league_elo ?? bestModeStats.league?.score ?? 1000,
+				rank: user.league_rank ?? bestModeStats.league?.rankLabel ?? "D",
+			},
 			quickPlay: toQuickPlayStats(bestModeStats.quickPlay?.metricValue ?? null, bestModeStats.quickPlay?.achievedAt ?? null),
 			fortyLines: toFortyLinesStats(bestModeStats.fortyLines?.score ?? null, bestModeStats.fortyLines?.achievedAt ?? null),
 			blitz: toModeStats(bestModeStats.blitz?.score ?? null, bestModeStats.blitz?.achievedAt ?? null),
@@ -269,6 +269,8 @@ async function findUserByField(
 		level: true,
 		xp: true,
 		next_level_xp: true,
+		league_elo: true,
+		league_rank: true,
 		play_time_seconds: true,
 		wins: true,
 	} as const;
@@ -293,6 +295,8 @@ async function findUserByField(
 			level: true,
 			xp: true,
 			next_level_xp: true,
+			league_elo: true,
+			league_rank: true,
 			play_time_seconds: true,
 			wins: true,
 		} as const;
@@ -387,10 +391,13 @@ function buildMiniProfileResponse(user: ProfileUserRecord, matchRows: ProfileMod
 			modes: {
 				league: bestModeStats.league
 					? {
-						tr: bestModeStats.league.score,
-						rank: bestModeStats.league.rankLabel ?? "D",
+						tr: user.league_elo ?? bestModeStats.league.score,
+						rank: user.league_rank ?? bestModeStats.league.rankLabel ?? "D",
 					}
-					: null,
+					: {
+						tr: user.league_elo ?? 1000,
+						rank: user.league_rank ?? "D",
+					},
 				quickPlay: toQuickPlayStats(bestModeStats.quickPlay?.metricValue ?? null, bestModeStats.quickPlay?.achievedAt ?? null),
 				fortyLines: toFortyLinesStats(bestModeStats.fortyLines?.score ?? null, bestModeStats.fortyLines?.achievedAt ?? null),
 				blitz: toModeStats(bestModeStats.blitz?.score ?? null, bestModeStats.blitz?.achievedAt ?? null),

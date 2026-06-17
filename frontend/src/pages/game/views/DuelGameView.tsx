@@ -95,13 +95,15 @@ export default function DuelGameView({ session }: DuelGameViewProps) {
             </>
           )}
         </div>
-        <button
-          className="versus-game__exit"
-          onClick={session.exitGame}
-          type="button"
-        >
-          EXIT
-        </button>
+        {gameConfig.mode === "custom" && isSpectating && (
+          <button
+            className="versus-game__exit"
+            onClick={session.leaveActiveGameView}
+            type="button"
+          >
+            LOBBY
+          </button>
+        )}
       </header>
 
       <section className="versus-game__stage">
@@ -145,7 +147,9 @@ export default function DuelGameView({ session }: DuelGameViewProps) {
       </section>
 
       <GameAbortOverlay progress={session.escProgress} />
-      <GameFocusOverlay active={!session.focused && !session.result} />
+      <GameFocusOverlay
+        active={!isSpectating && !session.focused && !session.result}
+      />
     </main>
   );
 }

@@ -3,6 +3,7 @@ import GameBoard from "../../../components/GameBoard/GameBoard";
 import type { ControlsConfig } from "../../../../shared/types/config.types";
 import { formatPlayerName } from "../gameUtils";
 import type { GameState } from "../types";
+import GameGarbageQueue from "./GameGarbageQueue";
 import GamePreviewPanel from "./GamePreviewPanel";
 
 type PlayerBoardCardProps = {
@@ -44,11 +45,19 @@ export default function PlayerBoardCard({
       )}
 
       <div className="versus-game__board-wrap">
-        <GameBoard
-          cellSize={cellSize}
-          gameState={state}
-          showGhost={controls.showShadowPiece}
-        />
+        <div className="versus-game__board-stack">
+          <GameGarbageQueue
+            alwaysVisible
+            cellSize={cellSize}
+            queue={state.garbageQueue}
+            rows={state.rows}
+          />
+          <GameBoard
+            cellSize={cellSize}
+            gameState={state}
+            showGhost={controls.showShadowPiece}
+          />
+        </div>
         <div className="versus-game__name">
           {formatPlayerName(username, fallbackName)}
         </div>

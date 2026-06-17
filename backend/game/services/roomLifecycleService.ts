@@ -60,6 +60,10 @@ async function persistMultiplayerExitResult(
                 mode,
                 score,
                 metricValue,
+                elapsedMs: room.state?.update?.elapsedMs,
+                lines: room.state?.lines ?? 0,
+                piecesPlaced: room.state?.piecesPlaced ?? 0,
+                roundsPlayed: room.state?.round ?? 1,
                 rankLabel:
                     room.gameConfig.mode === "league"
                         ? row.player?.profile?.rank ?? "D"

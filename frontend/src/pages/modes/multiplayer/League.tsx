@@ -2,12 +2,33 @@ import { useSyncExternalStore } from "react";
 import { useNavigate } from "react-router-dom";
 import { userCapabilities } from "../../../auth/capabilities";
 import { getSessionUser, subscribeToSession } from "../../../auth/session";
+import { getSocket } from "../../../socket/socketClient";
 import "./MultiplayerMode.scss";
 
 export default function League() {
   const navigate = useNavigate();
   const user = useSyncExternalStore(subscribeToSession, getSessionUser);
   const capabilities = userCapabilities(user);
+
+  const enterMatchmaking = () => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    socket.once("game:start", (payload: { roomId?: string }) => {
+      if (!payload.roomId) return;
+
+      navigate(`/game/${payload.roomId}`, {
+        state: {
+          ...payload,
+          from: "/play/multiplayer/league",
+        },
+      });
+    });
+    socket.emit("mode:join", {
+      mode: "league",
+      payload: {},
+    });
+  };
 
   return (
     <section className="mp-page mp-page--league">
@@ -40,7 +61,7 @@ export default function League() {
       </div>
 
       {capabilities.canEnterTetraLeague ? (
-        <button className="mp-league-action" type="button">
+        <button className="mp-league-action" onClick={enterMatchmaking} type="button">
           ENTER MATCHMAKING
           <span>Leaving early is punished</span>
         </button>

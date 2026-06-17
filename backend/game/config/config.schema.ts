@@ -19,6 +19,7 @@ const quickplayModifierSchema = z.enum([
 ]);
 
 const objectiveTypeSchema = z.enum(["score", "lines", "time", "none"]);
+const garbageTargetingSchema = z.enum(["payback", "even", "random"]);
 
 const rankLimitSchema = z.enum([
     "D",
@@ -117,6 +118,8 @@ const gameGarbagePatchSchema = z
         allClearGarbage: nonNegativeIntSchema,
         garbageDelay: nonNegativeIntSchema,
         garbageDelayOnClear: nonNegativeIntSchema,
+        garbageTargeting: garbageTargetingSchema,
+        garbageColumnChangeChance: z.number().min(0).max(1),
     })
     .partial()
     .strict()

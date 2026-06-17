@@ -1,10 +1,34 @@
 import { useNavigate } from "react-router-dom";
+import { getSocket } from "../../../socket/socketClient";
 import "./MultiplayerMode.scss";
 
 const quickMods = ["IV", "K", "X", "T", "V", "S", "//", "//", "//", "C"];
 
 export default function Quick() {
   const navigate = useNavigate();
+
+  const startQuickplay = () => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleGameStart = (payload: { roomId?: string }) => {
+      if (!payload.roomId) return;
+
+      socket.off("game:start", handleGameStart);
+      navigate(`/game/${payload.roomId}`, {
+        state: {
+          ...payload,
+          from: "/play/multiplayer/quick",
+        },
+      });
+    };
+
+    socket.once("game:start", handleGameStart);
+    socket.emit("mode:join", {
+      mode: "quickplay",
+      payload: {},
+    });
+  };
 
   return (
     <section className="mp-page mp-page--quick">
@@ -30,7 +54,7 @@ export default function Quick() {
           </div>
         </article>
 
-        <button className="mp-start" type="button">
+        <button className="mp-start" onClick={startQuickplay} type="button">
           START
         </button>
 

@@ -297,7 +297,6 @@
   margin-left: max(18vw, 16rem);
 }
 
-body.mp-custom-active .header,
 body.mp-custom-active::after {
   display: none;
 }
@@ -307,15 +306,15 @@ body.mp-custom-active::before {
 }
 
 body.mp-custom-active .mp-back {
-  top: 0.75rem;
+  top: calc(var(--app-header-height) + 0.75rem);
 }
 
 body.mp-custom-active .mp-custom-topbar {
-  top: 0;
+  top: var(--app-header-height);
 }
 
 body.mp-custom-active .mp-custom-room {
-  min-height: 100vh;
+  min-height: calc(100vh - var(--app-header-height));
   padding-bottom: 3.75rem;
 }
 
@@ -703,6 +702,27 @@ body.mp-custom-active .mp-custom-status {
 
 .mp-custom-footer button small {
   font-size: 0.58rem;
+}
+
+.mp-custom-setting--readonly strong {
+  min-height: 2rem;
+  display: grid;
+  align-items: center;
+  padding: 0 0.55rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(236, 224, 247, 0.82);
+  font-size: 0.9rem;
+  text-align: right;
+}
+
+.mp-custom-player--spectator,
+.mp-custom-role-toggle--spectator {
+  background: rgba(37, 18, 54, 0.92);
+  color: rgba(211, 183, 232, 0.7);
+}
+
+.mp-custom-role-toggle small {
+  color: rgba(218, 196, 230, 0.58);
 }
 
 @media (max-width: 1000px) {

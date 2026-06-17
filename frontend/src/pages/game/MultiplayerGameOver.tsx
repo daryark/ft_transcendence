@@ -1,7 +1,6 @@
 import type { GameEndPayload, GameStats, VersusPlayerState } from "./types";
 
 type MultiplayerGameOverProps = {
-  connectionStatus: string;
   players: Record<string, VersusPlayerState>;
   reason: GameEndPayload["reason"];
   stats: GameStats;
@@ -21,7 +20,6 @@ function formatVersusName(name: string | undefined, fallback: string) {
 }
 
 export default function MultiplayerGameOver({
-  connectionStatus,
   players,
   reason,
   stats,
@@ -35,10 +33,6 @@ export default function MultiplayerGameOver({
     <main className="solo-game solo-game--results">
       <header className="solo-game-results__top">
         <h1>GAME OVER</h1>
-        <div className="solo-game-results__status">
-          <span>SOCKET</span>
-          <strong>{connectionStatus}</strong>
-        </div>
       </header>
 
       <section className="solo-game-results__card" aria-label={`${modeLabel} results`}>

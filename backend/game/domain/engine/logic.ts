@@ -2,8 +2,51 @@ import type { Figure, FigureType } from "./figures";
 import type { GameState } from "./state";
 const BAG: FigureType[] = ["I", "O", "T", "S", "Z", "J", "L"];
 
-export function createBag(): FigureType[] {
-  return [...BAG].sort(() => Math.random() - 0.5);
+function hashSequence(seed: string, bagIndex: number) {
+  let hash = 0x811c9dc5;
+  const input = `${seed}:${bagIndex}`;
+
+  for (let i = 0; i < input.length; i += 1) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+
+  return hash >>> 0;
+}
+
+function createSeededRandom(seed: number) {
+  let state = seed >>> 0;
+
+  return () => {
+    state += 0x6d2b79f5;
+    let value = state;
+    value = Math.imul(value ^ (value >>> 15), value | 1);
+    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function shuffleBag(random: () => number) {
+  const bag = [...BAG];
+
+  for (let index = bag.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [bag[index], bag[swapIndex]] = [bag[swapIndex], bag[index]];
+  }
+
+  return bag;
+}
+
+export function createIndexedBag(seed: string, bagIndex: number): FigureType[] {
+  return shuffleBag(createSeededRandom(hashSequence(seed, bagIndex)));
+}
+
+export function createBag(seed?: string | null, bagIndex?: number): FigureType[] {
+  if (seed && typeof bagIndex === "number") {
+    return createIndexedBag(seed, bagIndex);
+  }
+
+  return shuffleBag(Math.random);
 }
 
 export function moveFigure(f: Figure, dx: number, dy: number): Figure {

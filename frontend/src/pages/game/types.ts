@@ -23,8 +23,19 @@ export interface GameState {
   lines: number;
   piecesPlaced: number;
   round: number;
+  mode?: "quickplay" | "custom" | "league";
   startedAt: number;
   update: GameUpdateStats;
+  garbageQueue?: GarbageQueueItem[];
+}
+
+export interface GarbageQueueItem {
+  id: string;
+  lines: number;
+  column: number;
+  receivedAt: number;
+  entersAt: number;
+  status: "pending" | "warning";
 }
 
 export interface GameStats {
@@ -78,6 +89,17 @@ export interface GameEndPayload {
       xp: number;
     }>;
   };
+}
+
+export interface RoundEndPayload {
+  roomId: string;
+  round: number;
+  reason: "game_over" | "objective_complete" | "round_timeout";
+  winnerId?: number | string | null;
+  players?: Record<string, VersusPlayerState>;
+  roundWins?: Record<string, number>;
+  roundsToWin?: number;
+  label?: "match_point" | "tiebreaker" | null;
 }
 
 export interface VersusPlayerState {

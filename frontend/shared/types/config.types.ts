@@ -50,6 +50,8 @@ export interface GarbageConfig {
   allClearGarbage: number;
   garbageDelay: number;
   garbageDelayOnClear: number;
+  garbageTargeting: "payback" | "even" | "random";
+  garbageColumnChangeChance: number;
 }
 
 export interface SurvivalConfig {

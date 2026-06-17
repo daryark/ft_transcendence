@@ -1,96 +1,88 @@
-//* join →
-//*   push player to queue →
-//*   try match →
-//*     if match found:
-//*       create room (hidden)
-//*       add both players
-//*       lock room (no joins)
-//*       socket.join(roomId)
-//*     else:
-//*       wait in queue
+import { Socket } from "socket.io";
+import { createConfig } from "../../../config/configBase";
+import type Config from "../../../config/config.types";
+import type { ConfigPatch } from "../../../config/config.schema";
+import type Room from "../../room";
+import type RoomService from "../../../services/roomService";
+import type { RoomServiceRoomState } from "../../../services/roomService";
+import type PlayerService from "../../../services/playerService";
+import type Player from "../../player";
+import startGame from "../../match/startGame";
+import { emitError } from "../../../../sockets/gameHandlers";
 
-//# enter mode →
-//#   lobby →
-//#     ready / config →
-//#       start trigger →
-//#         game →
-//#           end →
-//#             back to lobby / exit
+type QueueEntry = {
+  socket: Socket;
+  player: Player;
+  playerId: string;
+  joinedAt: number;
+};
 
-// export default function join(socket, roomService, payload) {
-//     const mode = 'league';
-//     roomService.enqueue(socket);
+const leagueQueue: QueueEntry[] = [];
 
-//     if (roomService.queue.length >= 2) { //!add matchmacking logic instead IF
-//         const player1 = roomService.dequeue(socket.id);
-//         const player2 = roomService.dequeue(socket.id);
+function removeQueuedPlayer(playerId: string) {
+  const index = leagueQueue.findIndex((entry) => entry.playerId === playerId);
+  if (index >= 0) {
+    leagueQueue.splice(index, 1);
+  }
+}
 
-//         const roomId = `league:${player1.id}:${player2.id}:${Date.now()}`;
-//         roomService.createRoom(roomId, { mode, players: [player1, player2] });
+function createLeagueRoom(roomService: RoomService, entries: [QueueEntry, QueueEntry]) {
+  const config: Config = createConfig("league");
+  const room: Room = roomService.createRoom(config);
 
-//         player1.join(roomId);
-//         player2.join(roomId);
-//         player1.data.roomId = roomId;
-//         player2.data.roomId = roomId;
+  for (const entry of entries) {
+    roomService.addPlayer(room.id, entry.player);
+    entry.socket.join(room.id);
+    entry.socket.data.roomId = room.id;
+    entry.socket.data.role = "player";
+  }
 
-//         roomService.startGame(roomId);
+  startGame(room, roomService);
+  return room;
+}
 
-//         return roomService.getRoomState(roomId);
-//     }
+export default function join(
+  socket: Socket,
+  { roomService, playerService }: { roomService: RoomService; playerService: PlayerService },
+  _payload: ConfigPatch = {},
+): RoomServiceRoomState | null {
+  const identity = socket.data.identity;
+  if (!identity || identity.type !== "registered") {
+    emitError(socket, "LEAGUE_REGISTERED_ONLY");
+    return null;
+  }
 
-//     return { status: 'waiting' };
+  const player = playerService.get(identity.id);
+  if (!player || !player.profile) {
+    emitError(socket, "PLAYER_NOT_FOUND");
+    return null;
+  }
 
-// const roomId = `league:${player1}:${player2}:${Date.now()}`;
+  removeQueuedPlayer(String(player.id));
+  leagueQueue.push({
+    socket,
+    player,
+    playerId: String(player.id),
+    joinedAt: Date.now(),
+  });
+  socket.once("disconnect", () => {
+    removeQueuedPlayer(String(player.id));
+  });
 
-// const room = {
-//     id: roomId,
-//     mode: 'league',
-//     players: [
-//         roomService.addPlayer(player1.id),
-//         roomService.addPlayer(player2.id)
-//     ],
-//     gameConfig: configBase(), //createLeagueConfig() needed or no?
-//     matchConfig: {
-//         roundsToWin: roundsToWin(player1, player2),
-//         scores: {
-//             [player1.id]: 0,
-//             [player2.id]: 0
-//         }
-//     },
-//     roomConfig: {
-//         maxPlayers: 2,
-//         allowSpectators: false,
-//         allowAnonymous: false
-//     }
-// };
+  socket.emit("room:update", {
+    status: "waiting",
+    queueSize: leagueQueue.length,
+  });
 
-// roomService.createRoom(room);
+  if (leagueQueue.length < 2) {
+    return null;
+  }
 
-// player1.join(roomId);
-// player2.join(roomId);
-// player1.data.roomId = roomId;
-// player2.data.roomId = roomId;
+  const nextPair = leagueQueue.splice(0, 2) as [QueueEntry, QueueEntry];
+  const room = createLeagueRoom(roomService, nextPair);
+  return roomService.getRoomState(room.id);
+}
 
-// return roomService.getRoomState(roomId);
-// }
-
-
-// 3 || 5 || 7 based on rank D-A || (S-)-SS || U, X
-// (based off the higher of the two player's ranks)
-// function roundsToWin(player1, player2) {
-//     const rankOrder = ['D', 'C', 'B', 'A', 'S', 'U', 'X']; //#add + - ranks later
-//     const higherRank = rankOrder.indexOf(player1.rank) > rankOrder.indexOf(player2.rank) ? player1.rank : player2.rank;
-
-//     if (['D', 'C', 'B', 'A'].includes(higherRank)) {
-//         return 3;
-//     } else if (['S'].includes(higherRank)) {
-//         return 5;
-//     } else {
-//         return 7;
-//     }
-// }
-
-
-// module.exports = {
-//     join
-// };
+module.exports = {
+  join,
+};

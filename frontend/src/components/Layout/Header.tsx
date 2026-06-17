@@ -49,7 +49,7 @@ const Header = () => {
 
   const [isSocialOpen, setIsSocialOpen] = useState(false);
   const [playerMeta, setPlayerMeta] = useState({
-    level: 0,
+    level: 1,
     rank: "UNRANKED",
   });
 
@@ -93,13 +93,13 @@ const Header = () => {
       .then((payload) => {
         const profile = payload.profile ?? payload;
         setPlayerMeta({
-          level: profile.level ?? 0,
+          level: profile.level ?? 1,
           rank: profile.modes?.league?.rank ?? "UNRANKED",
         });
       })
       .catch((error) => {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
-          setPlayerMeta({ level: 0, rank: "UNRANKED" });
+          setPlayerMeta({ level: 1, rank: "UNRANKED" });
         }
       });
 

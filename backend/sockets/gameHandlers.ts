@@ -7,11 +7,13 @@ import RoomService from "../game/services/roomService";
 import { ConfigPatch, ConfigPatchSchema } from "../game/config/config.schema";
 import startGame from "../game/domain/match/startGame";
 import { leaveSocketRoomNow } from "./roomSocketExit";
+import { interruptGameSession } from "../game/services/gameInterruptService";
 
 export type ClientToServerEvents =
     | "mode:join"
     | "mode:leave"
     | "room:start"
+    | "room:switchRole"
     | "player:move"
     | "game:resume"
     | "game:stop";
@@ -132,38 +134,7 @@ export default function gameHandlers(
     });
 
     socket.on("game:stop", async () => {
-        const { roomId } = socket.data as SocketData;
-        if (!roomId) return;
-
-        const room = roomService.getRoom(roomId);
-        if (!room) return;
-
-        if (room.gameConfig.mode === "solo" && room.gameConfig.objective.winCondition === "none") {
-            room.match?.stop();
-            room.engine?.stop();
-            roomService.broadcast(roomId, "game:end", {
-                roomId,
-                reason: "manual_exit",
-                state: room.state,
-                result: {
-                    outcome: "defeat",
-                    stats: null,
-                },
-            });
-
-            roomService.deleteRoom(roomId);
-            return;
-        }
-
-        // If solo mode -> delete entire room and do not persist stats
-        if (room.gameConfig.mode === "solo") {
-            room.match?.stop();
-            room.engine?.stop();
-            roomService.deleteRoom(roomId);
-            return;
-        }
-
-        leaveSocketRoomNow(socket, roomService);
+        interruptGameSession(socket, roomService);
     });
 }
 

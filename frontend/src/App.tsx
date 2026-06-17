@@ -1,4 +1,12 @@
-import { BrowserRouter, Routes, Route, useParams } from "react-router-dom";
+import { useEffect } from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  useLocation,
+  useNavigate,
+  useParams,
+} from "react-router-dom";
 import Layout from "./components/Layout/Layout";
 import Play from "./pages/play/Play";
 import TetraChannel from "./pages/tetra-channel/TetraChannel";
@@ -23,6 +31,13 @@ import { MusicProvider } from "./music/MusicProvider";
 import { NetworkProvider } from "./network/NetworkProvider";
 import { ForbiddenPage, OfflinePage } from "./pages/system/SystemPage";
 import { BackgroundProvider } from "./background/BackgroundProvider";
+import {
+  getSocket,
+  getSocketIdentityId,
+  subscribeToSocket,
+} from "./socket/socketClient";
+import XpPopup from "./components/XpPopup/XpPopup";
+import type { GameStartPayload } from "./pages/game/types";
 
 import "./styles/globals.scss";
 
@@ -30,6 +45,56 @@ function GameRoute() {
   const { gameId } = useParams<{ gameId: string }>();
 
   return <GamePage key={gameId} />;
+}
+
+function CustomGameStartRedirect() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const bind = () => {
+      const socket = getSocket();
+      if (!socket) return undefined;
+
+      const handleGameStart = (payload: GameStartPayload) => {
+        if (payload.config?.mode !== "custom" || !payload.roomId) return;
+        if (location.pathname === `/game/${payload.roomId}`) return;
+        const identityId = getSocketIdentityId();
+        const isActivePlayer =
+          !!identityId && !!payload.players?.[String(identityId)];
+        if (!isActivePlayer) return;
+
+        if (location.pathname.startsWith("/game/")) {
+          socket.emit("game:stop");
+        }
+        navigate(`/game/${payload.roomId}`, {
+          state: {
+            ...payload,
+            from: `/play/multiplayer/custom/${payload.roomId}`,
+          },
+        });
+      };
+
+      socket.on("game:start", handleGameStart);
+
+      return () => {
+        socket.off("game:start", handleGameStart);
+      };
+    };
+
+    let cleanup = bind();
+    const unsubscribe = subscribeToSocket(() => {
+      cleanup?.();
+      cleanup = bind();
+    });
+
+    return () => {
+      unsubscribe();
+      cleanup?.();
+    };
+  }, [location.pathname, navigate]);
+
+  return null;
 }
 
 export default function App() {
@@ -41,6 +106,8 @@ export default function App() {
             <MusicProvider>
               <BrowserRouter>
                 <SocketConfigSync />
+                <CustomGameStartRedirect />
+                <XpPopup />
                 <NetworkProvider>
                   <Routes>
                   <Route path="/" element={<Layout />}>

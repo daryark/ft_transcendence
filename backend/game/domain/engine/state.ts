@@ -24,6 +24,18 @@ export interface GameState {
   round: number;
   startedAt: number;
   update: GameUpdateStats;
+  garbageQueue?: GarbageQueueItem[];
+  bagSeed?: string | null;
+  nextBagIndex?: number;
+}
+
+export interface GarbageQueueItem {
+  id: string;
+  lines: number;
+  column: number;
+  receivedAt: number;
+  entersAt: number;
+  status: "pending" | "warning";
 }
 
 export interface GameStats {
@@ -108,11 +120,17 @@ export function initGame(
   cols: number,
   round = 1,
   startedAt = Date.now(),
+  sequence: { bagSeed?: string | null; nextBagIndex?: number } = {},
 ): GameState {
   const board = createEmptyBoard(createBoardHeight(rows), createBoardWidth(cols));
   const buffer = createEmptyBuffer(createBoardWidth(cols));
-  const bag = createBag();
-  const nextTypes = [...bag, ...createBag()];
+  const bagSeed = sequence.bagSeed ?? null;
+  let nextBagIndex = Math.max(0, Math.floor(sequence.nextBagIndex ?? 0));
+  const nextTypes = [
+    ...createBag(bagSeed, nextBagIndex),
+    ...createBag(bagSeed, nextBagIndex + 1),
+  ];
+  nextBagIndex += 2;
   const next = nextTypes.map((t) => createFigure(t, cols));
   const state: GameState = {
     board,
@@ -140,6 +158,9 @@ export function initGame(
       serverNow: Date.now(),
       objective: null,
     },
+    garbageQueue: [],
+    bagSeed,
+    nextBagIndex,
   };
 
   state.update = buildGameStats(state);

@@ -18,6 +18,8 @@ model users {
   level                                Int?             @default(1)
   xp                                   Int?             @default(0)
   next_level_xp                        Int?             @default(100)
+  league_elo                           Int?             @default(1000)
+  league_rank                          String?          @default("D") @db.VarChar(16)
   play_time_seconds                    Int?             @default(0)
   wins                                 Int?             @default(0)
   created_at                           DateTime?        @default(now()) @db.Timestamp(6)

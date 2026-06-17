@@ -46,8 +46,10 @@ export const customMultiBase: Config = {
             garbageMaxCap: 10, //max amnt of garbage pending queue can hold, the rest will be nullified
             garbagePassthrough: true, //true - opposing attacks in transit will cancel each other. false - do not cancel.
             allClearGarbage: 5, //amnt of lines send on all clear
-            garbageDelay: 100, //delay before garbage enters the board after being sent, in ms
-            garbageDelayOnClear: 20, //delay in ms on each clear(per clear, not per line)
+            garbageDelay: 500, //delay before garbage enters the board after being sent, in ms
+            garbageDelayOnClear: 100, //delay in ms on each clear(per clear, not per line)
+            garbageTargeting: "even",
+            garbageColumnChangeChance: 0.35,
         }
     }
 };
