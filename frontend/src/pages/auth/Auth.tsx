@@ -279,7 +279,7 @@ export default function Auth() {
             className="auth__anonymous"
             onClick={() => {
               saveSession(createAnonymousSession());
-              navigate(returnPath, { replace: true });
+              navigate("/play", { replace: true });
             }}
             type="button"
           >

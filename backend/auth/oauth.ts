@@ -5,9 +5,23 @@ const GITHUB_TOKEN = "https://github.com/login/oauth/access_token";
 const GITHUB_API_USER = "https://api.github.com/user";
 const GITHUB_API_EMAILS = "https://api.github.com/user/emails";
 
-export function buildGitHubAuthorizeUrl(state?: string) {
+function normalizeConfiguredUrl(value: string | undefined) {
+  const trimmed = value?.trim();
+
+  if (!trimmed || trimmed.includes("<your-ip>")) {
+    return null;
+  }
+
+  return trimmed;
+}
+
+export function getConfiguredGitHubCallbackUrl() {
+  return normalizeConfiguredUrl(process.env.GITHUB_CALLBACK_URL);
+}
+
+export function buildGitHubAuthorizeUrl(state?: string, callbackUrl?: string) {
   const clientId = process.env.GITHUB_CLIENT_ID;
-  const redirectUri = process.env.GITHUB_CALLBACK_URL;
+  const redirectUri = callbackUrl ?? getConfiguredGitHubCallbackUrl();
 
   if (!clientId || !redirectUri) {
     throw new Error("GITHUB_CLIENT_ID or GITHUB_CALLBACK_URL is not set");
@@ -25,10 +39,10 @@ export function buildGitHubAuthorizeUrl(state?: string) {
   return `${GITHUB_AUTHORIZE}?${params.toString()}`;
 }
 
-export async function exchangeCodeForAccessToken(code: string) {
+export async function exchangeCodeForAccessToken(code: string, callbackUrl?: string) {
   const clientId = process.env.GITHUB_CLIENT_ID;
   const clientSecret = process.env.GITHUB_CLIENT_SECRET;
-  const redirectUri = process.env.GITHUB_CALLBACK_URL;
+  const redirectUri = callbackUrl ?? getConfiguredGitHubCallbackUrl();
 
   if (!clientId || !clientSecret || !redirectUri) {
     throw new Error("GitHub OAuth env vars are not set");

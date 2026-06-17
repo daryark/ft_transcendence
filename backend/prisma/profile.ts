@@ -88,6 +88,10 @@ function normalizeCountry(country: string | null | undefined): string | undefine
 	}
 
 	const trimmed = country.trim();
+	if (trimmed.toLowerCase() === "undefined" || trimmed.toLowerCase() === "null") {
+		return undefined;
+	}
+
 	return trimmed.length > 0 ? trimmed : undefined;
 }
 

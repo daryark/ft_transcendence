@@ -23,6 +23,7 @@
     "config/**/*",
     "game/**/*",
     "middleware/**/*",
+    "notifications/**/*",
     "prisma/**/*",
     "sockets/**/*",
     "server/**/*"

@@ -6,19 +6,7 @@ import { findOrCreateOAuthUser } from "../prisma/auth";
 const OAUTH_STATE_COOKIE = "tetra_oauth_state";
 const OAUTH_TTL_MS = 10 * 60 * 1000;
 const oauthExchanges = new Map<string, { token: string; expiresAt: number }>();
-
-function getCookie(req: Request, name: string) {
-  const cookies = req.headers.cookie?.split(";") ?? [];
-
-  for (const cookie of cookies) {
-    const [rawName, ...rawValue] = cookie.trim().split("=");
-    if (rawName === name) {
-      return decodeURIComponent(rawValue.join("="));
-    }
-  }
-
-  return null;
-}
+const oauthStates = new Map<string, number>();
 
 function oauthCookieOptions(req: Request) {
   return {
@@ -40,29 +28,85 @@ function pruneExpiredExchanges() {
   }
 }
 
+function pruneExpiredStates() {
+  const now = Date.now();
+
+  for (const [state, expiresAt] of oauthStates) {
+    if (expiresAt <= now) {
+      oauthStates.delete(state);
+    }
+  }
+}
+
+function getForwardedHeader(req: Request, name: string) {
+  const value = req.headers[name.toLowerCase()];
+
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return typeof value === "string" && value.trim() ? value.trim() : null;
+}
+
+function getFrontendOrigin(req: Request) {
+  const configured =
+    process.env.FRONTEND_URL || process.env.FRONTEND_CALLBACK_URL;
+
+  if (configured?.trim() && !configured.includes("<your-ip>")) {
+    return configured.trim().replace(/\/$/, "");
+  }
+
+  const host = getForwardedHeader(req, "x-forwarded-host") || req.get("host");
+  const proto =
+    getForwardedHeader(req, "x-forwarded-proto") ||
+    (req.secure ? "https" : req.protocol || "http");
+
+  if (host) {
+    return `${proto.split(",")[0].trim()}://${host.split(",")[0].trim()}`;
+  }
+
+  return "http://localhost:5001";
+}
+
+function getGitHubCallbackUrl(req: Request) {
+  return `${getFrontendOrigin(req)}/api/auth/github/callback`;
+}
+
 export function redirectToGitHub(req: Request, res: Response) {
   const state = randomBytes(32).toString("hex");
+  pruneExpiredStates();
+  oauthStates.set(state, Date.now() + OAUTH_TTL_MS);
   res.cookie(OAUTH_STATE_COOKIE, state, oauthCookieOptions(req));
-  const url = oauth.buildGitHubAuthorizeUrl(state);
+  const url = oauth.buildGitHubAuthorizeUrl(state, getGitHubCallbackUrl(req));
   return res.redirect(url);
 }
 
 export async function githubCallback(req: Request, res: Response) {
   const code = typeof req.query.code === "string" ? req.query.code : null;
   const state = typeof req.query.state === "string" ? req.query.state : null;
-  const expectedState = getCookie(req, OAUTH_STATE_COOKIE);
   res.clearCookie(OAUTH_STATE_COOKIE, oauthCookieOptions(req));
 
   if (!code) {
     return res.status(400).json({ message: "Missing code" });
   }
 
-  if (!state || !expectedState || state !== expectedState) {
+  pruneExpiredStates();
+
+  if (!state) {
     return res.status(400).json({ message: "Invalid OAuth state" });
   }
 
+  if (!oauthStates.has(state)) {
+    return res.status(400).json({ message: "Invalid OAuth state" });
+  }
+
+  oauthStates.delete(state);
+
   try {
-    const accessToken = await oauth.exchangeCodeForAccessToken(code);
+    const accessToken = await oauth.exchangeCodeForAccessToken(
+      code,
+      getGitHubCallbackUrl(req),
+    );
     const profile = await oauth.getGitHubProfile(accessToken);
     let email: string | null = profile.email ?? null;
 
@@ -81,7 +125,7 @@ export async function githubCallback(req: Request, res: Response) {
       request: req,
     });
 
-    const frontend = process.env.FRONTEND_URL || process.env.FRONTEND_CALLBACK_URL || "http://localhost:5173";
+    const frontend = getFrontendOrigin(req);
     const exchangeCode = randomBytes(32).toString("hex");
     pruneExpiredExchanges();
     oauthExchanges.set(exchangeCode, {

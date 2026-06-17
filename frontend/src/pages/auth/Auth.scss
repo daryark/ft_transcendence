@@ -123,12 +123,15 @@
   transition: transform 120ms ease, filter 120ms ease;
 }
 
-.auth__tabs button:hover,
-.auth__tabs button.active,
-.auth__submit:hover:not(:disabled),
 .auth__anonymous:hover,
 .oauth:hover {
   transform: translateX(-0.8rem);
+  filter: brightness(1.16);
+}
+
+.auth__tabs button:hover,
+.auth__tabs button.active,
+.auth__submit:hover:not(:disabled) {
   filter: brightness(1.16);
 }
 

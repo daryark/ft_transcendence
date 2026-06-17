@@ -51,7 +51,8 @@
 }
 
 .navLink,
-.socialButton {
+.socialButton,
+.notificationsButton {
   min-height: 2.15rem;
   display: inline-flex;
   align-items: center;
@@ -71,11 +72,35 @@
 
 .navLink:hover,
 .navLink.active,
-.socialButton:hover {
+.socialButton:hover,
+.notificationsButton:hover {
   transform: translateX(-4px);
   border-color: rgba(255, 255, 255, 0.34);
   background: rgba(255, 255, 255, 0.12);
   color: #fff;
+}
+
+.notificationsButton {
+  position: relative;
+  width: 2.85rem;
+  padding: 0;
+  font-size: 1.15rem;
+}
+
+.notificationsButtonBadge {
+  position: absolute;
+  top: -0.1rem;
+  right: -0.18rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.2rem;
+  border-radius: 999px;
+  background: rgba(64, 247, 119, 0.16);
+  color: #8dffac;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1rem;
+  text-align: center;
 }
 
 .socialButton {
@@ -205,6 +230,10 @@
   }
 
   .socialButton {
+    width: 2.4rem;
+  }
+
+  .notificationsButton {
     width: 2.4rem;
   }
 }

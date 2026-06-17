@@ -18,6 +18,9 @@ function isLocalOrPrivateIp(ip: string): boolean {
 	const normalized = normalizeIpAddress(ip);
 
 	return (
+		normalized.length === 0 ||
+		normalized.toLowerCase() === "undefined" ||
+		normalized.toLowerCase() === "null" ||
 		normalized === "127.0.0.1" ||
 		normalized === "::1" ||
 		normalized === "0.0.0.0" ||
@@ -33,10 +36,6 @@ export function getClientIp(request?: RequestLike): string | null {
 		return null;
 	}
 
-	if (request.ip && !isLocalOrPrivateIp(request.ip)) {
-		return normalizeIpAddress(request.ip);
-	}
-
 	const forwardedFor = request.headers["x-forwarded-for"];
 	if (typeof forwardedFor === "string" && forwardedFor.trim()) {
 		const firstForwardedIp = forwardedFor.split(",")[0]?.trim();
@@ -45,9 +44,18 @@ export function getClientIp(request?: RequestLike): string | null {
 		}
 	}
 
+	const cloudflareIp = request.headers["cf-connecting-ip"];
+	if (typeof cloudflareIp === "string" && cloudflareIp.trim() && !isLocalOrPrivateIp(cloudflareIp)) {
+		return normalizeIpAddress(cloudflareIp);
+	}
+
 	const realIp = request.headers["x-real-ip"];
 	if (typeof realIp === "string" && realIp.trim() && !isLocalOrPrivateIp(realIp)) {
 		return normalizeIpAddress(realIp);
+	}
+
+	if (request.ip && !isLocalOrPrivateIp(request.ip)) {
+		return normalizeIpAddress(request.ip);
 	}
 
 	const socketIp = request.socket?.remoteAddress;
