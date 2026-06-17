@@ -1,12 +1,13 @@
 .profile-page {
   min-height: calc(100vh - var(--app-header-height));
-  padding: clamp(1rem, 3vw, 2rem) 0;
+  padding: clamp(1rem, 3vw, 2rem) 0 calc(var(--app-footer-height) + 2rem);
 }
 
 .profile-page--state {
   width: min(var(--app-page-max), calc(100vw - 2rem));
   margin: 0 auto;
   display: grid;
+  gap: 1rem;
   place-items: center;
   color: var(--app-muted);
   font-weight: 900;
@@ -20,6 +21,10 @@
 }
 
 .profile-page__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 1rem;
   padding: clamp(1.25rem, 4vw, 2rem);
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius-lg);
@@ -166,6 +171,10 @@
   background: rgba(79, 209, 197, 0.12);
 }
 
+.profile-page .back-button {
+  justify-self: end;
+}
+
 .profile-page__content {
   display: grid;
   gap: 1rem;
@@ -295,6 +304,14 @@
 }
 
 @media (max-width: 880px) {
+  .profile-page__top {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-page .back-button {
+    width: 100%;
+  }
+
   .profile-page__grid {
     grid-template-columns: 1fr;
   }

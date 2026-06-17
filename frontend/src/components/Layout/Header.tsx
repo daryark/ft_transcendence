@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import ProfileHeader from "../ProfileHeader/ProfileHeader";
 import { getAvatarStyle } from "../ProfileHeader/avatarStyle";
 import SocialPanels from "../SocialPanels/SocialPanels";
+import NotificationsPanel from "../Notifications/NotificationsPanel";
 import Dialog from "../Dialog/Dialog";
 import { apiJson } from "../../api/client";
 
@@ -30,6 +31,8 @@ const titles: Record<string, string> = {
   auth: "AUTH",
 };
 
+type SocialTab = "friends" | "requests" | "blocked";
+
 const getPageTitle = (pathname: string) => {
   const parts = pathname.split("/").filter(Boolean);
 
@@ -54,6 +57,9 @@ const Header = () => {
   const isLoggedIn = user !== null;
 
   const [isSocialOpen, setIsSocialOpen] = useState(false);
+  const [socialInitialTab, setSocialInitialTab] = useState<SocialTab>("friends");
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
   const [playerMeta, setPlayerMeta] = useState({
     level: 0,
     rank: "UNRANKED",
@@ -65,6 +71,7 @@ const Header = () => {
   const handleLogout = () => {
     setIsProfileOpen(false);
     setIsSocialOpen(false);
+    setIsNotificationsOpen(false);
     clearSession();
     navigate("/auth", { replace: true });
   };
@@ -78,6 +85,27 @@ const Header = () => {
         setIsProfileOpen(false);
       }
     });
+  }, []);
+
+  useEffect(() => {
+    const shouldFadeFooter = isSocialOpen || isNotificationsOpen;
+    document.body.classList.toggle("app-panel-open", shouldFadeFooter);
+
+    return () => {
+      document.body.classList.remove("app-panel-open");
+    };
+  }, [isNotificationsOpen, isSocialOpen]);
+
+  useEffect(() => {
+    const openNotifications = () => {
+      setIsSocialOpen(false);
+      setIsNotificationsOpen(true);
+    };
+
+    window.addEventListener("tetra:open-notifications", openNotifications);
+    return () => {
+      window.removeEventListener("tetra:open-notifications", openNotifications);
+    };
   }, []);
 
   useEffect(() => {
@@ -151,15 +179,44 @@ const Header = () => {
             <div className="right">
               {user ? (
                 <>
+                  <NotificationsPanel
+                    isOpen={isNotificationsOpen}
+                    onClose={() => setIsNotificationsOpen(false)}
+                    onUnreadCountChange={setNotificationCount}
+                    onOpenSocialTab={(tab) => {
+                      setSocialInitialTab(tab);
+                      setIsSocialOpen(true);
+                    }}
+                  />
                   <SocialPanels
                     isOpen={isSocialOpen}
                     onClose={() => setIsSocialOpen(false)}
+                    initialTab={socialInitialTab}
                   />
+                  {!user.isAnonymous && (
+                    <button
+                      className="notificationsButton"
+                      type="button"
+                      onClick={() => {
+                        setIsSocialOpen(false);
+                        setIsNotificationsOpen(true);
+                      }}
+                    >
+                      🔔
+                      {notificationCount > 0 && (
+                        <span className="notificationsButtonBadge">{notificationCount}</span>
+                      )}
+                    </button>
+                  )}
                   {!user.isAnonymous && (
                     <button
                       className="socialButton"
                       type="button"
-                      onClick={() => setIsSocialOpen(true)}
+                      onClick={() => {
+                        setIsNotificationsOpen(false);
+                        setSocialInitialTab("friends");
+                        setIsSocialOpen(true);
+                      }}
                     >
                       SOCIAL
                     </button>

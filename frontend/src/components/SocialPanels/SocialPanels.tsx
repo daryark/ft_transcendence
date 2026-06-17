@@ -26,6 +26,7 @@ type SocialPerson = {
   relationshipId?: number;
   relationshipStatus: RelationshipStatus;
   requestDirection: RequestDirection;
+  blockedByCurrentUser?: boolean;
 };
 
 type Message = {
@@ -58,6 +59,7 @@ type MiniProfile = {
 type Props = {
   isOpen: boolean;
   onClose: () => void;
+  initialTab?: SocialTab;
 };
 
 const FRIENDS_ENDPOINT = "/api/friends";
@@ -149,6 +151,7 @@ const toRelationship = (
   const username = String(user.username ?? "").trim();
   const relationshipId = toNumber(object.id);
   const senderId = toNumber(object.userId ?? object.user_id);
+  const recipientId = toNumber(object.friendId ?? object.friend_id);
   const status = String(object.status ?? "").toLowerCase();
 
   if (!id || !username || !relationshipId) {
@@ -168,10 +171,14 @@ const toRelationship = (
     relationshipStatus,
     requestDirection:
       relationshipStatus === "pending"
-        ? senderId === currentUserId
-          ? "outgoing"
-          : "incoming"
+        ? recipientId === currentUserId
+          ? "incoming"
+          : senderId === currentUserId
+            ? "outgoing"
+            : "incoming"
         : null,
+    blockedByCurrentUser:
+      relationshipStatus === "blocked" ? senderId === currentUserId : undefined,
   };
 };
 
@@ -190,6 +197,27 @@ const toSearchPerson = (value: unknown): SocialPerson | null => {
     avatarId: toNumber(object.avatarId ?? object.avatar_id) ?? undefined,
     relationshipStatus: "none",
     requestDirection: null,
+  };
+};
+
+const mergeSearchRelationship = (
+  person: SocialPerson,
+  relationships: SocialPerson[],
+): SocialPerson => {
+  const match = relationships.find(
+    (entry) => entry.id === person.id || entry.username.toLowerCase() === person.username.toLowerCase(),
+  );
+
+  if (!match) {
+    return person;
+  }
+
+  return {
+    ...person,
+    relationshipId: match.relationshipId,
+    relationshipStatus: match.relationshipStatus,
+    requestDirection: match.requestDirection,
+    blockedByCurrentUser: match.blockedByCurrentUser,
   };
 };
 
@@ -251,7 +279,9 @@ const formatModeValue = (value: unknown) => {
 
 const relationshipLabel = (person: SocialPerson) => {
   if (person.relationshipStatus === "accepted") return "FRIEND";
-  if (person.relationshipStatus === "blocked") return "BLOCKED";
+  if (person.relationshipStatus === "blocked") {
+    return person.blockedByCurrentUser ? "BLOCKED" : "BLOCKED YOU";
+  }
   if (person.requestDirection === "incoming") return "WANTS TO BE FRIENDS";
   if (person.requestDirection === "outgoing") return "REQUEST SENT";
   return "PLAYER";
@@ -287,7 +317,11 @@ const PersonRow = ({
   actions: ReactNode;
   onOpenProfile: () => void;
 }) => (
-  <article className="friendRow">
+  <article
+    className={`friendRow ${
+      person.requestDirection ? `friendRow--${person.requestDirection}` : ""
+    }`}
+  >
     <button
       className="friendIdentity"
       onClick={onOpenProfile}
@@ -431,7 +465,7 @@ const ProfileModal = ({
   );
 };
 
-export default function SocialPanels({ isOpen, onClose }: Props) {
+export default function SocialPanels({ isOpen, onClose, initialTab }: Props) {
   const navigate = useNavigate();
   const currentUser = getSessionUser();
   const [tab, setTab] = useState<SocialTab>("friends");
@@ -524,9 +558,12 @@ export default function SocialPanels({ isOpen, onClose }: Props) {
     }
 
     const controller = new AbortController();
+    if (initialTab) {
+      setTab(initialTab);
+    }
     void loadRelationships(controller.signal);
     return () => controller.abort();
-  }, [isOpen, loadRelationships]);
+  }, [initialTab, isOpen, loadRelationships]);
 
   useEffect(() => {
     let activeSocket = getSocket();
@@ -584,7 +621,9 @@ export default function SocialPanels({ isOpen, onClose }: Props) {
           .filter(Boolean) as SocialPerson[];
 
         setSearchResults(
-          players.filter((player) => player.id !== currentUser?.id),
+          players
+            .filter((player) => player.id !== currentUser?.id)
+            .map((player) => mergeSearchRelationship(player, relationships)),
         );
       } catch (error) {
         if (!controller.signal.aborted) {
@@ -605,7 +644,7 @@ export default function SocialPanels({ isOpen, onClose }: Props) {
       window.clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [currentUser?.id, isOpen, trimmedSearch]);
+  }, [currentUser?.id, isOpen, relationships, trimmedSearch]);
 
   useEffect(() => {
     if (!selectedFriend) {
@@ -724,9 +763,16 @@ export default function SocialPanels({ isOpen, onClose }: Props) {
   );
   const visiblePeople =
     tab === "friends" ? friends : tab === "requests" ? requests : blocked;
+  const searchNeedle = trimmedSearch.toLowerCase();
   const filteredPeople = visiblePeople.filter((person) =>
-    person.username.toLowerCase().includes(trimmedSearch.toLowerCase()),
+    person.username.toLowerCase().includes(searchNeedle),
   );
+  const tabCount = (people: SocialPerson[]) =>
+    searchNeedle
+      ? people.filter((person) =>
+          person.username.toLowerCase().includes(searchNeedle),
+        ).length
+      : people.length;
 
   const performAction = async (
     person: SocialPerson,
@@ -807,6 +853,7 @@ export default function SocialPanels({ isOpen, onClose }: Props) {
             ...person,
             relationshipStatus: "blocked" as const,
             requestDirection: null,
+            blockedByCurrentUser: true,
           };
           return [
             ...current.filter((entry) => entry.id !== person.id),
@@ -891,14 +938,14 @@ export default function SocialPanels({ isOpen, onClose }: Props) {
     }
 
     if (person.relationshipStatus === "blocked") {
-      return (
-        <ActionButton
-          disabled={disabled}
-          onClick={() => void performAction(person, "unblock")}
-        >
-          UNBLOCK
-        </ActionButton>
-      );
+      return person.blockedByCurrentUser ? (
+          <ActionButton
+            disabled={disabled}
+            onClick={() => void performAction(person, "unblock")}
+          >
+            UNBLOCK
+          </ActionButton>
+        ) : null;
     }
 
     if (person.requestDirection === "incoming") {
@@ -1032,21 +1079,21 @@ export default function SocialPanels({ isOpen, onClose }: Props) {
                 onClick={() => setTab("friends")}
                 type="button"
               >
-                FRIENDS <span>{friends.length}</span>
+                FRIENDS <span>{tabCount(friends)}</span>
               </button>
               <button
                 className={tab === "requests" ? "active" : ""}
                 onClick={() => setTab("requests")}
                 type="button"
               >
-                REQUESTS <span>{requests.length}</span>
+                REQUESTS <span>{tabCount(requests)}</span>
               </button>
               <button
                 className={tab === "blocked" ? "active" : ""}
                 onClick={() => setTab("blocked")}
                 type="button"
               >
-                BLOCKED <span>{blocked.length}</span>
+                BLOCKED <span>{tabCount(blocked)}</span>
               </button>
             </div>
 

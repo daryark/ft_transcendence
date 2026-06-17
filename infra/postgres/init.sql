@@ -137,6 +137,29 @@ CREATE TABLE IF NOT EXISTS messages (
 		ON DELETE CASCADE
 );
 
+-- NOTIFICATIONS
+CREATE TABLE IF NOT EXISTS notifications (
+	id SERIAL PRIMARY KEY,
+	user_id INT NOT NULL,
+	actor_id INT NULL,
+	type VARCHAR(50) NOT NULL,
+	title VARCHAR(120) NOT NULL,
+	body TEXT NOT NULL,
+	link VARCHAR(255) NULL,
+	payload JSONB NULL,
+	is_read BOOLEAN NOT NULL DEFAULT FALSE,
+	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	read_at TIMESTAMP NULL,
+
+	CONSTRAINT fk_notifications_user
+		FOREIGN KEY (user_id) REFERENCES users(id)
+		ON DELETE CASCADE,
+
+	CONSTRAINT fk_notifications_actor
+		FOREIGN KEY (actor_id) REFERENCES users(id)
+		ON DELETE SET NULL
+);
+
 -- STARTUP SEED DATA
 -- Shared test password for all accounts below: Password123!
 BEGIN;

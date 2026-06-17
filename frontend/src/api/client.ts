@@ -1,4 +1,4 @@
-import { clearSession, getSessionToken } from "../auth/session";
+import { clearSession, getSession, getSessionToken } from "../auth/session";
 
 const DEFAULT_TIMEOUT_MS = 12_000;
 
@@ -59,7 +59,9 @@ export async function apiRequest(
     });
 
     if (response.status === 401) {
-      clearSession();
+      if (getSession()?.token) {
+        clearSession();
+      }
       throw new ApiError("Your session has expired. Please sign in again.", 401);
     }
 

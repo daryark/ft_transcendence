@@ -16,6 +16,7 @@ import type { RoomId } from "../game/domain/room";
 import type { Identity } from "../auth/identity";
 import { Roles } from "../game/domain/player";
 import { setSocketServer, userSocketRoom } from "./realtime";
+import { setNotificationSocketServer } from "../notifications/hub";
 
 
 export type SocketData = {
@@ -27,6 +28,7 @@ export type SocketData = {
 
 export default function socketSetup(io: Server) {
     setSocketServer(io);
+    setNotificationSocketServer(io);
     const roomService = new RoomService(io);
     const playerService = new PlayerService();
     const modeService = createModeService({ modes, roomService, playerService });

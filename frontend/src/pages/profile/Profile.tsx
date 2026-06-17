@@ -16,6 +16,7 @@ import {
 import "./Profile.scss";
 import Dialog from "../../components/Dialog/Dialog";
 import { EmptyState, Skeleton } from "../../components/StateView/StateView";
+import BackButton from "../../components/BackButton/BackButton";
 
 type ModeKey = "league" | "quickPlay" | "fortyLines" | "blitz" | "zen";
 
@@ -493,6 +494,7 @@ export default function Profile() {
   if (loading) {
     return (
       <div className="profile-page profile-page--state">
+        <BackButton to="/play" />
         <Skeleton lines={7} />
       </div>
     );
@@ -501,6 +503,7 @@ export default function Profile() {
   if (!profile) {
     return (
       <div className="profile-page profile-page--state">
+        <BackButton to="/play" />
         <EmptyState
           title="PROFILE UNAVAILABLE"
           message={error || "The requested profile could not be found."}
@@ -522,6 +525,7 @@ export default function Profile() {
             {profile.username}
             {profile.country && <span>{profile.country}</span>}
           </h1>
+          <BackButton to="/play" />
         </header>
 
         <div className="profile-page__grid">

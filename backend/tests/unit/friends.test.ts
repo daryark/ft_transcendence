@@ -161,6 +161,36 @@ describe("friends service", () => {
 		});
 	});
 
+	test("blockFriendshipByPair keeps the blocker as user_id when updating reverse rows", async () => {
+		mockedPrisma.friends.findFirst.mockResolvedValue({
+			id: 56,
+			user_id: 9,
+			friend_id: 1,
+			status: "accepted",
+		});
+		mockedPrisma.friends.update.mockResolvedValue({
+			id: 56,
+			user_id: 1,
+			friend_id: 9,
+			status: "blocked",
+			created_at: null,
+		});
+
+		await blockFriendshipByPair(1, 9);
+
+		expect(mockedPrisma.friends.update).toHaveBeenCalledWith({
+			where: { id: 56 },
+			data: { user_id: 1, friend_id: 9, status: "blocked" },
+			select: {
+				id: true,
+				user_id: true,
+				friend_id: true,
+				status: true,
+				created_at: true,
+			},
+		});
+	});
+
 	test("removeFriendshipByPair deletes the matching friendship", async () => {
 		mockedPrisma.friends.findFirst.mockResolvedValue({ id: 88 });
 		mockedPrisma.friends.delete.mockResolvedValue({ id: 88 });
@@ -168,6 +198,18 @@ describe("friends service", () => {
 		await removeFriendshipByPair(1, 2);
 
 		expect(mockedPrisma.friends.delete).toHaveBeenCalledWith({ where: { id: 88 } });
+	});
+
+	test("removeFriendshipByPair does not let the blocked user unblock themselves", async () => {
+		mockedPrisma.friends.findFirst.mockResolvedValue({
+			id: 89,
+			user_id: 2,
+			friend_id: 1,
+			status: "blocked",
+		});
+
+		await expect(removeFriendshipByPair(1, 2)).rejects.toThrow("Not allowed");
+		expect(mockedPrisma.friends.delete).not.toHaveBeenCalled();
 	});
 
 	test("acceptFriendRequestById only allows the recipient to accept", async () => {

@@ -40,14 +40,30 @@ export default function SocketConfigSync() {
     const handleAchievementUnlocked = (achievement: AchievementToast) => {
       showAchievement(achievement);
     };
+    const handleNotifications = (payload: unknown) => {
+      const object = payload && typeof payload === "object" ? (payload as Record<string, unknown>) : {};
+      const notification =
+        object.notification && typeof object.notification === "object"
+          ? (object.notification as Record<string, unknown>)
+          : object;
+      const message = String(notification.title ?? notification.body ?? "New notification");
+
+      if (message.trim()) {
+        showToast(message, "info", () => {
+          window.dispatchEvent(new CustomEvent("tetra:open-notifications"));
+        });
+      }
+    };
 
     socket.on("game:config", handleGameConfig);
     socket.on("achievement:unlocked", handleAchievementUnlocked);
+    socket.on("notifications", handleNotifications);
     socket.on("connect_error", handleConnectError);
 
     return () => {
       socket.off("game:config", handleGameConfig);
       socket.off("achievement:unlocked", handleAchievementUnlocked);
+      socket.off("notifications", handleNotifications);
       socket.off("connect_error", handleConnectError);
     };
   }, [session, showAchievement, showToast]);
