@@ -38,6 +38,7 @@ async function requestAuth(
     mode === "login" ? "/api/auth/login" : "/api/auth/register",
     {
       method: "POST",
+      skipAuth: true,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     },

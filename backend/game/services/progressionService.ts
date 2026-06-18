@@ -54,6 +54,21 @@ function getPersistMode(room: Room) {
     return null;
 }
 
+function isSoloObjectiveProgressionMode(room: Room) {
+    return (
+        room.gameConfig.mode === "solo" &&
+        (room.gameConfig.preset === "40Lines" || room.gameConfig.preset === "blitz")
+    );
+}
+
+function shouldAwardProgression(input: MatchEndProgressionInput) {
+    if (isSoloObjectiveProgressionMode(input.room)) {
+        return input.reason === "objective_complete";
+    }
+
+    return true;
+}
+
 function getPersistedScore(room: Room, state: GameState | null) {
     if (!state) return 0;
     if (room.gameConfig.mode === "solo" && room.gameConfig.preset === "40Lines") {
@@ -84,6 +99,7 @@ function getProgressionMetric(room: Room, state: GameState | null) {
 async function persistRegisteredResult(input: MatchEndProgressionInput) {
     const mode = getPersistMode(input.room);
     if (!mode) return;
+    if (!shouldAwardProgression(input)) return;
 
     const result = input.reason === "objective_complete" ? "win" : "lose";
     const score = getPersistedScore(input.room, input.state);
@@ -126,6 +142,8 @@ export default function createProgressionService(room: Room) {
     }
 
     function onMatchEnd(input: MatchEndProgressionInput): PlayerProgressionSnapshot[] {
+        if (!shouldAwardProgression(input)) return [];
+
         const outcome: "win" | "defeat" = input.reason === "objective_complete" ? "win" : "defeat";
         const result = outcome === "win" ? "win" : "lose";
         const mode = getProgressionMode(input.room);

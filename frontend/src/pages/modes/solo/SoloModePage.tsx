@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { ModeLayout } from "../../../components/ModeLayout/ModeLayout";
 import {
   getSocket,
@@ -59,9 +59,14 @@ export default function SoloModePage() {
   const { modeId } = useParams<{ modeId: string }>();
   const config = isSoloModeId(modeId) ? MODES_CONFIG[modeId] : undefined;
   const navigate = useNavigate();
+  const location = useLocation();
+  const autoStartAttemptedRef = useRef(false);
   const [isLoading, setIsLoading] = useState(false);
   const [startError, setStartError] = useState("");
   const [socket, setSocket] = useState(() => getSocket());
+  const navigationState = location.state as
+    | { autoStart?: boolean; from?: string }
+    | null;
 
   useEffect(() => {
     return subscribeToSocket(() => {
@@ -69,9 +74,9 @@ export default function SoloModePage() {
     });
   }, []);
 
-  if (!config || !isSoloModeId(modeId)) return <NotFound />;
+  const handleStart = useCallback(() => {
+    if (!isSoloModeId(modeId)) return;
 
-  const handleStart = () => {
     setStartError("");
 
     if (!socket) {
@@ -81,11 +86,13 @@ export default function SoloModePage() {
 
     setIsLoading(true);
 
+    const returnPath = navigationState?.from ?? `/play/solo/${modeId}`;
+
     const handleGameStart = (payload: GameStartPayload) => {
       socket.off("server:error", handleModeError);
       setIsLoading(false);
       // include return path so the game can navigate back if aborted
-      navigate(`/game/${payload.roomId}`, { state: { ...payload, from: `/play/solo/${modeId}` } });
+      navigate(`/game/${payload.roomId}`, { state: { ...payload, from: returnPath } });
     };
 
     const handleModeError = (error: { reason?: string }) => {
@@ -106,7 +113,7 @@ export default function SoloModePage() {
       try {
         window.sessionStorage.setItem(
           "tetra-active-game",
-          JSON.stringify({ from: `/play/solo/${modeId}` }),
+          JSON.stringify({ from: returnPath }),
         );
       } catch {
         // ignore
@@ -126,7 +133,18 @@ export default function SoloModePage() {
       return;
     }
 
-  };
+  }, [modeId, navigate, navigationState?.from, socket]);
+
+  useEffect(() => {
+    if (!navigationState?.autoStart || autoStartAttemptedRef.current) return;
+    if (!socket) return;
+
+    autoStartAttemptedRef.current = true;
+    const timeoutId = window.setTimeout(handleStart, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [handleStart, navigationState?.autoStart, socket]);
+
+  if (!config || !isSoloModeId(modeId)) return <NotFound />;
 
   return (
     <ModeLayout

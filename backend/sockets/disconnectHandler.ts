@@ -15,6 +15,9 @@ export default function disconnectHandlers(
         const { identity } = socket.data as SocketData;
         if (!identity) return;
         const currentPlayer = playerService.get(identity.id);
+        if (currentPlayer && currentPlayer.socketId !== socket.id) {
+            return;
+        }
         const currentRoom = currentPlayer?.roomId
             ? roomService.getRoom(currentPlayer.roomId)
             : undefined;

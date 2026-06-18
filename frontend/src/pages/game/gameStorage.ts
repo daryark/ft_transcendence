@@ -74,11 +74,15 @@ export function clearStoredActiveGame(gameId?: string) {
 export function getReturnPath(locationState: unknown, gameId?: string) {
   const locationPath = toActiveGamePayload(locationState).from;
 
-  if (locationPath) return locationPath;
+  if (locationPath && !locationPath.startsWith("/game/")) {
+    return locationPath;
+  }
 
   const saved = readStoredActiveGame(gameId);
 
-  if (saved?.from) return saved.from;
+  if (saved?.from && !saved.from.startsWith("/game/")) {
+    return saved.from;
+  }
 
   if (saved?.config?.mode === "league") return "/play/multiplayer/league";
   if (saved?.config?.mode === "quickplay") return "/play/multiplayer/quick";

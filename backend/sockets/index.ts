@@ -23,6 +23,7 @@ export type SocketData = {
     roomId?: RoomId;
     joinedAt: number;
     role?: Roles | undefined;
+    replacedSocketId?: string;
 };
 
 export default function socketSetup(io: Server) {
@@ -34,6 +35,14 @@ export default function socketSetup(io: Server) {
     io.use(socketAuth(playerService));
     io.on("connection", (socket) => {
         console.log('New client connected:', socket.id);
+        if (socket.data.replacedSocketId && socket.data.replacedSocketId !== socket.id) {
+            const replacedSocket = io.sockets.sockets.get(socket.data.replacedSocketId);
+            replacedSocket?.emit("server:error", {
+                reason: "CLIENT_REPLACED",
+                message: "You joined this room on another client, replacing this one.",
+            });
+            setTimeout(() => replacedSocket?.disconnect(true), 50);
+        }
         socket.emit("session:identity", {
             id: socket.data.identity.id,
         });

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   getSession,
   subscribeToSession,
@@ -7,9 +8,12 @@ import {
 import { saveGameConfig, type GameConfigDTO } from "./gameConfigStorage";
 import { connectSocket, disconnectSocket } from "./socketClient";
 import { useToast } from "../components/Toast/ToastProvider";
+import { clearStoredActiveGame } from "../pages/game/gameStorage";
 
 export default function SocketConfigSync() {
   const { showToast } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [session, setSession] = useState<SessionData | null>(() =>
     getSession(),
   );
@@ -36,15 +40,32 @@ export default function SocketConfigSync() {
         "error",
       );
     };
+    const handleServerError = (payload: { reason?: string; message?: string }) => {
+      if (payload.reason === "CLIENT_REPLACED") {
+        clearStoredActiveGame();
+        showToast(
+          "CLIENT REPLACED: You joined this room on another client, replacing this one.",
+          "error",
+        );
+        if (
+          location.pathname.startsWith("/game/") ||
+          location.pathname.startsWith("/play/multiplayer/custom/")
+        ) {
+          navigate("/play/multiplayer", { replace: true });
+        }
+      }
+    };
 
     socket.on("game:config", handleGameConfig);
     socket.on("connect_error", handleConnectError);
+    socket.on("server:error", handleServerError);
 
     return () => {
       socket.off("game:config", handleGameConfig);
       socket.off("connect_error", handleConnectError);
+      socket.off("server:error", handleServerError);
     };
-  }, [session, showToast]);
+  }, [location.pathname, navigate, session, showToast]);
 
   return null;
 }

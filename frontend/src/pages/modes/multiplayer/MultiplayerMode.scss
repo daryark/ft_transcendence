@@ -490,6 +490,21 @@ body.mp-custom-active .mp-custom-status {
   text-align: center;
 }
 
+.mp-custom-player-badges {
+  display: grid;
+  gap: 0.14rem;
+  justify-items: end;
+}
+
+.mp-custom-player-badges:empty {
+  display: none;
+}
+
+.mp-custom-player-badges em {
+  width: max-content;
+  min-width: 3.9rem;
+}
+
 .mp-custom-main {
   padding: 1rem 0.65rem 5.3rem;
 }

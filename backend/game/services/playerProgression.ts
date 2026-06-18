@@ -1,5 +1,3 @@
-import { prisma } from "../../prisma/prisma";
-
 export const LEAGUE_RANKS = [
     "X",
     "U",
@@ -39,18 +37,22 @@ function isPositiveUserId(userId: number) {
     return Number.isInteger(userId) && userId > 0;
 }
 
+async function getPrisma() {
+    const { prisma } = await import("../../prisma/prisma.js");
+    return prisma;
+}
+
 export function getLevelCapacity(level: number) {
     const safeLevel = Math.max(1, Math.floor(level));
     return Math.round(900 + safeLevel * 12 + Math.sqrt(safeLevel) * 135);
 }
 
 function getFortyLinesXp(input: AwardProgressionInput) {
-    const elapsedSeconds = Math.max(1, (input.elapsedMs ?? 120_000) / 1000);
-    return Math.round(Math.max(250, 1800 - elapsedSeconds * 8));
+    return input.result === "win" ? 300 : 0;
 }
 
 function getBlitzXp(input: AwardProgressionInput) {
-    return Math.round(300 + Math.sqrt(Math.max(0, input.score ?? 0)) * 12);
+    return input.result === "win" ? 300 : 0;
 }
 
 function getQuickplayXp(input: AwardProgressionInput) {
@@ -69,10 +71,9 @@ function getLeagueXp(input: AwardProgressionInput) {
 
 function getCustomXp(input: AwardProgressionInput) {
     const survivedSeconds = Math.max(0, (input.elapsedMs ?? 0) / 1000);
-    const survivalXp = Math.min(900, survivedSeconds * 4);
-    const winnerBonus = input.result === "win" ? 100 : 0;
+    const winnerXp = Math.min(500, 220 + survivedSeconds * 2.4);
 
-    return Math.round(150 + survivalXp + winnerBonus);
+    return Math.round(input.result === "win" ? winnerXp : Math.max(0, winnerXp - 100));
 }
 
 export function calculateXpDelta(input: AwardProgressionInput) {
@@ -112,6 +113,7 @@ export function calculateEloDelta(playerElo: number, opponentElo: number, result
 }
 
 export async function recalculateLeagueRanks() {
+    const prisma = await getPrisma();
     const users = await (prisma.users as any).findMany({
         select: {
             id: true,
@@ -146,6 +148,7 @@ export async function recalculateLeagueRanks() {
 export async function awardPlayerProgression(input: AwardProgressionInput) {
     if (!isPositiveUserId(input.userId)) return null;
 
+    const prisma = await getPrisma();
     const user = await (prisma.users as any).findUnique({
         where: { id: input.userId },
         select: {

@@ -2,6 +2,7 @@ import { describe, expect, jest, test } from '@jest/globals';
 import RoomService from '../../game/services/roomService';
 import joinCustom, {
   removeCustomRoomParticipant,
+  switchCustomRoomRole,
 } from '../../game/domain/mode/custom/index.js';
 
 function createIo() {
@@ -222,5 +223,238 @@ describe('custom room lifecycle', () => {
         expect.objectContaining({ id: waitingPlayer.id }),
       ]),
     );
+  });
+
+  test('does not turn an intentional spectator into a waiting player on running room rejoin', () => {
+    const io = createIo();
+    const roomService = new RoomService(io);
+    const host = createPlayer('host');
+    const activeOpponent = createPlayer('active');
+    const spectator = createPlayer('spectator');
+    const players = new Map([
+      [host.id, host],
+      [activeOpponent.id, activeOpponent],
+      [spectator.id, spectator],
+    ]);
+    const playerService = createPlayerService(players);
+
+    joinCustom(createSocket(host), { roomService, playerService }, {
+      roomConfig: { public: false, roomName: 'Private' },
+    });
+    const room = Array.from(roomService['rooms'].values())[0];
+    joinCustom(createSocket(activeOpponent), { roomService, playerService }, {
+      roomConfig: { roomName: `JOIN:${room.id}` },
+    });
+    joinCustom(createSocket(spectator), { roomService, playerService }, {
+      roomConfig: { roomName: `JOIN:${room.id}` },
+    });
+    switchCustomRoomRole(roomService, room.id, spectator.id, 'spectator');
+
+    room.status = 'playing';
+    room.engine = {
+      playerEngines: new Map([
+        [host.id, { room: { status: 'playing', state: { gameOver: false } } }],
+        [activeOpponent.id, { room: { status: 'playing', state: { gameOver: false } } }],
+      ]),
+      eliminatedPlayerIds: new Set(),
+      stop: jest.fn(),
+    };
+
+    const spectatorSocket = createSocket(spectator);
+    joinCustom(spectatorSocket, { roomService, playerService }, {
+      roomConfig: { roomName: `JOIN:${room.id}` },
+    });
+
+    expect(room.waitingPlayers?.has(spectator.id)).toBe(false);
+    expect(room.players.has(spectator.id)).toBe(false);
+    expect(room.spectators.has(spectator.id)).toBe(true);
+    expect(spectatorSocket.data.role).toBe('spectator');
+    expect(getLastRoomUpdate(io).players.filter((player) => player.id === spectator.id)).toHaveLength(1);
+  });
+
+  test('keeps a private room and makes the first spectator host when the last player leaves', () => {
+    const io = createIo();
+    const roomService = new RoomService(io);
+    const host = createPlayer('host');
+    const spectator = createPlayer('spectator');
+    const players = new Map([
+      [host.id, host],
+      [spectator.id, spectator],
+    ]);
+    const playerService = createPlayerService(players);
+
+    joinCustom(createSocket(host), { roomService, playerService }, {
+      roomConfig: { public: false, roomName: 'Private' },
+    });
+    const room = Array.from(roomService['rooms'].values())[0];
+    joinCustom(createSocket(spectator), { roomService, playerService }, {
+      roomConfig: { roomName: `JOIN:${room.id}` },
+    });
+    switchCustomRoomRole(roomService, room.id, spectator.id, 'spectator');
+
+    removeCustomRoomParticipant(roomService, room.id, host.id, 'player');
+
+    expect(roomService.getRoom(room.id)).toBe(room);
+    expect(room.status).toBe('lobby');
+    expect(getLastRoomUpdate(io).players).toEqual([
+      expect.objectContaining({
+        id: spectator.id,
+        role: 'spectator',
+        isHost: true,
+      }),
+    ]);
+  });
+
+  test('keeps a public spectator room hostless until a registered player joins', () => {
+    const io = createIo();
+    const roomService = new RoomService(io);
+    const host = createPlayer('host', 'registered');
+    const spectator = createPlayer('spectator');
+    const registered = createPlayer('registered', 'registered');
+    const players = new Map([
+      [host.id, host],
+      [spectator.id, spectator],
+      [registered.id, registered],
+    ]);
+    const playerService = createPlayerService(players);
+
+    joinCustom(createSocket(host), { roomService, playerService }, {
+      roomConfig: { public: true, roomName: 'Public' },
+    });
+    const room = Array.from(roomService['rooms'].values())[0];
+    joinCustom(createSocket(spectator), { roomService, playerService }, {
+      roomConfig: { roomName: `JOIN:${room.id}` },
+    });
+    switchCustomRoomRole(roomService, room.id, spectator.id, 'spectator');
+
+    removeCustomRoomParticipant(roomService, room.id, host.id, 'player');
+
+    expect(roomService.getRoom(room.id)).toBe(room);
+    expect(getLastRoomUpdate(io).players).toEqual([
+      expect.objectContaining({
+        id: spectator.id,
+        role: 'spectator',
+        isHost: false,
+      }),
+    ]);
+
+    joinCustom(createSocket(registered), { roomService, playerService }, {
+      roomConfig: { roomName: `JOIN:${room.id}` },
+    });
+
+    expect(getLastRoomUpdate(io).players).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: registered.id,
+          role: 'player',
+          isHost: true,
+        }),
+        expect.objectContaining({
+          id: spectator.id,
+          role: 'spectator',
+          isHost: false,
+        }),
+      ]),
+    );
+  });
+
+  test('keeps a registered public host badge when the host switches to spectator while players remain', () => {
+    const io = createIo();
+    const roomService = new RoomService(io);
+    const host = createPlayer('host', 'registered');
+    const player = createPlayer('player');
+    const players = new Map([
+      [host.id, host],
+      [player.id, player],
+    ]);
+    const playerService = createPlayerService(players);
+
+    joinCustom(createSocket(host), { roomService, playerService }, {
+      roomConfig: { public: true, roomName: 'Public' },
+    });
+    const room = Array.from(roomService['rooms'].values())[0];
+    joinCustom(createSocket(player), { roomService, playerService }, {
+      roomConfig: { roomName: `JOIN:${room.id}` },
+    });
+
+    switchCustomRoomRole(roomService, room.id, host.id, 'spectator');
+
+    expect(getLastRoomUpdate(io).players).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: host.id,
+          role: 'spectator',
+          isHost: true,
+        }),
+        expect.objectContaining({
+          id: player.id,
+          role: 'player',
+          isHost: false,
+        }),
+      ]),
+    );
+  });
+
+  test('removes a public spectator host from the room when that host leaves', () => {
+    const io = createIo();
+    const roomService = new RoomService(io);
+    const host = createPlayer('host', 'registered');
+    const player = createPlayer('player');
+    const players = new Map([
+      [host.id, host],
+      [player.id, player],
+    ]);
+    const playerService = createPlayerService(players);
+
+    joinCustom(createSocket(host), { roomService, playerService }, {
+      roomConfig: { public: true, roomName: 'Public' },
+    });
+    const room = Array.from(roomService['rooms'].values())[0];
+    joinCustom(createSocket(player), { roomService, playerService }, {
+      roomConfig: { roomName: `JOIN:${room.id}` },
+    });
+    switchCustomRoomRole(roomService, room.id, host.id, 'spectator');
+
+    removeCustomRoomParticipant(roomService, room.id, host.id, 'spectator');
+
+    expect(getLastRoomUpdate(io).players).toEqual([
+      expect.objectContaining({
+        id: player.id,
+        role: 'player',
+        isHost: false,
+      }),
+    ]);
+  });
+
+  test('removes a spectator host even if leave is called with stale player role', () => {
+    const io = createIo();
+    const roomService = new RoomService(io);
+    const host = createPlayer('host');
+    const player = createPlayer('player');
+    const players = new Map([
+      [host.id, host],
+      [player.id, player],
+    ]);
+    const playerService = createPlayerService(players);
+
+    joinCustom(createSocket(host), { roomService, playerService }, {
+      roomConfig: { public: false, roomName: 'Private' },
+    });
+    const room = Array.from(roomService['rooms'].values())[0];
+    joinCustom(createSocket(player), { roomService, playerService }, {
+      roomConfig: { roomName: `JOIN:${room.id}` },
+    });
+    switchCustomRoomRole(roomService, room.id, host.id, 'spectator');
+
+    removeCustomRoomParticipant(roomService, room.id, host.id, 'player');
+
+    expect(room.spectators.has(host.id)).toBe(false);
+    expect(getLastRoomUpdate(io).players).toEqual([
+      expect.objectContaining({
+        id: player.id,
+        role: 'player',
+        isHost: true,
+      }),
+    ]);
   });
 });

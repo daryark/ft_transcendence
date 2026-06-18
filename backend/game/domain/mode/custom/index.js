@@ -155,21 +155,42 @@ function isRegisteredPlayer(player) {
 
 function getNextHostId(room) {
   const players = Array.from(room.players.values());
+  const waitingPlayers = Array.from(getWaitingPlayers(room).values());
 
   if (!room.roomConfig.public) {
-    return players[0]?.id ?? null;
+    return (
+      players[0]?.id ??
+      waitingPlayers[0]?.id ??
+      Array.from(room.spectators?.values() ?? [])[0]?.id ??
+      null
+    );
   }
 
-  return players.find(isRegisteredPlayer)?.id ?? null;
+  return (
+    players.find(isRegisteredPlayer)?.id ??
+    waitingPlayers.find(isRegisteredPlayer)?.id ??
+    null
+  );
 }
 
 function ensureRoomHost(room) {
   const currentHostId = customRoomHosts.get(room.id);
-  const currentHost = currentHostId ? room.players.get(currentHostId) : null;
+  const currentHost = currentHostId
+    ? room.players.get(currentHostId) ??
+      getWaitingPlayers(room).get(currentHostId) ??
+      room.spectators?.get(currentHostId)
+    : null;
+  const roomHasPlayers =
+    room.players.size + getWaitingPlayers(room).size > 0;
+  const currentHostIsSpectator = Boolean(
+    currentHostId && room.spectators?.has(currentHostId),
+  );
 
   if (
     currentHost &&
-    (!room.roomConfig.public || isRegisteredPlayer(currentHost))
+    (!room.roomConfig.public ||
+      (isRegisteredPlayer(currentHost) &&
+        (!currentHostIsSpectator || roomHasPlayers)))
   ) {
     return currentHostId;
   }
@@ -218,10 +239,9 @@ function createPlayerEngineRoom(room, player, startedAt) {
 
 function calculateCustomXpDelta(elapsedMs, isWinner) {
   const survivedSeconds = Math.max(0, elapsedMs / 1000);
-  const survivalXp = Math.min(900, survivedSeconds * 4);
-  const winnerBonus = isWinner ? 100 : 0;
+  const winnerXp = Math.min(500, 220 + survivedSeconds * 2.4);
 
-  return Math.round(150 + survivalXp + winnerBonus);
+  return Math.round(isWinner ? winnerXp : Math.max(0, winnerXp - 100));
 }
 
 function getFirstPlayerState(engine) {
@@ -245,6 +265,20 @@ function getActivePlayerIds(engine) {
   }
 
   return activePlayerIds;
+}
+
+function isActiveVersusPlayer(engine, playerId) {
+  if (!engine?.playerEngines?.has?.(String(playerId))) return false;
+
+  const playerEngine = engine.playerEngines.get(String(playerId));
+  const state = playerEngine?.room.state;
+
+  return Boolean(
+    playerEngine?.room.status === "playing" &&
+      state &&
+      !state.gameOver &&
+      !engine.eliminatedPlayerIds?.has?.(String(playerId)),
+  );
 }
 
 function serializeVersusGame(room, engine) {
@@ -424,9 +458,15 @@ export function removeCustomRoomParticipant(
 
   const normalizedPlayerId = String(playerId);
   const engine = room.engine;
+  const waitingPlayers = getWaitingPlayers(room);
+  const actualRole =
+    room.players.has(playerId) || waitingPlayers.has(playerId)
+      ? "player"
+      : room.spectators?.has(playerId)
+        ? "spectator"
+        : role;
 
-  if (role === "player") {
-    const waitingPlayers = getWaitingPlayers(room);
+  if (actualRole === "player") {
     const waitingPlayer = waitingPlayers.get(playerId);
     const leavingPlayer = room.players.get(playerId) ?? waitingPlayer;
     if (!leavingPlayer) return false;
@@ -447,6 +487,19 @@ export function removeCustomRoomParticipant(
     }
 
     if (room.players.size === 0 && waitingPlayers.size === 0) {
+      if ((room.spectators?.size ?? 0) > 0) {
+        engine?.stop?.();
+        stopCustomEngine(room.id);
+        room.status = "lobby";
+        room.engine = null;
+        room.roundWins = undefined;
+        room.roundNumber = undefined;
+        ensureRoomHost(room);
+        emitSystemMessage(roomService, room, "left the room", leavingPlayerName);
+        broadcastRoomUpdate(roomService, room);
+        return true;
+      }
+
       customRoomHosts.delete(room.id);
       customRoomScores.delete(room.id);
       customRoomMessages.delete(room.id);
@@ -469,8 +522,10 @@ export function removeCustomRoomParticipant(
   const spectator = room.spectators?.get(playerId);
   if (!spectator) return false;
 
+  const spectatorName = getPlayerName(spectator);
   roomService.removeSpectator(roomId, playerId);
-  emitSystemMessage(roomService, room, "left the room", getPlayerName(spectator));
+  ensureRoomHost(room);
+  emitSystemMessage(roomService, room, "left the room", spectatorName);
   broadcastRoomUpdate(roomService, room);
   return true;
 }
@@ -705,6 +760,14 @@ function joinExistingRoom(socket, roomService, player, roomCode) {
   const wasAlreadyWaiting = waitingPlayers.has(player.id);
   const wasAlreadySpectator = room.spectators?.has(player.id) ?? false;
 
+  if (wasAlreadySpectator) {
+    socket.join(room.id);
+    socket.data.roomId = room.id;
+    socket.data.role = "spectator";
+    socket.emit("room:update", serializeRoom(room));
+    return roomService.getRoomState(room.id);
+  }
+
   if (!canJoinAsPlayer(room, player)) {
     if (room.spectators) {
       roomService.addSpectator(room.id, player);
@@ -777,7 +840,11 @@ export function switchCustomRoomRole(roomService, roomId, playerId, nextRole) {
   if (!player) return { ok: false, reason: "PLAYER_NOT_FOUND" };
 
   if (nextRole === "spectator") {
-    if (room.status === "playing" && room.players.has(playerId)) {
+    if (
+      room.status === "playing" &&
+      room.players.has(playerId) &&
+      isActiveVersusPlayer(room.engine, playerId)
+    ) {
       return { ok: false, reason: "PLAYER_IN_ACTIVE_GAME" };
     }
 

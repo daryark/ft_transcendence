@@ -22,6 +22,7 @@ type ErrorPayload = {
 
 type ApiRequestOptions = RequestInit & {
   timeoutMs?: number;
+  skipAuth?: boolean;
 };
 
 async function readError(response: Response): Promise<ErrorPayload> {
@@ -38,6 +39,7 @@ export async function apiRequest(
 ) {
   const {
     timeoutMs = DEFAULT_TIMEOUT_MS,
+    skipAuth = false,
     signal: externalSignal,
     ...init
   } = options;
@@ -49,7 +51,7 @@ export async function apiRequest(
 
   const headers = new Headers(init.headers);
   const token = getSessionToken();
-  if (token) headers.set("Authorization", `Bearer ${token}`);
+  if (token && !skipAuth) headers.set("Authorization", `Bearer ${token}`);
 
   try {
     const response = await fetch(input, {
@@ -58,7 +60,7 @@ export async function apiRequest(
       signal: controller.signal,
     });
 
-    if (response.status === 401) {
+    if (response.status === 401 && !skipAuth) {
       clearSession();
       throw new ApiError("Your session has expired. Please sign in again.", 401);
     }

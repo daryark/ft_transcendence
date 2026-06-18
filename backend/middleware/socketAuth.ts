@@ -71,6 +71,9 @@ export function socketAuth(playerService: PlayerService) {
                     });
                 }
             } else {
+                if (player.roomId && player.socketId !== socket.id) {
+                    socket.data.replacedSocketId = player.socketId;
+                }
                 playerService.markConnected(identity.id, socket.id);
             }
 

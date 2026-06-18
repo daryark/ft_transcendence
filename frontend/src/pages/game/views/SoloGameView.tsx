@@ -1,3 +1,4 @@
+import { useEffect, useState, type CSSProperties } from "react";
 import GameBoard from "../../../components/GameBoard/GameBoard";
 import {
   formatRunTime,
@@ -14,8 +15,36 @@ type SoloGameViewProps = {
   session: GameSession;
 };
 
+const TABLET_BREAKPOINT_PX = 860;
+const SOLO_PACKAGE_SCALE_FLOOR = 0.74;
+const SOLO_BASE_WIDTH_PX = 46 * 16;
+const SOLO_BASE_HEIGHT_PX = 44 * 16;
+
+function getSoloPackageScale() {
+  if (window.innerWidth <= TABLET_BREAKPOINT_PX) {
+    return SOLO_PACKAGE_SCALE_FLOOR;
+  }
+
+  const widthScale = (window.innerWidth - 64) / SOLO_BASE_WIDTH_PX;
+  const heightScale = (window.innerHeight - 120) / SOLO_BASE_HEIGHT_PX;
+  return Math.min(
+    1,
+    Math.max(SOLO_PACKAGE_SCALE_FLOOR, Math.min(widthScale, heightScale)),
+  );
+}
+
 export default function SoloGameView({ session }: SoloGameViewProps) {
   const { gameConfig, gameState } = session;
+  const [packageScale, setPackageScale] = useState(getSoloPackageScale);
+
+  useEffect(() => {
+    const updateScale = () => setPackageScale(getSoloPackageScale());
+
+    updateScale();
+    window.addEventListener("resize", updateScale);
+    return () => window.removeEventListener("resize", updateScale);
+  }, []);
+
   if (!gameState || gameConfig?.mode !== "solo") return null;
 
   const objective = gameConfig.objective;
@@ -34,9 +63,14 @@ export default function SoloGameView({ session }: SoloGameViewProps) {
       ? { label: "SCORE", value: `${stats.score}` }
       : { label: "LINES", value: lineProgress };
   const objectiveWarning = getObjectiveWarning(objective, stats);
+  const cellSize = Math.round(32 * packageScale);
+  const previewFigureSize = Math.round(30 * packageScale);
+  const style = {
+    "--solo-package-scale": String(packageScale),
+  } as CSSProperties;
 
   return (
-    <main className="solo-game">
+    <main className="solo-game" style={style}>
       <section className="solo-game__status" aria-label="Socket status">
         <div>
           <span className="solo-game__label">MODE</span>
@@ -52,6 +86,7 @@ export default function SoloGameView({ session }: SoloGameViewProps) {
         {gameConfig.controls.hold && (
           <GamePreviewPanel
             className="solo-game__panel solo-game__panel--hold"
+            figureSize={previewFigureSize}
             state={gameState}
             type="hold"
           />
@@ -78,12 +113,14 @@ export default function SoloGameView({ session }: SoloGameViewProps) {
         )}
 
         <GameBoard
+          cellSize={cellSize}
           gameState={gameState}
           showGhost={gameConfig.controls.showShadowPiece}
         />
 
         <GamePreviewPanel
           className="solo-game__panel solo-game__panel--next"
+          figureSize={previewFigureSize}
           nextCount={gameConfig.controls.nextPieces}
           state={gameState}
           type="next"

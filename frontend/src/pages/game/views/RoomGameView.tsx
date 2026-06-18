@@ -178,18 +178,36 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
                 onClick={() => setSelectedTargetId(String(player.id))}
                 type="button"
               >
-                <div className="room-game__opponent-board-stack">
-                  <GameGarbageQueue
-                    alwaysVisible
-                    cellSize={opponentCellSize}
-                    queue={player.state.garbageQueue}
-                    rows={player.state.rows}
+                <div className="room-game__opponent-package">
+                  <GamePreviewPanel
+                    className="solo-game__panel room-game__opponent-hold"
+                    figureSize={Math.max(9, opponentCellSize - 2)}
+                    state={player.state}
+                    type="hold"
                   />
-                  <GameBoard
-                    cellSize={opponentCellSize}
-                    gameState={player.state}
-                    showGhost={false}
+                  <div className="room-game__opponent-board-stack">
+                    <GameGarbageQueue
+                      alwaysVisible
+                      cellSize={opponentCellSize}
+                      queue={player.state.garbageQueue}
+                      rows={player.state.rows}
+                    />
+                    <GameBoard
+                      cellSize={opponentCellSize}
+                      gameState={player.state}
+                      showGhost={false}
+                    />
+                  </div>
+                  <GamePreviewPanel
+                    className="solo-game__panel room-game__opponent-next"
+                    figureSize={Math.max(9, opponentCellSize - 2)}
+                    nextCount={Math.min(3, gameConfig.controls.nextPieces)}
+                    state={player.state}
+                    type="next"
                   />
+                  {isSpectating && (
+                    <span className="room-game__watch">WATCH</span>
+                  )}
                 </div>
                 <div className="room-game__opponent-name">
                   {formatPlayerName(player.username, "PLAYER")}
@@ -198,9 +216,6 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
                   <span>{player.state.lines} L</span>
                   <span>{player.state.score} PTS</span>
                 </div>
-                {isSpectating && (
-                  <span className="room-game__watch">WATCH</span>
-                )}
               </button>
             ))
           ) : (

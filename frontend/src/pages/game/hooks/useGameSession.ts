@@ -56,6 +56,15 @@ function getInitialPayload(locationState: unknown, gameId?: string) {
   return readStoredActiveGame(gameId) ?? {};
 }
 
+function getActiveCountdownStep(
+  config: GameConfig | null | undefined,
+  state: GameState | null | undefined,
+) {
+  if (!state || state.startedAt <= Date.now()) return null;
+
+  return getCountdownSequence(config ?? null)[0] ?? null;
+}
+
 function getMultiplayerExitPath(config: GameConfig | null) {
   if (config?.mode === "custom") return "/play/multiplayer/custom";
   if (config?.mode === "quickplay") return "/play/multiplayer/quick";
@@ -93,7 +102,10 @@ export function useGameSession() {
   const [roundResult, setRoundResult] = useState<RoundEndPayload | null>(null);
   const [countdownStep, setCountdownStep] = useState<CountdownStep>(() => {
     if (initialPayload.roomId !== gameId) return null;
-    return getCountdownSequence(initialPayload.config ?? null)[0] ?? null;
+    return getActiveCountdownStep(
+      initialPayload.config ?? null,
+      initialPayload.state ?? null,
+    );
   });
   const [socket, setSocket] = useState(() => getSocket());
   const [connectionStatus, setConnectionStatus] = useState(() =>
@@ -258,9 +270,7 @@ export function useGameSession() {
       setGameConfig(payload.config ?? null);
       setPlayers(payload.players ?? {});
       setResult(null);
-      setCountdownStep(
-        getCountdownSequence(payload.config ?? null)[0] ?? null,
-      );
+      setCountdownStep(getActiveCountdownStep(payload.config ?? null, state));
       saveActiveGame({
         ...payload,
         state,

@@ -1,5 +1,6 @@
 .solo-game {
   --solo-game-padding: clamp(1rem, 3vw, 2rem);
+  --solo-package-scale: 1;
 
   position: relative;
   min-height: calc(100vh - var(--app-header-height));
@@ -477,14 +478,17 @@ body.game-session-active {
   position: relative;
   min-height: calc(100vh - var(--app-header-height) - (var(--solo-game-padding) * 2));
   display: grid;
-  grid-template-columns: minmax(10.75rem, 12rem) auto minmax(9rem, 10.75rem);
+  grid-template-columns:
+    calc(11rem * var(--solo-package-scale))
+    max-content
+    calc(10.75rem * var(--solo-package-scale));
   grid-template-areas:
     "hold board next"
     "stats board next";
   justify-content: center;
   align-content: center;
   align-items: start;
-  column-gap: 0;
+  column-gap: calc(0.65rem * var(--solo-package-scale));
 }
 
 .solo-game__panel {
@@ -507,27 +511,27 @@ body.game-session-active {
 
 .solo-game__stage .game-board {
   grid-area: board;
-  width: min(36vw, 21rem);
+  width: auto;
   max-width: none;
 }
 
 .solo-game__panel h2 {
-  min-height: 1.75rem;
+  min-height: calc(1.75rem * var(--solo-package-scale));
   display: grid;
   align-items: center;
   margin: 0;
-  padding: 0 0.38rem;
+  padding: 0 calc(0.38rem * var(--solo-package-scale));
   background: rgba(255, 255, 255, 0.96);
   color: #07090a;
   font-family: var(--app-font-display);
-  font-size: 1.2rem;
+  font-size: clamp(0.78rem, calc(1.2rem * var(--solo-package-scale)), 1.2rem);
   font-weight: 900;
   line-height: 1;
 }
 
 .solo-game__preview {
   display: grid;
-  min-height: 6rem;
+  min-height: calc(6rem * var(--solo-package-scale));
   place-items: center;
   border: 2px solid rgba(255, 255, 255, 0.94);
   border-top: 0;
@@ -538,7 +542,7 @@ body.game-session-active {
 .solo-game__next {
   display: grid;
   gap: 0;
-  padding: 0.45rem 0 0.65rem;
+  padding: calc(0.45rem * var(--solo-package-scale)) 0 calc(0.65rem * var(--solo-package-scale));
   border: 2px solid rgba(255, 255, 255, 0.94);
   border-top: 0;
   background: rgba(1, 4, 5, 0.88);
@@ -546,13 +550,13 @@ body.game-session-active {
 }
 
 .solo-game__panel--next .solo-game__preview {
-  min-height: 5.25rem;
+  min-height: calc(5.25rem * var(--solo-package-scale));
   border: 0;
   background: transparent;
 }
 
 .solo-game__panel--hold .solo-game__preview {
-  min-height: 6.25rem;
+  min-height: calc(6.25rem * var(--solo-package-scale));
   clip-path: polygon(0 0, 100% 0, 100% 100%, 1rem 100%, 0 calc(100% - 1rem));
 }
 
@@ -566,9 +570,9 @@ body.game-session-active {
   align-self: end;
   display: grid;
   width: 100%;
-  gap: 0.7rem;
+  gap: calc(0.7rem * var(--solo-package-scale));
   justify-items: end;
-  padding: 1rem 0.65rem 0.4rem 0;
+  padding: calc(1rem * var(--solo-package-scale)) calc(0.65rem * var(--solo-package-scale)) calc(0.4rem * var(--solo-package-scale)) 0;
   color: var(--app-text);
   text-align: right;
   text-shadow: 0 0 0.75rem rgba(0, 0, 0, 0.7);
@@ -583,7 +587,7 @@ body.game-session-active {
 .solo-game__live-stats small {
   color: rgba(255, 255, 255, 0.86);
   font-family: var(--app-font-display);
-  font-size: 0.82rem;
+  font-size: clamp(0.58rem, calc(0.82rem * var(--solo-package-scale)), 0.82rem);
   font-weight: 900;
   letter-spacing: 0;
   white-space: nowrap;
@@ -592,7 +596,7 @@ body.game-session-active {
 .solo-game__live-stats strong {
   color: #ffffff;
   font-family: var(--app-font-display);
-  font-size: clamp(1.8rem, 3vw, 2.8rem);
+  font-size: clamp(1.2rem, calc(2.8rem * var(--solo-package-scale)), 2.8rem);
   font-weight: 900;
   line-height: 1;
   white-space: nowrap;
@@ -632,11 +636,11 @@ body.game-session-active {
 }
 
 .solo-game__countdown--number {
-  width: 8rem;
-  min-height: 8rem;
+  width: auto;
+  min-height: 0;
   border: 0;
-  border-radius: 50%;
-  background: rgba(25, 20, 0, 0.42);
+  border-radius: 0;
+  background: transparent;
   color: var(--solo-countdown-number-color);
   font-size: clamp(4rem, 9vw, 6.5rem);
   text-shadow: 0 0 1rem var(--solo-countdown-number-glow);
@@ -1056,26 +1060,62 @@ body.game-session-active {
   display: grid;
   justify-items: center;
   padding: 0.35rem;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(4, 7, 11, 0.76);
+  border: 1px solid transparent;
+  background: transparent;
   color: inherit;
   cursor: pointer;
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease,
-    transform 0.15s ease;
+  transition: transform 0.15s ease;
 }
 
 .room-game__opponent:not(:disabled):hover,
 .room-game__opponent:not(:disabled):focus-visible {
-  border-color: #ff8a15;
-  background: rgba(255, 125, 0, 0.14);
   transform: translateY(-2px);
 }
 
 .room-game__opponent:disabled {
   cursor: default;
   opacity: 1;
+}
+
+.room-game__opponent-package {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2.4rem max-content 2.4rem;
+  align-items: start;
+  gap: 0.22rem;
+  padding: 0.18rem;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(4, 7, 11, 0.76);
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.room-game__opponent:not(:disabled):hover .room-game__opponent-package,
+.room-game__opponent:not(:disabled):focus-visible .room-game__opponent-package {
+  border-color: #ff8a15;
+  background: rgba(255, 125, 0, 0.14);
+  box-shadow: 0 0 0 2px rgba(255, 138, 21, 0.16);
+}
+
+.room-game__opponent-hold h2,
+.room-game__opponent-next h2 {
+  min-height: 0.72rem;
+  padding: 0 0.12rem;
+  font-size: 0.48rem;
+}
+
+.room-game__opponent-hold .solo-game__preview,
+.room-game__opponent-next .solo-game__preview {
+  min-height: 1.8rem;
+  border-width: 1px;
+}
+
+.room-game__opponent-next .solo-game__next {
+  gap: 0.1rem;
+  padding: 0.1rem 0;
+  border-width: 1px;
 }
 
 .room-game__opponent .game-board {
@@ -1128,8 +1168,8 @@ body.game-session-active {
   pointer-events: none;
 }
 
-.room-game__opponent:not(:disabled):hover .room-game__watch,
-.room-game__opponent:not(:disabled):focus-visible .room-game__watch {
+.room-game__opponent:not(:disabled):hover .room-game__opponent-package .room-game__watch,
+.room-game__opponent:not(:disabled):focus-visible .room-game__opponent-package .room-game__watch {
   opacity: 1;
 }
 
@@ -1198,28 +1238,22 @@ body.game-session-active {
   }
 
   .solo-game__stage {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-areas:
-      "hold"
-      "board"
-      "stats"
-      "next";
-    justify-items: center;
+    overflow-x: auto;
   }
 
   .solo-game__panel {
-    width: min(100%, 22rem);
+    width: auto;
   }
 
   .solo-game__stage .solo-game__next {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .solo-game__live-stats {
-    width: min(100%, 22rem);
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    justify-items: center;
-    text-align: center;
+    width: 100%;
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: end;
+    text-align: right;
   }
 
   .solo-game-results__stats {

@@ -130,6 +130,8 @@ export default function Custom() {
   useEffect(() => {
     if (!routeRoomCode) {
       customRoomRouteVisited = true;
+      autoJoinAttemptedCodeRef.current = "";
+      leavingRoomRef.current = false;
       return;
     }
 
@@ -226,8 +228,9 @@ export default function Custom() {
       const nextRoomId = payload.roomId ?? roomId;
       const isActivePlayer =
         !!currentIdentityId && !!payload.players?.[String(currentIdentityId)];
+      const shouldSpectate = currentRoomRole === "spectator";
 
-      if (!nextRoomId || !isActivePlayer) return;
+      if (!nextRoomId || (!isActivePlayer && !shouldSpectate)) return;
 
       navigate(`/game/${nextRoomId}`, {
         state: {
@@ -250,6 +253,7 @@ export default function Custom() {
     };
   }, [
     currentIdentityId,
+    currentRoomRole,
     currentPlayer,
     location.pathname,
     navigate,
@@ -261,6 +265,7 @@ export default function Custom() {
   useEffect(() => {
     if (
       !routeRoomCode ||
+      leavingRoomRef.current ||
       inRoom ||
       autoJoinAttemptedCodeRef.current === routeRoomCode
     ) {
@@ -352,6 +357,8 @@ export default function Custom() {
   };
 
   const createRoom = (visibility: Visibility) => {
+    leavingRoomRef.current = false;
+
     if (visibility === "public" && !capabilities.canCreatePublicRooms) {
       setStatus("REGISTERED USERS ONLY");
       return;
@@ -415,6 +422,9 @@ export default function Custom() {
     if (!approved) return;
 
     leavingRoomRef.current = true;
+    if (roomCode || routeRoomCode || roomId) {
+      autoJoinAttemptedCodeRef.current = roomCode || routeRoomCode || roomId || "";
+    }
     if (roomId) {
       getSocket()?.emit("mode:leave");
     }
@@ -450,7 +460,12 @@ export default function Custom() {
   };
 
   const playZenWhileWaiting = () => {
-    navigate("/play/solo/zen");
+    navigate("/play/solo/zen", {
+      state: {
+        autoStart: true,
+        from: customRoomPath(roomCode || roomId || ""),
+      },
+    });
   };
 
   const switchRoomRole = () => {
@@ -539,8 +554,10 @@ export default function Custom() {
               <span>
                 {player.matchWins ?? 0}/{player.matchTotalGames ?? 0}
               </span>
-              {player.isHost && <em>HOST</em>}
-              {player.role === "spectator" && <em>SPECTATOR</em>}
+              <div className="mp-custom-player-badges">
+                {player.isHost && <em>HOST</em>}
+                {player.role === "spectator" && <em>SPECTATOR</em>}
+              </div>
             </div>
           ))}
         </div>
