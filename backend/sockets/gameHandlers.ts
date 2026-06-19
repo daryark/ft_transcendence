@@ -12,6 +12,7 @@ import { interruptGameSession } from "../game/services/gameInterruptService";
 export type ClientToServerEvents =
     | "mode:join"
     | "mode:leave"
+    | "rooms:list"
     | "room:start"
     | "room:switchRole"
     | "player:move"
@@ -27,6 +28,7 @@ export type ServerToClientEvents =
     | "round:start"
     | "round:end"
     | "room:update"
+    | "rooms:update"
     | "social:update"
     | "server:error";
 
@@ -82,6 +84,10 @@ export default function gameHandlers(
             return;
         }
         modeService.join(mode, socket, parsedPayload.data);
+    });
+
+    socket.on("rooms:list", () => {
+        socket.emit("rooms:update" as ServerToClientEvents, roomService.listPublicCustomRooms());
     });
 
     socket.on("player:move", (input: unknown) => {

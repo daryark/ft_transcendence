@@ -147,6 +147,7 @@ function serializeRoom(room) {
 
 function broadcastRoomUpdate(roomService, room) {
   roomService.broadcast(room.id, "room:update", serializeRoom(room));
+  roomService.emitPublicRoomList?.();
 }
 
 function isRegisteredPlayer(player) {
@@ -180,17 +181,10 @@ function ensureRoomHost(room) {
       getWaitingPlayers(room).get(currentHostId) ??
       room.spectators?.get(currentHostId)
     : null;
-  const roomHasPlayers =
-    room.players.size + getWaitingPlayers(room).size > 0;
-  const currentHostIsSpectator = Boolean(
-    currentHostId && room.spectators?.has(currentHostId),
-  );
 
   if (
     currentHost &&
-    (!room.roomConfig.public ||
-      (isRegisteredPlayer(currentHost) &&
-        (!currentHostIsSpectator || roomHasPlayers)))
+    (!room.roomConfig.public || isRegisteredPlayer(currentHost))
   ) {
     return currentHostId;
   }
@@ -505,6 +499,7 @@ export function removeCustomRoomParticipant(
       customRoomMessages.delete(room.id);
       stopCustomEngine(room.id);
       roomService.deleteRoom(room.id);
+      roomService.emitPublicRoomList?.();
       return true;
     }
 

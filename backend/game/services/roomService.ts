@@ -6,6 +6,15 @@ import Player from "../domain/player";
 import { UserId } from "../../auth/identity";
 
 export type RoomServiceRoomState = Pick<Room, "id" | "status" | "players">;
+export type PublicRoomListItem = {
+  id: RoomId;
+  name: string;
+  status: Room["status"];
+  hostName: string | null;
+  players: number;
+  spectators: number;
+  maxPlayers: number | null;
+};
 
 export default class RoomService {
   private rooms: Map<RoomId, Room>;
@@ -137,6 +146,35 @@ export default class RoomService {
     if (!room) return;
 
     this.io.to(roomId).emit(event, data);
+  }
+
+  listPublicCustomRooms(): PublicRoomListItem[] {
+    return Array.from(this.rooms.values())
+      .filter((room) => room.gameConfig.mode === "custom" && room.roomConfig.public)
+      .map((room) => {
+        const players = room.players.size + (room.waitingPlayers?.size ?? 0);
+        const host = Array.from(room.players.values()).find(
+          (player) => player.connected,
+        );
+
+        return {
+          id: room.id,
+          name: room.roomConfig.roomName?.trim() || "PUBLIC ROOM",
+          status: room.status,
+          hostName: host?.profile?.nickname ?? (host ? String(host.id) : null),
+          players,
+          spectators: room.spectators?.size ?? 0,
+          maxPlayers:
+            typeof room.roomConfig.maxPlayers === "number" &&
+            Number.isFinite(room.roomConfig.maxPlayers)
+              ? room.roomConfig.maxPlayers
+              : null,
+        };
+      });
+  }
+
+  emitPublicRoomList(): void {
+    this.io.emit("rooms:update", this.listPublicCustomRooms());
   }
 
   private clearRoomSpectators(room: Room): void {

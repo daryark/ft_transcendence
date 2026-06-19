@@ -9,6 +9,7 @@ function createIo() {
   const roomEmitter = { emit: jest.fn() };
   return {
     roomEmitter,
+    emit: jest.fn(),
     to: jest.fn(() => roomEmitter),
   };
 }
@@ -393,6 +394,52 @@ describe('custom room lifecycle', () => {
         }),
       ]),
     );
+  });
+
+  test('keeps private host badge when the host switches to spectator', () => {
+    const io = createIo();
+    const roomService = new RoomService(io);
+    const host = createPlayer('host');
+    const players = new Map([[host.id, host]]);
+    const playerService = createPlayerService(players);
+
+    joinCustom(createSocket(host), { roomService, playerService }, {
+      roomConfig: { public: false, roomName: 'Private' },
+    });
+    const room = Array.from(roomService['rooms'].values())[0];
+
+    switchCustomRoomRole(roomService, room.id, host.id, 'spectator');
+
+    expect(getLastRoomUpdate(io).players).toEqual([
+      expect.objectContaining({
+        id: host.id,
+        role: 'spectator',
+        isHost: true,
+      }),
+    ]);
+  });
+
+  test('keeps registered public host badge when the host switches to spectator without active players', () => {
+    const io = createIo();
+    const roomService = new RoomService(io);
+    const host = createPlayer('host', 'registered');
+    const players = new Map([[host.id, host]]);
+    const playerService = createPlayerService(players);
+
+    joinCustom(createSocket(host), { roomService, playerService }, {
+      roomConfig: { public: true, roomName: 'Public' },
+    });
+    const room = Array.from(roomService['rooms'].values())[0];
+
+    switchCustomRoomRole(roomService, room.id, host.id, 'spectator');
+
+    expect(getLastRoomUpdate(io).players).toEqual([
+      expect.objectContaining({
+        id: host.id,
+        role: 'spectator',
+        isHost: true,
+      }),
+    ]);
   });
 
   test('removes a public spectator host from the room when that host leaves', () => {

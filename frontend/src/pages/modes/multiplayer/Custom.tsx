@@ -225,6 +225,8 @@ export default function Custom() {
     };
 
     const handleGameStart = (payload: GameStartPayload) => {
+      if (payload.config?.mode !== "custom") return;
+
       const nextRoomId = payload.roomId ?? roomId;
       const isActivePlayer =
         !!currentIdentityId && !!payload.players?.[String(currentIdentityId)];
@@ -460,10 +462,48 @@ export default function Custom() {
   };
 
   const playZenWhileWaiting = () => {
-    navigate("/play/solo/zen", {
-      state: {
-        autoStart: true,
-        from: customRoomPath(roomCode || roomId || ""),
+    const socket = getSocket();
+    const preset = getStoredGameConfig()?.solo.presets.zen;
+
+    if (!socket) {
+      showToast("Socket is not connected yet.", "error");
+      return;
+    }
+
+    if (!preset) {
+      showToast("Game config is not loaded yet.", "error");
+      return;
+    }
+
+    const returnPath = customRoomPath(roomCode || roomId || "");
+    const handleGameStart = (payload: GameStartPayload) => {
+      if (payload.config?.mode !== "solo" || !payload.roomId) return;
+
+      socket.off("server:error", handleModeError);
+      navigate(`/game/${payload.roomId}`, {
+        state: {
+          ...payload,
+          from: returnPath,
+        },
+      });
+    };
+    const handleModeError = (error: ServerError) => {
+      socket.off("game:start", handleGameStart);
+      showToast(error.reason ?? "Failed to start Zen.", "error");
+    };
+
+    socket.off("game:start", handleGameStart);
+    socket.off("server:error", handleModeError);
+    socket.once("game:start", handleGameStart);
+    socket.once("server:error", handleModeError);
+    socket.emit("mode:join", {
+      mode: "solo",
+      payload: {
+        gameConfig: {
+          mode: "solo",
+          preset: "zen",
+          objective: preset.objective,
+        },
       },
     });
   };

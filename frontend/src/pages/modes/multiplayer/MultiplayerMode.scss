@@ -292,6 +292,14 @@
   font-weight: 900;
 }
 
+.mp-room-empty {
+  padding: 1rem 0.9rem;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 1.15rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .mp-page--custom-select {
   width: min(82vw, 1600px);
   margin-left: max(18vw, 16rem);
