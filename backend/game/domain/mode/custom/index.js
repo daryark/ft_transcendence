@@ -4,7 +4,7 @@ import createEngine, { TICK_MS } from "../../engine/tetrisEngine";
 import { initGame } from "../../engine/state";
 import { isInput } from "../../engine/input";
 import { createGarbageService } from "../../../services/garbageService.js";
-import { emitAchievementUnlocked } from "../../../../sockets/realtime";
+import { notifyAchievementUnlocks } from "../../../../notifications/service";
 
 const JOIN_PREFIX = "JOIN:";
 const customRoomHosts = new Map();
@@ -445,7 +445,7 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
           },
           result: isWinner ? "win" : "lose",
         });
-        emitAchievementUnlocked(userId, achievements ?? []);
+        void notifyAchievementUnlocks(userId, achievements ?? []);
       })
       .catch((error) => {
         console.error("Failed to persist custom progression", error);
