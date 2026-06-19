@@ -27,6 +27,7 @@ export interface GameState {
   startedAt: number;
   update: GameUpdateStats;
   garbageQueue?: GarbageQueueItem[];
+  quickplay?: QuickplayStats;
 }
 
 export interface GarbageQueueItem {
@@ -59,6 +60,14 @@ export interface GameStats {
 export interface GameUpdateStats extends GameStats {
   scoreAdded?: number;
   linesCleared?: number;
+  quickplay?: QuickplayStats;
+}
+
+export interface QuickplayStats {
+  meters: number;
+  floor: number;
+  climbRank: number;
+  climbSpeed: number;
 }
 
 export interface GameStartPayload {

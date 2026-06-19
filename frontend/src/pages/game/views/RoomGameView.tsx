@@ -13,16 +13,16 @@ type RoomGameViewProps = {
 
 const TABLET_BREAKPOINT_PX = 860;
 const ROOM_PACKAGE_SCALE_FLOOR = 0.74;
-const ROOM_BASE_WIDTH_PX = 54 * 16;
-const ROOM_BASE_HEIGHT_PX = 45 * 16;
+const ROOM_BASE_WIDTH_PX = 46 * 16;
+const ROOM_BASE_HEIGHT_PX = 44 * 16;
 
 function getRoomPackageScale() {
   if (window.innerWidth <= TABLET_BREAKPOINT_PX) {
     return ROOM_PACKAGE_SCALE_FLOOR;
   }
 
-  const widthScale = (window.innerWidth - 360) / ROOM_BASE_WIDTH_PX;
-  const heightScale = (window.innerHeight - 96) / ROOM_BASE_HEIGHT_PX;
+  const widthScale = (window.innerWidth - 64) / ROOM_BASE_WIDTH_PX;
+  const heightScale = (window.innerHeight - 120) / ROOM_BASE_HEIGHT_PX;
   return Math.min(
     1,
     Math.max(ROOM_PACKAGE_SCALE_FLOOR, Math.min(widthScale, heightScale)),
@@ -60,6 +60,10 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
     ? selectedTarget ?? alivePlayers[0]
     : selfPlayer;
   const targetState = targetPlayer?.state ?? gameState;
+  const quickplayStats =
+    gameConfig.mode === "quickplay"
+      ? targetState.update.quickplay ?? targetState.quickplay
+      : null;
   const previewPlayers = alivePlayers.filter(
     (player) => String(player.id) !== String(targetPlayer?.id),
   );
@@ -72,7 +76,10 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
   } as CSSProperties;
 
   return (
-    <main className="solo-game room-game" style={style}>
+    <main
+      className={`solo-game room-game room-game--${gameConfig.mode}`}
+      style={style}
+    >
       <header className="versus-game__topbar">
         <div className="versus-game__live">LIVE</div>
         <div className="versus-game__title">
@@ -109,21 +116,61 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
               />
             )}
             <div className="room-game__stats" aria-label="Player stats">
+              {quickplayStats ? (
+                <>
+                  <div>
+                    <span>ALTITUDE</span>
+                    <strong
+                      className="game-stat-pop"
+                      key={`altitude-${quickplayStats.meters.toFixed(1)}`}
+                    >
+                      {quickplayStats.meters.toFixed(1)}M
+                    </strong>
+                    <small>{quickplayStats.climbSpeed.toFixed(2)}M/S</small>
+                  </div>
+                  <div>
+                    <span>FLOOR</span>
+                    <strong
+                      className="game-stat-pop"
+                      key={`floor-${quickplayStats.floor}`}
+                    >
+                      {quickplayStats.floor}
+                    </strong>
+                  </div>
+                </>
+              ) : null}
               <div>
                 <span>PIECES</span>
-                <strong>{targetState.piecesPlaced}</strong>
+                <strong
+                  className="game-stat-pop"
+                  key={`pieces-${targetState.piecesPlaced}`}
+                >
+                  {targetState.piecesPlaced}
+                </strong>
                 <small>
                   {targetState.update.piecesPerSecond.toFixed(2)}/S
                 </small>
               </div>
               <div>
                 <span>LINES</span>
-                <strong>{targetState.lines}</strong>
+                <strong
+                  className="game-stat-pop"
+                  key={`lines-${targetState.lines}`}
+                >
+                  {targetState.lines}
+                </strong>
               </div>
-              <div>
-                <span>SCORE</span>
-                <strong>{targetState.score}</strong>
-              </div>
+              {!quickplayStats ? (
+                <div>
+                  <span>SCORE</span>
+                  <strong
+                    className="game-stat-pop"
+                    key={`score-${targetState.score}`}
+                  >
+                    {targetState.score}
+                  </strong>
+                </div>
+              ) : null}
             </div>
           </div>
 
