@@ -1,19 +1,25 @@
+// @ts-nocheck
 import { applyConfigPatch, createConfig } from "../../../config/configBase";
 import { ConfigPatchSchema } from "../../../config/config.schema";
-import createEngine, { TICK_MS } from "../../engine/tetrisEngine";
-import { initGame } from "../../engine/state";
 import { isInput } from "../../engine/input";
-import { createGarbageService } from "../../../services/garbageService.js";
 import { emitAchievementUnlocked } from "../../../../sockets/realtime";
+import {
+  clearRoomMessages,
+  emitRoomSystemMessage,
+  getRoomMessages,
+} from "../../../services/roomChatService";
+import {
+  createMultiplayerEngine,
+  getActiveMultiplayerPlayerIds,
+  getFirstMultiplayerState,
+  isActiveMultiplayerPlayer,
+  serializeMultiplayerGame,
+} from "../../../services/multiplayerEngineService";
 
 const JOIN_PREFIX = "JOIN:";
 const customRoomHosts = new Map();
 const customEngines = new Map();
 const customRoomScores = new Map();
-const customRoomMessages = new Map();
-const MAX_ROOM_MESSAGES = 100;
-const COUNTDOWN_STEP_MS = 900;
-const COUNTDOWN_STEPS = 5;
 
 function emitError(socket, reason) {
   socket.emit("server:error", { reason });
@@ -23,40 +29,8 @@ function getPlayerName(player) {
   return player?.profile?.nickname ?? String(player?.id ?? "PLAYER");
 }
 
-function getRoomMessages(room) {
-  if (!customRoomMessages.has(room.id)) {
-    customRoomMessages.set(room.id, []);
-  }
-
-  return customRoomMessages.get(room.id);
-}
-
-export function appendCustomRoomChatMessage(room, message) {
-  if (!room || room.gameConfig.mode !== "custom") return message;
-
-  const messages = getRoomMessages(room);
-  const storedMessage = {
-    id: `${Date.now()}-${messages.length}`,
-    ...message,
-  };
-
-  messages.push(storedMessage);
-  if (messages.length > MAX_ROOM_MESSAGES) {
-    messages.splice(0, messages.length - MAX_ROOM_MESSAGES);
-  }
-
-  return storedMessage;
-}
-
 function emitSystemMessage(roomService, room, message, actor) {
-  const payload = appendCustomRoomChatMessage(room, {
-    sender: "SYS",
-    system: true,
-    actor: actor ? String(actor).toUpperCase() : undefined,
-    message,
-  });
-
-  roomService.broadcast(room.id, "chat:message", payload);
+  emitRoomSystemMessage(roomService, room, message, actor);
 }
 
 function getRoomScores(room) {
@@ -201,37 +175,6 @@ function ensureRoomHost(room) {
   return nextHostId;
 }
 
-function toEngineGameConfig(gameConfig) {
-  return {
-    ...gameConfig,
-    mode: "solo",
-    objective: {
-      winCondition: "score",
-      scoreToWin: Number.MAX_SAFE_INTEGER,
-    },
-  };
-}
-
-function createPlayerEngineRoom(room, player, startedAt) {
-  const { boardHeight, boardWidth } = room.gameConfig.general;
-  const round = room.roundNumber ?? 1;
-  const state = initGame(boardHeight, boardWidth, round, startedAt, {
-    bagSeed: `${room.id}:round:${round}`,
-  });
-
-  return {
-    id: `${room.id}:${player.id}`,
-    status: "playing",
-    players: new Map([[player.id, player]]),
-    spectators: new Map(),
-    state,
-    engine: null,
-    roomConfig: room.roomConfig,
-    matchConfig: room.matchConfig,
-    gameConfig: toEngineGameConfig(room.gameConfig),
-  };
-}
-
 function calculateCustomXpDelta(elapsedMs, isWinner) {
   const survivedSeconds = Math.max(0, elapsedMs / 1000);
   const winnerXp = Math.min(500, 220 + survivedSeconds * 2.4);
@@ -239,73 +182,17 @@ function calculateCustomXpDelta(elapsedMs, isWinner) {
   return Math.round(isWinner ? winnerXp : Math.max(0, winnerXp - 100));
 }
 
-function getFirstPlayerState(engine) {
-  return engine.playerEngines.values().next().value?.room.state ?? null;
+function serializeCustomGame(room, engine) {
+  return serializeMultiplayerGame(room, engine, getPlayerName);
 }
 
-function getActivePlayerIds(engine) {
-  const activePlayerIds = [];
-
-  for (const [playerId, playerEngine] of engine.playerEngines.entries()) {
-    const state = playerEngine.room.state;
-
-    if (
-      playerEngine.room.status === "playing" &&
-      state &&
-      !state.gameOver &&
-      !engine.eliminatedPlayerIds.has(playerId)
-    ) {
-      activePlayerIds.push(playerId);
-    }
-  }
-
-  return activePlayerIds;
-}
-
-function isActiveVersusPlayer(engine, playerId) {
-  if (!engine?.playerEngines?.has?.(String(playerId))) return false;
-
-  const playerEngine = engine.playerEngines.get(String(playerId));
-  const state = playerEngine?.room.state;
-
-  return Boolean(
-    playerEngine?.room.status === "playing" &&
-      state &&
-      !state.gameOver &&
-      !engine.eliminatedPlayerIds?.has?.(String(playerId)),
-  );
-}
-
-function serializeVersusGame(room, engine) {
-  const players = {};
-
-  for (const player of room.players.values()) {
-    const playerId = String(player.id);
-    const playerEngine = engine.playerEngines.get(playerId);
-    const state = playerEngine?.room.state ?? null;
-
-    players[playerId] = {
-      id: player.id,
-      username: getPlayerName(player),
-      rank: player.profile?.rank,
-      state,
-      gameOver: Boolean(
-        state?.gameOver || engine.eliminatedPlayerIds.has(playerId),
-      ),
-    };
-  }
-
-  const activePlayerIds = getActivePlayerIds(engine);
-
-  return {
-    roomId: room.id,
-    status: room.status,
-    config: room.gameConfig,
-    players,
-    state: getFirstPlayerState(engine),
-    startedAt: engine.startedAt,
-    winnerId: activePlayerIds.length === 1 ? activePlayerIds[0] : null,
-  };
+function createCustomMultiplayerEngine(room, roomService) {
+  return createMultiplayerEngine({
+    room,
+    roomService,
+    onMaybeEnd: (engine, reason) => maybeEndVersus(room, roomService, engine, reason),
+    onStop: () => customEngines.delete(room.id),
+  });
 }
 
 function stopCustomEngine(roomId) {
@@ -318,7 +205,7 @@ function stopCustomEngine(roomId) {
 function maybeEndVersus(room, roomService, engine, reason = "game_over") {
   if (room.status !== "playing") return false;
 
-  const activePlayerIds = getActivePlayerIds(engine);
+  const activePlayerIds = getActiveMultiplayerPlayerIds(engine);
   if (activePlayerIds.length > 1) return false;
   const winnerId = activePlayerIds[0] ?? null;
   const roundsToWin = room.matchConfig?.roundsToWin ?? 1;
@@ -343,7 +230,7 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
     (roundWins.get(String(winnerId)) ?? 0) < roundsToWin
   ) {
     const payload = {
-      ...serializeVersusGame(room, engine),
+      ...serializeCustomGame(room, engine),
       reason,
       round,
       mode: room.gameConfig.mode,
@@ -359,17 +246,17 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
     room.roundNumber = round + 1;
     setTimeout(() => {
       if (room.status !== "playing") return;
-      const nextEngine = createVersusEngine(room, roomService);
+      const nextEngine = createCustomMultiplayerEngine(room, roomService);
       room.engine = nextEngine;
-      room.state = getFirstPlayerState(nextEngine);
+      room.state = getFirstMultiplayerState(nextEngine);
       customEngines.set(room.id, nextEngine);
-      roomService.broadcast(room.id, "game:start", serializeVersusGame(room, nextEngine));
+      roomService.broadcast(room.id, "game:start", serializeCustomGame(room, nextEngine));
     }, 2400);
     return true;
   }
 
   room.status = "ended";
-  room.state = getFirstPlayerState(engine);
+  room.state = getFirstMultiplayerState(engine);
   const sharedElapsedMs = Math.max(
     0,
     ...Array.from(engine.playerEngines.values()).map((playerEngine) => {
@@ -382,7 +269,7 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
   );
 
   const payload = {
-    ...serializeVersusGame(room, engine),
+    ...serializeCustomGame(room, engine),
     reason,
     winnerId,
     result: {
@@ -520,7 +407,7 @@ export function removeCustomRoomParticipant(
 
       customRoomHosts.delete(room.id);
       customRoomScores.delete(room.id);
-      customRoomMessages.delete(room.id);
+      clearRoomMessages(room.id);
       stopCustomEngine(room.id);
       roomService.deleteRoom(room.id);
       roomService.emitPublicRoomList?.();
@@ -549,160 +436,6 @@ export function removeCustomRoomParticipant(
   return true;
 }
 
-function createVersusEngine(room, roomService) {
-  const startedAt = Date.now() + COUNTDOWN_STEP_MS * COUNTDOWN_STEPS;
-  const playerEngines = new Map();
-  const eliminatedPlayerIds = new Set();
-  const lastPiecesPlaced = new Map();
-  const stockLeft = new Map();
-  const garbageService = createGarbageService(room.gameConfig.garbage);
-
-  function getStateMap() {
-    const states = new Map();
-
-    for (const [playerId, playerEngine] of playerEngines.entries()) {
-      if (playerEngine.room.state) {
-        states.set(playerId, playerEngine.room.state);
-      }
-    }
-
-    return states;
-  }
-
-  const versusEngine = {
-    startedAt,
-    playerEngines,
-    eliminatedPlayerIds,
-    garbageService,
-    stockLeft,
-    interval: null,
-    pushInput(playerId, input) {
-      if (room.status !== "playing") return;
-
-      const playerEngine = playerEngines.get(String(playerId));
-      if (!playerEngine || playerEngine.room.status !== "playing") return;
-
-      playerEngine.engine.pushInput(input);
-    },
-    stop() {
-      if (versusEngine.interval) {
-        clearInterval(versusEngine.interval);
-        versusEngine.interval = null;
-      }
-
-      for (const playerEngine of playerEngines.values()) {
-        playerEngine.engine?.stop?.();
-        playerEngine.room.status = "ended";
-      }
-
-      customEngines.delete(room.id);
-    },
-  };
-
-  function respawnPlayer(playerId, playerEngine) {
-    const nextRoom = createPlayerEngineRoom(room, playerEngine.player, startedAt);
-    const playerRoomService = playerEngine.roomService;
-
-    garbageService.syncState(playerId, nextRoom.state, Date.now());
-    lastPiecesPlaced.set(playerId, 0);
-    playerEngine.engine?.stop?.();
-    const nextEngine = createEngine(nextRoom, playerRoomService);
-    nextRoom.engine = nextEngine;
-    playerEngine.room = nextRoom;
-    playerEngine.engine = nextEngine;
-  }
-
-  function handlePlayerOut(playerId, playerEngine, reason = "game_over") {
-    if (eliminatedPlayerIds.has(playerId)) return false;
-
-    const remainingStock = stockLeft.get(playerId) ?? 0;
-    if (remainingStock > 0) {
-      stockLeft.set(playerId, remainingStock - 1);
-      respawnPlayer(playerId, playerEngine);
-      return false;
-    }
-
-    eliminatedPlayerIds.add(playerId);
-    playerEngine.engine?.stop?.();
-    playerEngine.room.status = "ended";
-    return maybeEndVersus(room, roomService, versusEngine, reason);
-  }
-
-  for (const player of room.players.values()) {
-    const playerId = String(player.id);
-    const playerRoom = createPlayerEngineRoom(room, player, startedAt);
-    const playerEngine = {
-      player,
-      room: playerRoom,
-      engine: null,
-      roomService: null,
-    };
-    garbageService.syncState(playerId, playerRoom.state, startedAt);
-    lastPiecesPlaced.set(playerId, playerRoom.state?.piecesPlaced ?? 0);
-    stockLeft.set(playerId, room.matchConfig?.stock ?? 0);
-    const playerRoomService = {
-      broadcast(_roomId, event, payload) {
-        if (event === "game:update") {
-          const state = payload ?? playerEngine.room.state;
-          playerEngine.room.state = state;
-
-          const previousPiecesPlaced = lastPiecesPlaced.get(playerId) ?? 0;
-          const nextPiecesPlaced = state?.piecesPlaced ?? previousPiecesPlaced;
-
-          if (nextPiecesPlaced > previousPiecesPlaced) {
-            garbageService.handlePieceLocked({
-              playerId,
-              state,
-              linesCleared: state?.update?.linesCleared ?? 0,
-              activePlayerIds: getActivePlayerIds(versusEngine),
-              stateMap: getStateMap(),
-            });
-            lastPiecesPlaced.set(playerId, nextPiecesPlaced);
-
-            if (state?.gameOver && handlePlayerOut(playerId, playerEngine)) {
-              return;
-            }
-            if (maybeEndVersus(room, roomService, versusEngine)) {
-              return;
-            }
-          }
-        }
-
-        if (event === "game:end") {
-          playerEngine.room.state = payload?.state ?? playerEngine.room.state;
-          handlePlayerOut(playerId, playerEngine, payload?.reason);
-        }
-      },
-    };
-
-    playerEngine.roomService = playerRoomService;
-    playerEngine.engine = createEngine(playerRoom, playerRoomService);
-    playerRoom.engine = playerEngine.engine;
-    playerEngines.set(playerId, playerEngine);
-  }
-
-  versusEngine.interval = setInterval(() => {
-    if (room.status !== "playing") return;
-
-    for (const [playerId, playerEngine] of playerEngines.entries()) {
-      if (playerEngine.room.state?.gameOver) {
-        if (handlePlayerOut(playerId, playerEngine)) return;
-      }
-    }
-
-    room.state = getFirstPlayerState(versusEngine);
-    if (maybeEndVersus(room, roomService, versusEngine)) return;
-
-    roomService.broadcast(
-      room.id,
-      "game:update",
-      serializeVersusGame(room, versusEngine),
-    );
-  }, TICK_MS);
-
-  return versusEngine;
-}
-
 function startCustomVersus(room, roomService) {
   if (room.status === "playing") return;
   promoteWaitingPlayers(room);
@@ -718,16 +451,16 @@ function startCustomVersus(room, roomService) {
   room.roundWins = new Map();
   room.roundNumber = 1;
 
-  const engine = createVersusEngine(room, roomService);
+  const engine = createCustomMultiplayerEngine(room, roomService);
   room.engine = engine;
-  room.state = getFirstPlayerState(engine);
+  room.state = getFirstMultiplayerState(engine);
   customEngines.set(room.id, engine);
 
   emitSystemMessage(roomService, room, "game started");
   roomService.broadcast(
     room.id,
     "game:start",
-    serializeVersusGame(room, engine),
+    serializeCustomGame(room, engine),
   );
 }
 
@@ -862,7 +595,7 @@ export function switchCustomRoomRole(roomService, roomId, playerId, nextRole) {
     if (
       room.status === "playing" &&
       room.players.has(playerId) &&
-      isActiveVersusPlayer(room.engine, playerId)
+      isActiveMultiplayerPlayer(room.engine, playerId)
     ) {
       return { ok: false, reason: "PLAYER_IN_ACTIVE_GAME" };
     }

@@ -3,7 +3,7 @@ import RoomService from '../../game/services/roomService';
 import joinCustom, {
   removeCustomRoomParticipant,
   switchCustomRoomRole,
-} from '../../game/domain/mode/custom/index.js';
+} from '../../game/domain/mode/custom';
 
 function createIo() {
   const roomEmitter = { emit: jest.fn() };

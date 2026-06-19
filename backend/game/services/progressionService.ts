@@ -209,7 +209,7 @@ export default function createProgressionService(room: Room) {
                     piecesPlaced: input.state?.piecesPlaced ?? 0,
                     roundsPlayed: Math.max(1, input.completedRounds),
                 });
-                const levelResult = applyXpToLevel(profile.level, profile.xp, xpDelta);
+                const levelResult = applyXpToLevel(profile.level ?? 1, profile.xp ?? 0, xpDelta);
 
                 profile.level = levelResult.level;
                 profile.xp = levelResult.xp;

@@ -1,6 +1,6 @@
 import { Server, Socket } from "socket.io";
 import RoomService from "../game/services/roomService";
-import { appendCustomRoomChatMessage } from "../game/domain/mode/custom/index.js";
+import { appendRoomChatMessage } from "../game/services/roomChatService";
 
 function getPlayerName(roomService: RoomService, roomId: string, playerId: string) {
     const room = roomService.getRoom(roomId as never);
@@ -32,7 +32,7 @@ export default function chatHandlers(
         }
 
         const room = roomService.getRoom(roomId as never);
-        const payload = appendCustomRoomChatMessage(room, {
+        const payload = appendRoomChatMessage(room, {
             sender: getPlayerName(roomService, roomId, String(identity.id)),
             message,
         });

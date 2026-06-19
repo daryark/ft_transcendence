@@ -6,12 +6,12 @@ jest.mock('../../game/domain/match/startGame', () => ({
   default: jest.fn(),
 }));
 
-jest.mock('../../game/domain/mode/custom/index.js', () => ({
+jest.mock('../../game/domain/mode/custom', () => ({
   removeCustomRoomParticipant: jest.fn(),
 }));
 
 import startGame from '../../game/domain/match/startGame';
-import { removeCustomRoomParticipant } from '../../game/domain/mode/custom/index.js';
+import { removeCustomRoomParticipant } from '../../game/domain/mode/custom';
 
 type GameHandlersSocket = Parameters<typeof gameHandlers>[0];
 type GameHandlersDeps = Parameters<typeof gameHandlers>[1];

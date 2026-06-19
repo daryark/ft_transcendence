@@ -1,4 +1,4 @@
-const { createGarbageService } = require("../../game/services/garbageService.js");
+const { createGarbageService } = require("../../game/services/garbageService");
 
 function createState(rows = 20, cols = 10) {
   return {
