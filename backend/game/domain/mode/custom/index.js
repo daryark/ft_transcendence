@@ -4,6 +4,7 @@ import createEngine, { TICK_MS } from "../../engine/tetrisEngine";
 import { initGame } from "../../engine/state";
 import { isInput } from "../../engine/input";
 import { createGarbageService } from "../../../services/garbageService.js";
+import { emitAchievementUnlocked } from "../../../../sockets/realtime";
 
 const JOIN_PREFIX = "JOIN:";
 const customRoomHosts = new Map();
@@ -411,18 +412,41 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
     });
 
     void import("../../../../prisma/playerStats.js")
-      .then(({ persistGameResult }) =>
-        persistGameResult({
+      .then(async ({ persistGameResult }) => {
+        const achievements = await persistGameResult({
           userId,
           mode: "customGame",
           score: playerState?.score ?? 0,
+          achievementScore: playerState?.score ?? 0,
           elapsedMs: sharedElapsedMs,
           lines: playerState?.lines ?? 0,
           piecesPlaced: playerState?.piecesPlaced ?? 0,
+          hardDrops: playerState?.hardDrops ?? 0,
+          holds: playerState?.holds ?? 0,
+          maxCombo: playerState?.maxCombo ?? 0,
+          maxLinesCleared: playerState?.maxLinesCleared ?? 0,
+          clearedTwoAtOnce: playerState?.clearedTwoAtOnce ?? false,
+          clearedThreeAtOnce: playerState?.clearedThreeAtOnce ?? false,
+          tetrises: playerState?.tetrises ?? 0,
+          clearedAfterHalfHeight: playerState?.clearedAfterHalfHeight ?? false,
           roundsPlayed: round,
+          stats: {
+            lines: playerState?.lines ?? 0,
+            piecesPlaced: playerState?.piecesPlaced ?? 0,
+            hardDrops: playerState?.hardDrops ?? 0,
+            holds: playerState?.holds ?? 0,
+            maxCombo: playerState?.maxCombo ?? 0,
+            maxLinesCleared: playerState?.maxLinesCleared ?? 0,
+            clearedTwoAtOnce: playerState?.clearedTwoAtOnce ?? false,
+            clearedThreeAtOnce: playerState?.clearedThreeAtOnce ?? false,
+            tetrises: playerState?.tetrises ?? 0,
+            durationMs: sharedElapsedMs,
+            clearedAfterHalfHeight: playerState?.clearedAfterHalfHeight ?? false,
+          },
           result: isWinner ? "win" : "lose",
-        }),
-      )
+        });
+        emitAchievementUnlocked(userId, achievements ?? []);
+      })
       .catch((error) => {
         console.error("Failed to persist custom progression", error);
       });

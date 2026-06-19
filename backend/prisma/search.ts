@@ -93,7 +93,7 @@ export async function searchUsers(options: SearchUsersOptions): Promise<SearchUs
 	const page = normalizePage(options.page);
 	const limit = normalizeLimit(options.limit);
 	const skip = (page - 1) * limit;
-	const excludedIds = await loadExcludedUserIds(options.requesterUserId);
+	const excludedUserIds = await loadExcludedUserIds(options.requesterUserId);
 
 	const where = {
 		AND: [
@@ -103,7 +103,7 @@ export async function searchUsers(options: SearchUsersOptions): Promise<SearchUs
 					{ country: { contains: query, mode: "insensitive" as const } },
 				],
 			},
-			...(excludedIds.length > 0 ? [{ id: { notIn: excludedIds } }] : []),
+			...(excludedUserIds.length > 0 ? [{ id: { notIn: excludedUserIds } }] : []),
 		],
 	};
 

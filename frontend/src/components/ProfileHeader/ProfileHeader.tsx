@@ -19,6 +19,7 @@ type SimpleModeStats = {
 type ProfileModes = {
   league?: LeagueStats | null;
   fortyLines?: SimpleModeStats | null;
+  blitz?: SimpleModeStats | null;
   quickPlay?: SimpleModeStats | null;
 };
 
@@ -27,7 +28,10 @@ type ProfileDetails = {
   modes?: ProfileModes;
 };
 
-type ApiProfileResponse = ProfileDetails | { profile: ProfileDetails };
+type ApiProfileResponse =
+  | ProfileDetails
+  | { profile: ProfileDetails }
+  | { miniprofile: ProfileDetails };
 
 const getJoinedText = (user: SessionUser) => {
   if (!user.created_at) {
@@ -48,27 +52,24 @@ const getJoinedText = (user: SessionUser) => {
   return days === 0 ? "JOINED TODAY" : `JOINED ${days} DAYS AGO`;
 };
 
-// const unwrapProfile = (payload: ApiProfileResponse): ProfileDetails =>
-//   "profile" in payload && typeof payload.profile === "object"
-//     ? payload.profile
-//     : payload;
+const unwrapProfile = (payload: ApiProfileResponse): ProfileDetails => {
+  if (
+    "miniprofile" in payload &&
+    typeof payload.miniprofile === "object" &&
+    payload.miniprofile !== null
+  ) {
+    return payload.miniprofile;
+  }
 
-const isProfileWrapper = (
-  payload: ApiProfileResponse,
-): payload is { profile: ProfileDetails } => {
-  return (
+  if (
     "profile" in payload &&
     typeof payload.profile === "object" &&
     payload.profile !== null
-  );
-};
-
-const unwrapProfile = (payload: ApiProfileResponse): ProfileDetails => {
-  if (isProfileWrapper(payload)) {
+  ) {
     return payload.profile;
   }
 
-  return payload;
+  return payload as ProfileDetails;
 };
 
 const formatNumber = (value: number | undefined) =>
@@ -141,7 +142,9 @@ const ProfileHeader = ({
   const modes = profileDetails?.modes ?? {};
   const leagueStats = modes.league;
   const fortyLinesStats = modes.fortyLines;
+  const blitzStats = modes.blitz;
   const quickPlayStats = modes.quickPlay;
+  const level = profileDetails?.level ?? 1;
 
   return (
     <section
@@ -159,7 +162,7 @@ const ProfileHeader = ({
         </div>
         <div>
           <h2>{user.username}</h2>
-          {!user.isAnonymous && <p>{getJoinedText(user)} - HEARTS 0</p>}
+          {!user.isAnonymous && <p>{getJoinedText(user)}</p>}
         </div>
       </div>
 
@@ -168,7 +171,14 @@ const ProfileHeader = ({
       ) : (
         <>
           <div className="profileLevel">
-            <span className="levelBadge">{profileDetails?.level ?? 1}</span>
+            <span className="levelBadge">{level}</span>
+            <div className="profileLevelBar">
+              <i
+                style={{
+                  width: `${Math.min(level % 100, 100)}%`,
+                }}
+              />
+            </div>
           </div>
 
           {error && <div className="profileStatsNotice">{error}</div>}
@@ -218,6 +228,22 @@ const ProfileHeader = ({
               ) : (
                 <>
                   <strong>0 M</strong>
+                  <small>NO RECORD</small>
+                </>
+              )}
+            </article>
+            <article>
+              <span>BLITZ</span>
+              {isLoading ? (
+                <strong>LOADING...</strong>
+              ) : blitzStats ? (
+                <>
+                  <strong>{blitzStats.value ?? "0 PTS"}</strong>
+                  <small>{blitzStats.achievedAgo ?? "NO RECORD"}</small>
+                </>
+              ) : (
+                <>
+                  <strong>0 PTS</strong>
                   <small>NO RECORD</small>
                 </>
               )}

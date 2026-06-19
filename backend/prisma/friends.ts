@@ -223,7 +223,11 @@ export async function createBlockedRelation(userId: number, friendId: number): P
 
 	return prisma.friends.update({
 		where: { id: friendship.id },
-		data: { status: "blocked" },
+		data: {
+			user_id: userId,
+			friend_id: friendId,
+			status: "blocked",
+		},
 		select: {
 			id: true,
 			user_id: true,
@@ -345,6 +349,10 @@ export async function removeFriendshipByPair(userId: number, friendId: number) {
 	const friendship = await getFriendshipByPair(userId, friendId);
 	if (!friendship) {
 		throw new Error("Friendship not found");
+	}
+
+	if (friendship.status === "blocked" && friendship.user_id !== userId) {
+		throw new Error("Not allowed to unblock this user");
 	}
 
 	return deleteFriendship(friendship.id);

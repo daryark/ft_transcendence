@@ -17,6 +17,7 @@ export interface LeaderboardEntry {
   name: string;
   score: number;
   country: string;
+  achievedAt: Date | null;
 }
 
 /**
@@ -140,12 +141,14 @@ export async function getLeaderboard(
         select: {
           gamemode: true,
           status: true,
+          created_at: true,
         },
       },
     } as any,
   });
 
-  // Aggregate stats by user
+  // Keep the best record per user for mode leaderboards. For an unfiltered
+  // leaderboard, preserve the historical aggregate behavior.
   const leaderboardMap = new Map<number, LeaderboardEntry & { victories: number }>();
 
   matchPlayers.forEach((matchPlayer: any) => {
@@ -154,6 +157,7 @@ export async function getLeaderboard(
     const country = matchPlayer.users.country ?? "";
     const isVictory = matchPlayer.result === 'win';
     const playerScore = matchPlayer.score || 0;
+    const matchDate = matchPlayer.matches.created_at as Date | null;
 
     if (!leaderboardMap.has(userId)) {
       leaderboardMap.set(userId, {
@@ -161,20 +165,50 @@ export async function getLeaderboard(
         name,
         country,
         victories: 0,
-        score: 0,
+        score: playerScore,
+        achievedAt: matchDate,
       });
+    } else {
+      const entry = leaderboardMap.get(userId)!;
+
+      if (resolvedMode) {
+        const isBetterRecord =
+          resolvedMode === 'fortyLines'
+            ? playerScore < entry.score
+            : playerScore > entry.score;
+
+        if (isBetterRecord) {
+          entry.score = playerScore;
+          entry.achievedAt = matchDate;
+        }
+      } else {
+        entry.score += playerScore;
+        if (matchDate && (!entry.achievedAt || matchDate > entry.achievedAt)) {
+          entry.achievedAt = matchDate;
+        }
+      }
     }
 
-    const entry = leaderboardMap.get(userId)!;
     if (isVictory) {
-      entry.victories += 1;
+      leaderboardMap.get(userId)!.victories += 1;
     }
-    entry.score += playerScore;
   });
 
-  // Convert map to array and sort by victories (descending)
+  const compareEntries = (
+    a: LeaderboardEntry & { victories: number },
+    b: LeaderboardEntry & { victories: number },
+  ) => {
+    if (resolvedMode === 'fortyLines') {
+      return a.score - b.score;
+    }
+    if (resolvedMode) {
+      return b.score - a.score;
+    }
+    return b.victories - a.victories || b.score - a.score;
+  };
+
   const leaderboard = Array.from(leaderboardMap.values())
-    .sort((a, b) => b.victories - a.victories || b.score - a.score)
+    .sort(compareEntries)
     .map(({ victories: _victories, ...entry }) => entry)
     .slice(0, limit);
 

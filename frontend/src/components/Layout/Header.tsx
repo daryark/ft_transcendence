@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import ProfileHeader from "../ProfileHeader/ProfileHeader";
 import { getAvatarStyle } from "../ProfileHeader/avatarStyle";
 import SocialPanels from "../SocialPanels/SocialPanels";
+import NotificationsPanel from "../Notifications/NotificationsPanel";
 import Dialog from "../Dialog/Dialog";
 import { apiJson } from "../../api/client";
 
@@ -24,15 +25,23 @@ const titles: Record<string, string> = {
   custom: "CUSTOM GAME",
   channel: "TETRA CHANNEL",
   leaderboards: "LEADERBOARDS",
+  statistics: "MY STATISTICS",
+  achievements: "ACHIEVEMENTS",
   about: "ABOUT",
   auth: "AUTH",
 };
+
+type SocialTab = "friends" | "requests" | "blocked";
 
 const getPageTitle = (pathname: string) => {
   const parts = pathname.split("/").filter(Boolean);
 
   if (parts.length === 0 || pathname === "/play") {
     return "HOME";
+  }
+
+  if (parts[0] === "channel" && parts[1] === "leaderboards") {
+    return titles.leaderboards;
   }
 
   const lastPart = parts[parts.length - 1];
@@ -48,6 +57,9 @@ const Header = () => {
   const isLoggedIn = user !== null;
 
   const [isSocialOpen, setIsSocialOpen] = useState(false);
+  const [socialInitialTab, setSocialInitialTab] = useState<SocialTab>("friends");
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [notificationCount, setNotificationCount] = useState(0);
   const [playerMeta, setPlayerMeta] = useState({
     level: 1,
     rank: "UNRANKED",
@@ -59,6 +71,7 @@ const Header = () => {
   const handleLogout = () => {
     setIsProfileOpen(false);
     setIsSocialOpen(false);
+    setIsNotificationsOpen(false);
     clearSession();
     navigate("/auth", { replace: true });
   };
@@ -75,12 +88,37 @@ const Header = () => {
   }, []);
 
   useEffect(() => {
+    const shouldFadeFooter = isSocialOpen || isNotificationsOpen;
+    document.body.classList.toggle("app-panel-open", shouldFadeFooter);
+
+    return () => {
+      document.body.classList.remove("app-panel-open");
+    };
+  }, [isNotificationsOpen, isSocialOpen]);
+
+  useEffect(() => {
+    const openNotifications = () => {
+      setIsSocialOpen(false);
+      setIsNotificationsOpen(true);
+    };
+
+    window.addEventListener("tetra:open-notifications", openNotifications);
+    return () => {
+      window.removeEventListener("tetra:open-notifications", openNotifications);
+    };
+  }, []);
+
+  useEffect(() => {
     if (!user || user.isAnonymous) {
       return;
     }
 
     const controller = new AbortController();
     void apiJson<{
+      miniprofile?: {
+        level?: number;
+        modes?: { league?: { rank?: string } | null };
+      };
       profile?: {
         level?: number;
         modes?: { league?: { rank?: string } | null };
@@ -91,7 +129,7 @@ const Header = () => {
       signal: controller.signal,
     })
       .then((payload) => {
-        const profile = payload.profile ?? payload;
+        const profile = payload.miniprofile ?? payload.profile ?? payload;
         setPlayerMeta({
           level: profile.level ?? 1,
           rank: profile.modes?.league?.rank ?? "UNRANKED",
@@ -141,15 +179,44 @@ const Header = () => {
             <div className="right">
               {user ? (
                 <>
+                  <NotificationsPanel
+                    isOpen={isNotificationsOpen}
+                    onClose={() => setIsNotificationsOpen(false)}
+                    onUnreadCountChange={setNotificationCount}
+                    onOpenSocialTab={(tab) => {
+                      setSocialInitialTab(tab);
+                      setIsSocialOpen(true);
+                    }}
+                  />
                   <SocialPanels
                     isOpen={isSocialOpen}
                     onClose={() => setIsSocialOpen(false)}
+                    initialTab={socialInitialTab}
                   />
+                  {!user.isAnonymous && (
+                    <button
+                      className="notificationsButton"
+                      type="button"
+                      onClick={() => {
+                        setIsSocialOpen(false);
+                        setIsNotificationsOpen(true);
+                      }}
+                    >
+                      🔔
+                      {notificationCount > 0 && (
+                        <span className="notificationsButtonBadge">{notificationCount}</span>
+                      )}
+                    </button>
+                  )}
                   {!user.isAnonymous && (
                     <button
                       className="socialButton"
                       type="button"
-                      onClick={() => setIsSocialOpen(true)}
+                      onClick={() => {
+                        setIsNotificationsOpen(false);
+                        setSocialInitialTab("friends");
+                        setIsSocialOpen(true);
+                      }}
                     >
                       SOCIAL
                     </button>

@@ -13,6 +13,8 @@ import TetraChannel from "./pages/tetra-channel/TetraChannel";
 import About from "./pages/about/About";
 import Auth from "./pages/auth/Auth";
 import Leaderboard from "./pages/leaderboard/Leaderboard";
+import MyStatistics from "./pages/statistics/MyStatistics";
+import Achievements from "./pages/achievements/Achievements";
 import NotFound from "./pages/notFound/NotFound";
 import SoloModePage from "./pages/modes/solo/SoloModePage";
 import Quick from "./pages/modes/multiplayer/Quick";
@@ -179,6 +181,22 @@ export default function App() {
           <Route
             path="channel/leaderboards/:mode/:scope"
             element={<Leaderboard />}
+          />
+          <Route
+            path="channel/statistics"
+            element={
+              <ProtectedRoute>
+                <MyStatistics />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="channel/achievements"
+            element={
+              <ProtectedRoute>
+                <Achievements />
+              </ProtectedRoute>
+            }
           />
           <Route path="about" element={<About />} />
           <Route path="forbidden" element={<ForbiddenPage />} />

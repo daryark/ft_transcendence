@@ -21,9 +21,12 @@ const { registerUser, loginUser, changeUserPassword } = require("./prisma/auth")
 const { getProfileByUsername, updateMyProfile, getMiniProfileByUsername } = require("./prisma/profile");
 const { searchUsers } = require("./prisma/search");
 const { listFriends, createFriendRequest, acceptFriendRequestById, rejectFriendRequestById, removeFriendshipByPair, blockFriendshipByPair, } = require("./prisma/friends");
+const { createNotification, listNotifications, markNotificationRead, markAllNotificationsRead } = require("./prisma/notifications");
+const { emitNotification } = require("./notifications/hub");
 const oauthController = require("./auth/oauthController");
 // lightweight helpers
 const { getLeaderboard } = require("./prisma/leaderboard");
+const { getUserAchievements } = require("./prisma/achievements");
 
 function getAuthenticatedUserId(req: ApiRequest): number | null {
   const authUser = req.user as any;
@@ -42,6 +45,32 @@ function getOptionalBearerUserId(req: ApiRequest): number | null {
     const payload = jwt.verify(authHeader.slice(7), getJwtSecret()) as any;
     const parsedUserId = Number(payload?.sub ?? payload?.id);
     return Number.isInteger(parsedUserId) && parsedUserId > 0 ? parsedUserId : null;
+  } catch {
+    return null;
+  }
+}
+
+function getAuthenticatedUsername(req: ApiRequest): string | null {
+  const authUser = req.user as any;
+  const username = typeof authUser === "object" ? authUser?.username : null;
+  return typeof username === "string" && username.trim().length > 0 ? username.trim() : null;
+}
+
+async function notifyUser(
+  userId: number,
+  payload: {
+    actorId?: number | null;
+    type: string;
+    title: string;
+    body: string;
+    link?: string | null;
+    payload?: unknown;
+  },
+) {
+  try {
+    const notification = await createNotification({ userId, ...payload });
+    emitNotification(userId, { notification });
+    return notification;
   } catch {
     return null;
   }
@@ -136,6 +165,24 @@ api.get("/auth/me", authenticateToken, (req: ApiRequest, res: Response) => {
   res.json({ user: req.user });
 });
 
+api.get("/achievements", authenticateToken, async (req: ApiRequest, res: Response) => {
+  try {
+    const userId = getAuthenticatedUserId(req);
+    if (!userId) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    const achievements = await getUserAchievements(userId);
+    return res.json({ achievements });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return res.status(500).json({
+      message: "Failed to load achievements",
+      error: message,
+    });
+  }
+});
+
 // to check
 // curl http://localhost:3000/api/something
 // curl http://localhost:3000/api/users/7
@@ -148,6 +195,35 @@ api.get("/auth/me", authenticateToken, (req: ApiRequest, res: Response) => {
 //api.get("/something", (req, res) => {
 //  res.json({ message: "handled /api/something" });
 //});
+
+// GET /api/users/search?nickname=...&query=...
+api.get("/users/search", async (req: ApiRequest, res: Response) => {
+  try {
+    const term = typeof req.query.q === "string" && req.query.q.trim().length > 0
+      ? req.query.q
+      : typeof req.query.nickname === "string" && req.query.nickname.trim().length > 0
+        ? req.query.nickname
+        : typeof req.query.query === "string" && req.query.query.trim().length > 0
+          ? req.query.query
+          : "";
+    const page = req.query.page ? parseInt(String(req.query.page), 10) : 1;
+    const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 20;
+    const requesterUserId = getOptionalBearerUserId(req);
+
+    const results = await searchUsers({
+      term,
+      page,
+      limit,
+      requesterUserId: requesterUserId ?? undefined,
+    });
+
+    res.json(results);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message.includes("required") || message.includes("must") || message.includes("range") ? 400 : 500;
+    res.status(status).json({ message: "Failed to search users", error: message });
+  }
+});
 
 // GET /api/users/42  → param "id"
 api.get("/users/:id", (req: ApiRequest, res: Response) => {
@@ -168,7 +244,11 @@ api.get("/leaderboards", async (req: ApiRequest, res: Response) => {
         id: entry.id ?? null,
         name: entry.name ?? entry.nickname,
         score: entry.score,
-        country: entry.country ?? null,
+        country: entry.country ?? "",
+        achievedAt:
+          entry.achievedAt instanceof Date
+            ? entry.achievedAt.toISOString()
+            : null,
       }))
     );
   } catch (error) {
@@ -289,6 +369,7 @@ api.post("/friends/request", authenticateToken, async (req: ApiRequest, res: Res
     if (!requesterUserId) {
       return sendError(res, 401, "Unauthorized");
     }
+    const requesterUsername = getAuthenticatedUsername(req) ?? "Someone";
 
     const friendId = getFriendActionTargetId(req.body);
     const friendship = await createFriendRequest({ userId: requesterUserId, friendId });
@@ -296,6 +377,17 @@ api.post("/friends/request", authenticateToken, async (req: ApiRequest, res: Res
       action: friendship.status === "accepted" ? "accepted" : "requested",
       userIds: [requesterUserId, friendId],
     });
+
+    if (friendship.status === "pending") {
+      await notifyUser(friendId, {
+        actorId: requesterUserId,
+        type: "friend_request",
+        title: "Friend request",
+        body: `${requesterUsername} sent you a friend request.`,
+        link: "/play",
+        payload: { friendshipId: friendship.id, requesterUserId },
+      });
+    }
 
     return sendOk(res, {
       friendship: {
@@ -320,6 +412,7 @@ api.post("/friends/respond", authenticateToken, async (req: ApiRequest, res: Res
     if (!requesterUserId) {
       return sendError(res, 401, "Unauthorized");
     }
+    const requesterUsername = getAuthenticatedUsername(req) ?? "Someone";
 
     const friendshipId = Number(req.body?.requestId);
     const action = typeof req.body?.action === "string" ? req.body.action : "";
@@ -338,6 +431,18 @@ api.post("/friends/respond", authenticateToken, async (req: ApiRequest, res: Res
     emitSocialUpdate([friendship.user_id, friendship.friend_id], {
       action: action === "accept" ? "accepted" : "rejected",
       userIds: [friendship.user_id, friendship.friend_id],
+    });
+
+    await notifyUser(friendship.user_id, {
+      actorId: requesterUserId,
+      type: action === "accept" ? "friend_request_accepted" : "friend_request_rejected",
+      title: action === "accept" ? "Friend request accepted" : "Friend request rejected",
+      body:
+        action === "accept"
+          ? `${requesterUsername} accepted your friend request.`
+          : `${requesterUsername} rejected your friend request.`,
+      link: "/play",
+      payload: { friendshipId: friendship.id, action },
     });
 
     return sendOk(res, {
@@ -374,7 +479,7 @@ api.post("/friends/remove", authenticateToken, async (req: ApiRequest, res: Resp
     return sendOk(res, { removed: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const status = message.includes("not found") ? 404 : 400;
+    const status = message.includes("not found") ? 404 : message.includes("allowed") ? 403 : 400;
     return sendError(res, status, message);
   }
 });
@@ -411,36 +516,58 @@ api.post("/friends/block", authenticateToken, async (req: ApiRequest, res: Respo
 });
 
 // GET /api/notifications
-api.get("/notifications", (req: ApiRequest, res: Response) => {
-  res.status(501).json({ message: "TODO: implement GET /api/notifications" });
-});
-
-// GET /api/users/search?nickname=...&query=...
-api.get("/users/search", async (req: ApiRequest, res: Response) => {
+api.get("/notifications", authenticateToken, async (req: ApiRequest, res: Response) => {
   try {
-    const term = typeof req.query.q === "string" && req.query.q.trim().length > 0
-      ? req.query.q
-      : typeof req.query.nickname === "string" && req.query.nickname.trim().length > 0
-        ? req.query.nickname
-        : typeof req.query.query === "string" && req.query.query.trim().length > 0
-          ? req.query.query
-          : "";
-    const page = req.query.page ? parseInt(String(req.query.page), 10) : 1;
-    const limit = req.query.limit ? parseInt(String(req.query.limit), 10) : 20;
-    const requesterUserId = getOptionalBearerUserId(req);
+    const requesterUserId = getAuthenticatedUserId(req);
+    if (!requesterUserId) {
+      return sendError(res, 401, "Unauthorized");
+    }
 
-    const results = await searchUsers({
-      term,
-      page,
-      limit,
-      requesterUserId: requesterUserId ?? undefined,
+    const { page, limit } = parsePaginationQuery(req);
+    const result = await listNotifications({ userId: requesterUserId, page, limit });
+
+    return sendOk(res, {
+      items: result.items,
+      page: result.page,
+      limit: result.limit,
+      total: result.total,
     });
-
-    res.json(results);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    const status = message.includes("required") || message.includes("must") || message.includes("range") ? 400 : 500;
-    res.status(status).json({ message: "Failed to search users", error: message });
+    return sendError(res, message.includes("Unauthorized") ? 401 : 400, message);
+  }
+});
+
+// PATCH /api/notifications/:id/read
+api.patch("/notifications/read", authenticateToken, async (req: ApiRequest, res: Response) => {
+  try {
+    const requesterUserId = getAuthenticatedUserId(req);
+    if (!requesterUserId) {
+      return sendError(res, 401, "Unauthorized");
+    }
+
+    const result = await markAllNotificationsRead(requesterUserId);
+    return sendOk(res, result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return sendError(res, message.includes("Unauthorized") ? 401 : 400, message);
+  }
+});
+
+api.patch("/notifications/:id/read", authenticateToken, async (req: ApiRequest, res: Response) => {
+  try {
+    const requesterUserId = getAuthenticatedUserId(req);
+    if (!requesterUserId) {
+      return sendError(res, 401, "Unauthorized");
+    }
+
+    const notificationId = Number(req.params.id);
+    const notification = await markNotificationRead(notificationId, requesterUserId);
+    return sendOk(res, { notification });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const status = message === "Notification not found" ? 404 : message.includes("Unauthorized") ? 401 : 400;
+    return sendError(res, status, message);
   }
 });
 

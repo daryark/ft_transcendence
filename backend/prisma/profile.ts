@@ -115,6 +115,10 @@ function normalizeCountry(country: string | null | undefined): string | undefine
 	}
 
 	const trimmed = country.trim();
+	if (trimmed.toLowerCase() === "undefined" || trimmed.toLowerCase() === "null") {
+		return undefined;
+	}
+
 	return trimmed.length > 0 ? trimmed : undefined;
 }
 
@@ -128,13 +132,22 @@ function formatAchievedAgo(achievedAt: Date | null): string | undefined {
 	return days > 0 ? `${days} days ago` : "recently";
 }
 
-function toModeStats(score: number | null, achievedAt: Date | null): ProfileModeStats {
+function formatDuration(milliseconds: number): string {
+	const safeMilliseconds = Math.max(0, Math.round(milliseconds));
+	const minutes = Math.floor(safeMilliseconds / 60000);
+	const seconds = Math.floor((safeMilliseconds % 60000) / 1000);
+	const remainder = safeMilliseconds % 1000;
+
+	return `${minutes}:${String(seconds).padStart(2, "0")}.${String(remainder).padStart(3, "0")}`;
+}
+
+function toScoreStats(score: number | null, achievedAt: Date | null): ProfileModeStats {
 	if (score === null || score === undefined) {
 		return null;
 	}
 
 	return {
-		value: String(score),
+		value: `${score.toLocaleString("en-US")} pts`,
 		achievedAgo: formatAchievedAgo(achievedAt),
 	};
 }
@@ -145,7 +158,9 @@ function toQuickPlayStats(metricValue: number | null, achievedAt: Date | null): 
 	}
 
 	return {
-		value: `${metricValue.toFixed(2)} m`,
+		value: `${metricValue.toLocaleString("en-US", {
+			maximumFractionDigits: 2,
+		})} m`,
 		achievedAgo: formatAchievedAgo(achievedAt),
 	};
 }
@@ -156,7 +171,7 @@ function toFortyLinesStats(score: number | null, achievedAt: Date | null): Profi
 	}
 
 	return {
-		value: `${(score / 1000).toFixed(2)}s`,
+		value: formatDuration(score),
 		achievedAgo: formatAchievedAgo(achievedAt),
 	};
 }
@@ -249,8 +264,8 @@ function buildProfileResponse(
 			},
 			quickPlay: toQuickPlayStats(bestModeStats.quickPlay?.metricValue ?? null, bestModeStats.quickPlay?.achievedAt ?? null),
 			fortyLines: toFortyLinesStats(bestModeStats.fortyLines?.score ?? null, bestModeStats.fortyLines?.achievedAt ?? null),
-			blitz: toModeStats(bestModeStats.blitz?.score ?? null, bestModeStats.blitz?.achievedAt ?? null),
-			zen: toModeStats(bestModeStats.zen?.score ?? null, bestModeStats.zen?.achievedAt ?? null),
+			blitz: toScoreStats(bestModeStats.blitz?.score ?? null, bestModeStats.blitz?.achievedAt ?? null),
+			zen: toScoreStats(bestModeStats.zen?.score ?? null, bestModeStats.zen?.achievedAt ?? null),
 		},
 	};
 }
@@ -400,8 +415,8 @@ function buildMiniProfileResponse(user: ProfileUserRecord, matchRows: ProfileMod
 					},
 				quickPlay: toQuickPlayStats(bestModeStats.quickPlay?.metricValue ?? null, bestModeStats.quickPlay?.achievedAt ?? null),
 				fortyLines: toFortyLinesStats(bestModeStats.fortyLines?.score ?? null, bestModeStats.fortyLines?.achievedAt ?? null),
-				blitz: toModeStats(bestModeStats.blitz?.score ?? null, bestModeStats.blitz?.achievedAt ?? null),
-				zen: toModeStats(bestModeStats.zen?.score ?? null, bestModeStats.zen?.achievedAt ?? null),
+				blitz: toScoreStats(bestModeStats.blitz?.score ?? null, bestModeStats.blitz?.achievedAt ?? null),
+				zen: toScoreStats(bestModeStats.zen?.score ?? null, bestModeStats.zen?.achievedAt ?? null),
 			},
 		},
 	};

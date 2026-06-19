@@ -1,5 +1,6 @@
 import type Room from "../domain/room";
 import type { GameState } from "../domain/engine/state";
+import { emitAchievementUnlocked } from "../../sockets/realtime";
 import {
     applyXpToLevel,
     calculateXpDelta,
@@ -96,7 +97,26 @@ function getProgressionMetric(room: Room, state: GameState | null) {
     return null;
 }
 
-async function persistRegisteredResult(input: MatchEndProgressionInput) {
+function getAchievementStats(state: GameState | null) {
+    return {
+        lines: state?.lines ?? 0,
+        piecesPlaced: state?.piecesPlaced ?? 0,
+        hardDrops: state?.hardDrops ?? 0,
+        holds: state?.holds ?? 0,
+        maxCombo: state?.maxCombo ?? 0,
+        maxLinesCleared: state?.maxLinesCleared ?? 0,
+        clearedTwoAtOnce: state?.clearedTwoAtOnce ?? false,
+        clearedThreeAtOnce: state?.clearedThreeAtOnce ?? false,
+        tetrises: state?.tetrises ?? 0,
+        durationMs: state ? Math.max(0, Date.now() - state.startedAt) : 0,
+        clearedAfterHalfHeight: state?.clearedAfterHalfHeight ?? false,
+    };
+}
+
+async function persistRegisteredResult(
+    input: MatchEndProgressionInput,
+    progression: PlayerProgressionSnapshot[] = [],
+) {
     const mode = getPersistMode(input.room);
     if (!mode) return;
     if (!shouldAwardProgression(input)) return;
@@ -111,21 +131,42 @@ async function persistRegisteredResult(input: MatchEndProgressionInput) {
 
         try {
             const { persistGameResult } = await import("../../prisma/playerStats.js");
-            await persistGameResult({
+            const playerProgression = progression.find(
+                (snapshot) => snapshot.playerId === player.id,
+            );
+            const achievements = await persistGameResult({
                 userId,
                 mode,
                 score,
+                achievementScore: input.state?.score ?? score,
                 metricValue,
                 elapsedMs: input.state?.update?.elapsedMs,
                 lines: input.state?.lines ?? 0,
                 piecesPlaced: input.state?.piecesPlaced ?? 0,
+                hardDrops: input.state?.hardDrops ?? 0,
+                holds: input.state?.holds ?? 0,
+                maxCombo: input.state?.maxCombo ?? 0,
+                maxLinesCleared: input.state?.maxLinesCleared ?? 0,
+                clearedTwoAtOnce: input.state?.clearedTwoAtOnce ?? false,
+                clearedThreeAtOnce: input.state?.clearedThreeAtOnce ?? false,
+                tetrises: input.state?.tetrises ?? 0,
+                clearedAfterHalfHeight: input.state?.clearedAfterHalfHeight ?? false,
                 roundsPlayed: Math.max(1, input.completedRounds),
                 rankLabel:
                     input.room.gameConfig.mode === "league"
                         ? player.profile?.rank ?? "D"
                         : null,
+                progression: playerProgression
+                    ? {
+                        level: playerProgression.level,
+                        xp: playerProgression.xp,
+                        won: playerProgression.outcome === "win",
+                    }
+                    : undefined,
+                stats: getAchievementStats(input.state),
                 result,
             });
+            emitAchievementUnlocked(userId, achievements ?? []);
         } catch (error) {
             console.error("Failed to persist game result", error);
         }

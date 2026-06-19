@@ -1,7 +1,6 @@
 generator client {
-  provider      = "prisma-client-js"
+  provider = "prisma-client-js"
 }
-//binaryTargets = ["native", "linux-musl-openssl-3.0.x"] //bcs alpine docker, so alpine prisma query engine is a must
 
 datasource db {
   provider = "postgresql"
@@ -9,26 +8,29 @@ datasource db {
 }
 
 model users {
-  id                                   Int              @id @default(autoincrement())
-  email                                String           @unique @db.VarChar(255)
-  username                             String           @unique @db.VarChar(100)
-  password_hash                        String           @db.VarChar(255)
-  avatar_id                            Int?             @default(0)
-  country                              String?          @db.VarChar(100)
-  level                                Int?             @default(1)
-  xp                                   Int?             @default(0)
-  next_level_xp                        Int?             @default(100)
-  league_elo                           Int?             @default(1000)
-  league_rank                          String?          @default("D") @db.VarChar(16)
-  play_time_seconds                    Int?             @default(0)
-  wins                                 Int?             @default(0)
-  created_at                           DateTime?        @default(now()) @db.Timestamp(6)
-  friends_friends_friend_idTousers     friends[]        @relation("friends_friend_idTousers")
-  friends_friends_user_idTousers       friends[]        @relation("friends_user_idTousers")
-  match_players                        match_players[]
-  messages_messages_receiver_idTousers messages[]       @relation("messages_receiver_idTousers")
-  messages_messages_sender_idTousers   messages[]       @relation("messages_sender_idTousers")
-  oauth_accounts                       oauth_accounts[]
+  id                                          Int                 @id @default(autoincrement())
+  email                                       String              @unique @db.VarChar(255)
+  username                                    String              @unique @db.VarChar(100)
+  password_hash                               String              @db.VarChar(255)
+  avatar_id                                   Int?                @default(0)
+  country                                     String?             @db.VarChar(100)
+  level                                       Int?                @default(1)
+  xp                                          Int?                @default(0)
+  next_level_xp                               Int?                @default(100)
+  league_elo                                  Int?                @default(1000)
+  league_rank                                 String?             @default("D") @db.VarChar(16)
+  play_time_seconds                           Int?                @default(0)
+  wins                                        Int?                @default(0)
+  created_at                                  DateTime?           @default(now()) @db.Timestamp(6)
+  friends_friends_friend_idTousers            friends[]           @relation("friends_friend_idTousers")
+  friends_friends_user_idTousers              friends[]           @relation("friends_user_idTousers")
+  match_players                               match_players[]
+  messages_messages_receiver_idTousers        messages[]          @relation("messages_receiver_idTousers")
+  messages_messages_sender_idTousers          messages[]          @relation("messages_sender_idTousers")
+  notifications_notifications_actor_idTousers notifications[]     @relation("notifications_actor_idTousers")
+  notifications_notifications_user_idTousers  notifications[]     @relation("notifications_user_idTousers")
+  oauth_accounts                              oauth_accounts[]
+  user_achievements                           user_achievements[]
 }
 
 model friends {
@@ -44,15 +46,47 @@ model friends {
 }
 
 model match_players {
-  id           Int            @id @default(autoincrement())
-  match_id     Int
-  user_id      Int
-  score        Int?           @default(0)
-  metric_value Float?
-  rank_label   String?        @db.VarChar(16)
-  result       player_result?
-  matches      matches        @relation(fields: [match_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_match_players_match")
-  users        users          @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_match_players_user")
+  id                        Int            @id @default(autoincrement())
+  match_id                  Int
+  user_id                   Int
+  score                     Int?           @default(0)
+  metric_value              Float?
+  rank_label                String?        @db.VarChar(16)
+  result                    player_result?
+  lines                     Int            @default(0)
+  pieces_placed             Int            @default(0)
+  hard_drops                Int            @default(0)
+  holds                     Int            @default(0)
+  max_combo                 Int            @default(0)
+  max_lines_cleared         Int            @default(0)
+  cleared_two_at_once       Boolean        @default(false)
+  cleared_three_at_once     Boolean        @default(false)
+  tetrises                  Int            @default(0)
+  duration_ms               Int            @default(0)
+  cleared_after_half_height Boolean        @default(false)
+  matches                   matches        @relation(fields: [match_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_match_players_match")
+  users                     users          @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_match_players_user")
+}
+
+model achievements {
+  id                Int                 @id
+  code              String              @unique @db.VarChar(80)
+  name              String              @db.VarChar(120)
+  description       String
+  rarity            String              @db.VarChar(20)
+  target            Int
+  user_achievements user_achievements[]
+}
+
+model user_achievements {
+  id             Int          @id @default(autoincrement())
+  user_id        Int
+  achievement_id Int
+  unlocked_at    DateTime     @default(now()) @db.Timestamp(6)
+  achievements   achievements @relation(fields: [achievement_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_achievements_achievement")
+  users          users        @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_user_achievements_user")
+
+  @@unique([user_id, achievement_id], map: "unique_user_achievement")
 }
 
 model matches {
@@ -71,6 +105,22 @@ model messages {
   created_at                        DateTime? @default(now()) @db.Timestamp(6)
   users_messages_receiver_idTousers users     @relation("messages_receiver_idTousers", fields: [receiver_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_messages_receiver")
   users_messages_sender_idTousers   users     @relation("messages_sender_idTousers", fields: [sender_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_messages_sender")
+}
+
+model notifications {
+  id                                  Int       @id @default(autoincrement())
+  user_id                             Int
+  actor_id                            Int?
+  type                                String    @db.VarChar(50)
+  title                               String    @db.VarChar(120)
+  body                                String
+  link                                String?   @db.VarChar(255)
+  payload                             Json?
+  is_read                             Boolean   @default(false)
+  created_at                          DateTime? @default(now()) @db.Timestamp(6)
+  read_at                             DateTime? @db.Timestamp(6)
+  users_notifications_actor_idTousers users?    @relation("notifications_actor_idTousers", fields: [actor_id], references: [id], onUpdate: NoAction, map: "fk_notifications_actor")
+  users_notifications_user_idTousers  users     @relation("notifications_user_idTousers", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_notifications_user")
 }
 
 model oauth_accounts {

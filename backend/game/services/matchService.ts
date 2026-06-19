@@ -40,6 +40,16 @@ function copyCarryStats(nextState: GameState, previousState: GameState) {
   nextState.score = previousState.score;
   nextState.lines = previousState.lines;
   nextState.piecesPlaced = previousState.piecesPlaced;
+  nextState.hardDrops = previousState.hardDrops;
+  nextState.holds = previousState.holds;
+  nextState.currentCombo = previousState.currentCombo;
+  nextState.maxCombo = previousState.maxCombo;
+  nextState.maxLinesCleared = previousState.maxLinesCleared;
+  nextState.clearedTwoAtOnce = previousState.clearedTwoAtOnce;
+  nextState.clearedThreeAtOnce = previousState.clearedThreeAtOnce;
+  nextState.tetrises = previousState.tetrises;
+  nextState.reachedHalfHeight = previousState.reachedHalfHeight;
+  nextState.clearedAfterHalfHeight = previousState.clearedAfterHalfHeight;
   nextState.startedAt = Date.now();
   nextState.update = buildGameStats(nextState);
 }
@@ -282,7 +292,7 @@ export default function createMatchService(
     }
 
     void progressionService
-      .persistMatchEnd(matchEndInput)
+      .persistMatchEnd(matchEndInput, progression)
       .finally(() => {
         roomService.broadcast(room.id, "game:end", {
           roomId: room.id,

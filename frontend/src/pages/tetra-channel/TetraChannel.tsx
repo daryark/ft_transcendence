@@ -18,14 +18,6 @@ export default function TetraChannel() {
       };
     }
 
-    if (button.id === "me" && !capabilities.canUsePersonalStats) {
-      return {
-        ...button,
-        disabled: true,
-        disabledReason: "Anonymous users cannot set records",
-      };
-    }
-
     if (button.id === "achievements" && !capabilities.canUseAchievements) {
       return {
         ...button,
@@ -41,23 +33,11 @@ export default function TetraChannel() {
     <div className="channel">
 
     <BackButton/>
-      <div className="channel__block center">
-        <ChannelButton {...buttons[0]} />
+      <div className="channel__menu">
+        {buttons.map((button) => (
+          <ChannelButton key={button.id} {...button} />
+        ))}
       </div>
-
-      <div className="channel__block center">
-        <ChannelButton {...buttons[1]} />
-      </div>
-
-      <div className="channel__row">
-        <ChannelButton {...buttons[2]} />
-        <ChannelButton {...buttons[3]} />
-      </div>
-
-      <div className="channel__block center">
-        <ChannelButton {...buttons[4]} />
-      </div>
-
     </div>
   );
 }

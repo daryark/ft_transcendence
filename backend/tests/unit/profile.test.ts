@@ -116,7 +116,7 @@ describe("profile service", () => {
 				league: { tr: 1200, glicko: 1200, rank: "B" },
 				quickPlay: { value: "34.25 m", achievedAgo: "3 days ago" },
 				fortyLines: null,
-				blitz: { value: "60", achievedAgo: "1 days ago" },
+				blitz: { value: "60 pts", achievedAgo: "1 days ago" },
 				zen: null,
 			},
 		});

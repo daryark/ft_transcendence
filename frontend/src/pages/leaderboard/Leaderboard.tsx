@@ -4,8 +4,10 @@ import { userCapabilities } from "../../auth/capabilities";
 import { getSessionUser, subscribeToSession } from "../../auth/session";
 import { apiJson } from "../../api/client";
 import { EmptyState, Skeleton } from "../../components/StateView/StateView";
+import LeaderboardPlayerRow from "./LeaderboardPlayerRow";
 
 import "./Leaderboard.scss";
+import BackButton from "../../components/BackButton/BackButton";
 
 const leaderboardModes = ["fortyLines", "quick", "blitz"] as const;
 const leaderboardScopes = ["global", "country", "friends"] as const;
@@ -18,6 +20,7 @@ type Player = {
   name: string;
   score: number;
   country: string;
+  achievedAt: string | null;
 };
 
 const isLeaderboardMode = (value?: string): value is LeaderboardMode =>
@@ -49,7 +52,8 @@ const fetchLeaderboard = async (
       typeof value.id !== "number" ||
       typeof value.name !== "string" ||
       typeof value.score !== "number" ||
-      typeof value.country !== "string"
+      typeof value.country !== "string" ||
+      (value.achievedAt !== null && typeof value.achievedAt !== "string")
     ) {
       throw new Error(`Invalid leaderboard entry ${index + 1}`);
     }
@@ -58,6 +62,7 @@ const fetchLeaderboard = async (
       name: value.name,
       score: value.score,
       country: value.country,
+      achievedAt: value.achievedAt,
     };
   });
 };
@@ -129,7 +134,7 @@ export default function Leaderboard() {
 
   return (
     <div className="leaderboard">
-
+      <BackButton to="/channel" />
       {/* MODE */}
       <div className="leaderboard__row">
         <button
@@ -207,27 +212,19 @@ export default function Leaderboard() {
       )}
 
       {!loading && !error && players.length > 0 && (
-        <table className="leaderboard__table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Player</th>
-              <th>Country</th>
-              <th>Score</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {players.map((p, index) => (
-              <tr key={p.id}>
-                <td>{index + 1}</td>
-                <td>{p.name}</td>
-                <td>{p.country}</td>
-                <td>{p.score}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <ol className="leaderboard__list" aria-label="Leaderboard results">
+          {players.map((player, index) => (
+            <LeaderboardPlayerRow
+              key={player.id}
+              mode={currentMode}
+              rank={index + 1}
+              name={player.name}
+              country={player.country}
+              achievedAt={player.achievedAt}
+              score={player.score}
+            />
+          ))}
+        </ol>
       )}
     </div>
   );

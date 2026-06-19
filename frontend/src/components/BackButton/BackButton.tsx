@@ -1,7 +1,11 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import "./BackButton.scss";
 
-export default function BackButton() {
+type BackButtonProps = {
+  to?: string;
+};
+
+export default function BackButton({ to }: BackButtonProps) {
   const location = useLocation();
   const navigate = useNavigate();
   const segments = location.pathname.split("/").filter(Boolean);
@@ -11,7 +15,7 @@ export default function BackButton() {
   return (
     <button
       className="back-button"
-      onClick={() => navigate(parentPath)}
+      onClick={() => navigate(to ?? parentPath)}
       type="button"
     >
       BACK
