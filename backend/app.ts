@@ -4,7 +4,8 @@ import { authenticateToken } from "./middleware/httpAuth";
 import type { Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import { getJwtSecret } from "./auth/jwt";
-import { emitSocialUpdate } from "./sockets/realtime";
+import { emitMessageUpdate, emitSocialUpdate } from "./sockets/realtime";
+import { notifyUser } from "./notifications/service";
 
 const app = express();
 export default app;
@@ -21,8 +22,8 @@ const { registerUser, loginUser, changeUserPassword } = require("./prisma/auth")
 const { getProfileByUsername, updateMyProfile, getMiniProfileByUsername } = require("./prisma/profile");
 const { searchUsers } = require("./prisma/search");
 const { listFriends, createFriendRequest, acceptFriendRequestById, rejectFriendRequestById, removeFriendshipByPair, blockFriendshipByPair, } = require("./prisma/friends");
-const { createNotification, listNotifications, markNotificationRead, markAllNotificationsRead } = require("./prisma/notifications");
-const { emitNotification } = require("./notifications/hub");
+const { listNotifications, markNotificationRead, markAllNotificationsRead } = require("./prisma/notifications");
+const { listConversation, markConversationRead, markMessageRead, sendMessage } = require("./prisma/messages");
 const oauthController = require("./auth/oauthController");
 // lightweight helpers
 const { getLeaderboard } = require("./prisma/leaderboard");
@@ -54,26 +55,6 @@ function getAuthenticatedUsername(req: ApiRequest): string | null {
   const authUser = req.user as any;
   const username = typeof authUser === "object" ? authUser?.username : null;
   return typeof username === "string" && username.trim().length > 0 ? username.trim() : null;
-}
-
-async function notifyUser(
-  userId: number,
-  payload: {
-    actorId?: number | null;
-    type: string;
-    title: string;
-    body: string;
-    link?: string | null;
-    payload?: unknown;
-  },
-) {
-  try {
-    const notification = await createNotification({ userId, ...payload });
-    emitNotification(userId, { notification });
-    return notification;
-  } catch {
-    return null;
-  }
 }
 
 function sendOk(res: Response, data: any, status = 200) {
@@ -121,6 +102,45 @@ function getFriendActionTargetId(body: any) {
   }
 
   return targetId;
+}
+
+const messageRateLimits = new Map<number, number[]>();
+
+function enforceMessageRateLimit(userId: number) {
+  const now = Date.now();
+  const windowStart = now - 10_000;
+  const recent = (messageRateLimits.get(userId) ?? []).filter((timestamp) => timestamp > windowStart);
+
+  if (recent.length >= 20) {
+    throw new Error("Too many messages. Please wait a moment.");
+  }
+
+  recent.push(now);
+  messageRateLimits.set(userId, recent);
+}
+
+function getMessageTargetId(body: any) {
+  const targetId = Number(body?.toUserId ?? body?.receiverId);
+  if (!Number.isInteger(targetId) || targetId <= 0) {
+    throw new Error("toUserId must be a positive integer");
+  }
+  return targetId;
+}
+
+function getMessageErrorStatus(message: string) {
+  if (message === "User not found" || message === "Message not found") return 404;
+  if (
+    message.includes("not friends") ||
+    message.includes("blocked") ||
+    message.includes("must be accepted")
+  ) return 403;
+  if (message.startsWith("Too many messages")) return 429;
+  return 400;
+}
+
+function getMessageNotificationPreview(content: string) {
+  const singleLine = content.replace(/\s+/g, " ").trim();
+  return singleLine.length > 120 ? `${singleLine.slice(0, 117)}...` : singleLine;
 }
 
 api.post("/auth/register", async (req: ApiRequest, res: Response) => {
@@ -572,14 +592,124 @@ api.patch("/notifications/:id/read", authenticateToken, async (req: ApiRequest, 
 });
 
 // GET /api/messages/conversation/:friendId
-api.get("/messages/conversation/:friendId", (req: ApiRequest, res: Response) => {
-  res.status(501).json({ message: "TODO: implement GET /api/messages/conversation/:friendId", friendId: req.params.friendId });
+api.get("/messages/conversation/:friendId", authenticateToken, async (req: ApiRequest, res: Response) => {
+  try {
+    const requesterUserId = getAuthenticatedUserId(req);
+    if (!requesterUserId) {
+      return sendError(res, 401, "Unauthorized");
+    }
+
+    const friendId = Number(req.params.friendId);
+    if (!Number.isInteger(friendId) || friendId <= 0) {
+      throw new Error("friendId must be a positive integer");
+    }
+
+    const { page, limit } = parsePaginationQuery(req);
+    const cursor = req.query.cursor === undefined ? undefined : Number(req.query.cursor);
+    if (cursor !== undefined && (!Number.isInteger(cursor) || cursor <= 0)) {
+      throw new Error("cursor must be a positive integer");
+    }
+
+    const conversation = await listConversation(requesterUserId, friendId, {
+      page,
+      limit,
+      cursor,
+    });
+    return sendOk(res, conversation);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return sendError(res, getMessageErrorStatus(message), message);
+  }
 });
 
 // POST /api/messages
-api.post("/messages", (req: ApiRequest, res: Response) => {
-  // expected body will be validated/implemented later
-  res.status(501).json({ message: "TODO: implement POST /api/messages", received: req.body ?? null });
+api.post("/messages", authenticateToken, async (req: ApiRequest, res: Response) => {
+  try {
+    const requesterUserId = getAuthenticatedUserId(req);
+    if (!requesterUserId) {
+      return sendError(res, 401, "Unauthorized");
+    }
+
+    enforceMessageRateLimit(requesterUserId);
+    const receiverId = getMessageTargetId(req.body);
+    const replyTo = req.body?.replyTo === undefined ? undefined : Number(req.body.replyTo);
+    const message = await sendMessage({
+      senderId: requesterUserId,
+      receiverId,
+      content: req.body?.body ?? req.body?.content,
+      replyToId: replyTo,
+    });
+    const senderUsername = getAuthenticatedUsername(req) ?? "Someone";
+
+    emitMessageUpdate([requesterUserId, receiverId], {
+      action: "created",
+      message,
+    });
+
+    await notifyUser(receiverId, {
+      actorId: requesterUserId,
+      type: "new_message",
+      title: `New message from ${senderUsername}`,
+      body: getMessageNotificationPreview(message.content),
+      link: "/play",
+      payload: {
+        messageId: message.id,
+        senderId: requesterUserId,
+        conversationUserId: requesterUserId,
+      },
+    });
+
+    return sendOk(res, { message }, 201);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return sendError(res, getMessageErrorStatus(message), message);
+  }
+});
+
+// PATCH /api/messages/:id/read
+api.patch("/messages/:id/read", authenticateToken, async (req: ApiRequest, res: Response) => {
+  try {
+    const requesterUserId = getAuthenticatedUserId(req);
+    if (!requesterUserId) {
+      return sendError(res, 401, "Unauthorized");
+    }
+
+    const messageId = Number(req.params.id);
+    const message = await markMessageRead(messageId, requesterUserId);
+    emitMessageUpdate([message.senderId, message.receiverId], {
+      action: "read",
+      message,
+    });
+    return sendOk(res, { message });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return sendError(res, getMessageErrorStatus(message), message);
+  }
+});
+
+// PATCH /api/messages/conversation/:friendId/read
+api.patch("/messages/conversation/:friendId/read", authenticateToken, async (req: ApiRequest, res: Response) => {
+  try {
+    const requesterUserId = getAuthenticatedUserId(req);
+    if (!requesterUserId) {
+      return sendError(res, 401, "Unauthorized");
+    }
+
+    const friendId = Number(req.params.friendId);
+    const result = await markConversationRead(requesterUserId, friendId);
+    if (result.count > 0) {
+      emitMessageUpdate([requesterUserId, friendId], {
+        action: "conversation-read",
+        readerId: requesterUserId,
+        friendId,
+        ...result,
+      });
+    }
+    return sendOk(res, result);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return sendError(res, getMessageErrorStatus(message), message);
+  }
 });
 
 // POST /api/items  (example)

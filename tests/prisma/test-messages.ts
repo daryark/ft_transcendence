@@ -15,6 +15,7 @@ import {
 
 type Created = {
 	users: { id: number }[];
+	friendship: { id: number };
 	messages: { id: number }[];
 };
 
@@ -29,12 +30,17 @@ async function seedDemoData(): Promise<Created> {
 		data: { email: `msg_u2_${suffix}@example.com`, username: `msg_u2_${suffix}`, password_hash: "x" },
 		select: { id: true },
 	});
+	const friendship = await prisma.friends.create({
+		data: { user_id: userOne.id, friend_id: userTwo.id, status: "accepted" },
+		select: { id: true },
+	});
 
 	const first = await sendMessage({ senderId: userOne.id, receiverId: userTwo.id, content: "hello there" });
 	const second = await sendMessage({ senderId: userTwo.id, receiverId: userOne.id, content: "hi back" });
 
 	return {
 		users: [userOne, userTwo],
+		friendship,
 		messages: [first, second],
 	};
 }
@@ -43,6 +49,8 @@ async function cleanup(created: Created) {
 	for (const message of created.messages) {
 		await deleteMessage(message.id);
 	}
+
+	await prisma.friends.delete({ where: { id: created.friendship.id } });
 
 	for (const user of created.users) {
 		await prisma.users.delete({ where: { id: user.id } });
@@ -60,10 +68,10 @@ async function main() {
 	console.log("Loaded message content:", message.content);
 
 	const conversation = await listConversation(created.users[0].id, created.users[1].id, { limit: 10 });
-	if (conversation.length !== 2) {
+	if (conversation.items.length !== 2) {
 		throw new Error("Expected two messages in conversation");
 	}
-	console.log("Conversation count:", conversation.length);
+	console.log("Conversation count:", conversation.items.length);
 
 	if (process.env.KEEP_TEST_DATA !== "1") {
 		await cleanup(created);

@@ -34,7 +34,9 @@ type Message = {
   senderId: number;
   receiverId: number;
   content: string;
+  status: "sent" | "read";
   createdAt: string | null;
+  readAt: string | null;
 };
 
 type ModeStats = {
@@ -60,6 +62,8 @@ type Props = {
   isOpen: boolean;
   onClose: () => void;
   initialTab?: SocialTab;
+  initialConversationUserId?: number | null;
+  onInitialConversationOpened?: () => void;
 };
 
 const FRIENDS_ENDPOINT = "/api/friends";
@@ -237,11 +241,18 @@ const toMessage = (value: unknown): Message | null => {
     senderId,
     receiverId,
     content,
+    status: object.status === "read" ? "read" : "sent",
     createdAt:
       typeof object.createdAt === "string"
         ? object.createdAt
         : typeof object.created_at === "string"
           ? object.created_at
+          : null,
+    readAt:
+      typeof object.readAt === "string"
+        ? object.readAt
+        : typeof object.read_at === "string"
+          ? object.read_at
           : null,
   };
 };
@@ -467,7 +478,13 @@ const ProfileModal = ({
   );
 };
 
-export default function SocialPanels({ isOpen, onClose, initialTab }: Props) {
+export default function SocialPanels({
+  isOpen,
+  onClose,
+  initialTab,
+  initialConversationUserId,
+  onInitialConversationOpened,
+}: Props) {
   const navigate = useNavigate();
   const currentUser = getSessionUser();
   const [tab, setTab] = useState<SocialTab>("friends");
@@ -488,6 +505,7 @@ export default function SocialPanels({ isOpen, onClose, initialTab }: Props) {
   const [isSocialLoading, setIsSocialLoading] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [isMessagesLoading, setIsMessagesLoading] = useState(false);
+  const [messageRefresh, setMessageRefresh] = useState(0);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState<{
     personId: number;
@@ -568,6 +586,26 @@ export default function SocialPanels({ isOpen, onClose, initialTab }: Props) {
   }, [initialTab, isOpen, loadRelationships]);
 
   useEffect(() => {
+    if (!isOpen || !initialConversationUserId) return;
+
+    const friend = relationships.find(
+      (person) =>
+        person.id === initialConversationUserId &&
+        person.relationshipStatus === "accepted",
+    );
+    if (!friend) return;
+
+    setTab("friends");
+    setSelectedFriend(friend);
+    onInitialConversationOpened?.();
+  }, [
+    initialConversationUserId,
+    isOpen,
+    onInitialConversationOpened,
+    relationships,
+  ]);
+
+  useEffect(() => {
     let activeSocket = getSocket();
 
     const handleSocialUpdate = () => {
@@ -593,6 +631,32 @@ export default function SocialPanels({ isOpen, onClose, initialTab }: Props) {
       activeSocket?.off("social:update", handleSocialUpdate);
     };
   }, [isOpen, loadRelationships]);
+
+  useEffect(() => {
+    let activeSocket = getSocket();
+
+    const handleMessageUpdate = () => {
+      if (isOpen && selectedFriend) {
+        setMessageRefresh((current) => current + 1);
+      }
+    };
+
+    const attach = () => {
+      const nextSocket = getSocket();
+      if (activeSocket === nextSocket) return;
+      activeSocket?.off("messages", handleMessageUpdate);
+      activeSocket = nextSocket;
+      activeSocket?.on("messages", handleMessageUpdate);
+    };
+
+    activeSocket?.on("messages", handleMessageUpdate);
+    const unsubscribe = subscribeToSocket(attach);
+
+    return () => {
+      unsubscribe();
+      activeSocket?.off("messages", handleMessageUpdate);
+    };
+  }, [isOpen, selectedFriend]);
 
   useEffect(() => {
     if (!isOpen || trimmedSearch.length < 2) {
@@ -669,12 +733,26 @@ export default function SocialPanels({ isOpen, onClose, initialTab }: Props) {
         );
 
         if (!response.ok) {
-          throw new Error("MESSAGES API IS NOT READY YET");
+          throw new Error(
+            await parseApiError(response, "FAILED TO LOAD MESSAGES"),
+          );
         }
 
-        setMessages(
-          asArray(await response.json()).map(toMessage).filter(Boolean) as Message[],
-        );
+        const loadedMessages = unwrapItems(await response.json())
+          .map(toMessage)
+          .filter(Boolean) as Message[];
+        setMessages(loadedMessages);
+
+        if (
+          loadedMessages.some(
+            (message) => message.receiverId === currentUser?.id,
+          )
+        ) {
+          void authFetch(
+            `${MESSAGES_ENDPOINT}/conversation/${selectedFriend.id}/read`,
+            { method: "PATCH" },
+          );
+        }
       } catch (error) {
         if (!controller.signal.aborted) {
           setMessages([]);
@@ -691,7 +769,7 @@ export default function SocialPanels({ isOpen, onClose, initialTab }: Props) {
 
     void loadMessages();
     return () => controller.abort();
-  }, [selectedFriend]);
+  }, [currentUser?.id, messageRefresh, selectedFriend]);
 
   useEffect(() => {
     if (!profilePerson) {
@@ -1011,12 +1089,21 @@ export default function SocialPanels({ isOpen, onClose, initialTab }: Props) {
       });
 
       if (!response.ok) {
-        throw new Error("MESSAGES API IS NOT READY YET");
+        throw new Error(
+          await parseApiError(response, "FAILED TO SEND MESSAGE"),
+        );
       }
 
       const data = await response.json();
-      const sentMessage = toMessage(asRecord(data).message ?? data);
-      if (sentMessage) setMessages((current) => [...current, sentMessage]);
+      const payload = unwrapPayload(data);
+      const sentMessage = toMessage(payload.message ?? payload);
+      if (sentMessage) {
+        setMessages((current) =>
+          current.some((message) => message.id === sentMessage.id)
+            ? current
+            : [...current, sentMessage],
+        );
+      }
     } catch (error) {
       setDraft(content);
       setMessagesError(
@@ -1240,6 +1327,8 @@ export default function SocialPanels({ isOpen, onClose, initialTab }: Props) {
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
+                        {message.senderId === currentUser?.id &&
+                          ` · ${message.status.toUpperCase()}`}
                       </time>
                     )}
                   </div>
@@ -1258,7 +1347,7 @@ export default function SocialPanels({ isOpen, onClose, initialTab }: Props) {
                   placeholder="message..."
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
-                  maxLength={5000}
+                  maxLength={2000}
                 />
               </form>
             </section>

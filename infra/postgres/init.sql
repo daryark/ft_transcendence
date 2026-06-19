@@ -138,7 +138,9 @@ CREATE TABLE IF NOT EXISTS messages (
 	sender_id INT NOT NULL,
 	receiver_id INT NOT NULL,
 	content TEXT NOT NULL,
+	reply_to_id INT NULL,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+	read_at TIMESTAMP NULL,
 
 	CONSTRAINT fk_messages_sender
 		FOREIGN KEY (sender_id) REFERENCES users(id)
@@ -146,8 +148,19 @@ CREATE TABLE IF NOT EXISTS messages (
 
 	CONSTRAINT fk_messages_receiver
 		FOREIGN KEY (receiver_id) REFERENCES users(id)
-		ON DELETE CASCADE
+		ON DELETE CASCADE,
+
+	CONSTRAINT fk_messages_reply
+		FOREIGN KEY (reply_to_id) REFERENCES messages(id)
+		ON DELETE SET NULL
 );
+
+ALTER TABLE messages
+	ADD COLUMN IF NOT EXISTS reply_to_id INT NULL,
+	ADD COLUMN IF NOT EXISTS read_at TIMESTAMP NULL;
+
+CREATE INDEX IF NOT EXISTS idx_messages_conversation
+	ON messages(sender_id, receiver_id, id);
 
 -- NOTIFICATIONS
 CREATE TABLE IF NOT EXISTS notifications (

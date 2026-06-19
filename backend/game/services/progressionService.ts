@@ -1,6 +1,6 @@
 import type Room from "../domain/room";
 import type { GameState } from "../domain/engine/state";
-import { emitAchievementUnlocked } from "../../sockets/realtime";
+import { notifyAchievementUnlocks } from "../../notifications/service";
 import {
     applyXpToLevel,
     calculateXpDelta,
@@ -166,7 +166,7 @@ async function persistRegisteredResult(
                 stats: getAchievementStats(input.state),
                 result,
             });
-            emitAchievementUnlocked(userId, achievements ?? []);
+            void notifyAchievementUnlocks(userId, achievements ?? []);
         } catch (error) {
             console.error("Failed to persist game result", error);
         }
