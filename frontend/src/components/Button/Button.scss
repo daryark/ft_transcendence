@@ -4,21 +4,18 @@
   --mode-bg: rgba(34, 34, 38, 0.82);
   position: relative;
   justify-self: end;
-  width: calc(100% - 2rem);
-  min-height: 5.7rem;
+  width: calc(100% - 3.2rem);
+  min-height: 7rem;
   display: grid;
   grid-template-columns: 9.6rem minmax(0, 1fr);
   align-items: center;
   overflow: hidden;
   border: 1px solid color-mix(in srgb, var(--mode-a) 38%, transparent);
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0 16%, transparent 16% 50%, rgba(0, 0, 0, 0.11) 50% 66%, transparent 66%),
-    linear-gradient(90deg, color-mix(in srgb, var(--mode-bg) 82%, black), var(--mode-bg));
-  background-size: 5.5rem 5.5rem, 100% 100%;
+  background: var(--mode-bg);
   box-shadow:
     0 0.22rem 0 rgba(0, 0, 0, 0.78),
     inset 0 0 0 1px rgba(255, 255, 255, 0.04);
-  opacity: 0.88;
+  opacity: 1;
   transition:
     width 120ms ease,
     opacity 120ms ease,
@@ -28,6 +25,7 @@
 .button:hover {
   width: 100%;
   opacity: 1;
+  background: color-mix(in srgb, var(--mode-bg) 88%, var(--mode-a));
   filter: brightness(1.16) saturate(1.08);
 }
 
@@ -38,7 +36,8 @@
 }
 
 .button--disabled:hover {
-  width: calc(100% - 2rem);
+  width: calc(100% - 3.2rem);
+  background: var(--mode-bg);
   opacity: 0.56;
   filter: grayscale(0.2) brightness(0.9);
 }
@@ -160,9 +159,9 @@
 
 @media (max-width: 700px) {
   .button {
-    width: calc(100% - 0.4rem);
+    width: calc(100% - 0.8rem);
     grid-template-columns: 6.2rem minmax(0, 1fr);
-    min-height: 4.75rem;
+    min-height: 5,5rem;
   }
 
   .button:hover {
@@ -170,7 +169,7 @@
   }
 
   .button--disabled:hover {
-    width: calc(100% - 0.4rem);
+    width: calc(100% - 0.8rem);
   }
 
   .button img {

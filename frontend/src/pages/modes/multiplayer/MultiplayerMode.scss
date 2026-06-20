@@ -12,7 +12,7 @@
   width: 100%;
   min-height: calc(100vh - var(--app-header-height));
   margin: 0;
-  padding: 4.15rem 0 calc(var(--app-footer-height) + 2.2rem);
+  padding: 1.65rem 0 calc(var(--app-footer-height) + 2.2rem);
   overflow: hidden;
   background:
     linear-gradient(180deg, rgba(79, 21, 11, 0.42), rgba(27, 8, 5, 0.18)),
@@ -33,36 +33,12 @@
 .mp-page--quick::after {
   content: "";
   position: fixed;
-  inset: calc(var(--app-header-height) + 4.1rem) 0 var(--app-footer-height);
+  inset: var(--app-header-height) 0 var(--app-footer-height);
   z-index: -1;
   background:
     repeating-linear-gradient(90deg, transparent 0 7.5rem, rgba(255, 121, 46, 0.28) 7.5rem 7.65rem, transparent 7.65rem 12rem),
     repeating-linear-gradient(0deg, transparent 0 6rem, rgba(255, 121, 46, 0.12) 6rem 6.1rem, transparent 6.1rem 11rem);
   opacity: 0.58;
-}
-
-.mp-quick-header {
-  position: fixed;
-  top: var(--app-header-height);
-  left: 0;
-  right: 0;
-  z-index: 24;
-  height: 4.1rem;
-  display: flex;
-  align-items: center;
-  border-bottom: 2px solid rgba(255, 103, 36, 0.72);
-  background: linear-gradient(90deg, rgba(78, 19, 10, 0.98), rgba(92, 24, 10, 0.9), rgba(52, 11, 5, 0.96));
-  box-shadow: 0 0.35rem 0 rgba(0, 0, 0, 0.36);
-}
-
-.mp-quick-header h1 {
-  margin: 0 0 0 1.05rem;
-  color: #ffc3a2;
-  font-size: clamp(2.1rem, 2.6vw, 3.15rem);
-  font-weight: 900;
-  letter-spacing: 0;
-  line-height: 1;
-  text-transform: uppercase;
 }
 
 .mp-back {

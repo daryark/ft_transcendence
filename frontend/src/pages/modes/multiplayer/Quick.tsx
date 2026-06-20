@@ -76,10 +76,6 @@ export default function Quick() {
 
   return (
     <section className="mp-page mp-page--quick">
-      <header className="mp-quick-header">
-        <h1>QUICK PLAY</h1>
-      </header>
-
       <button
         className="mp-back"
         type="button"
