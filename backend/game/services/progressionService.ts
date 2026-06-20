@@ -24,7 +24,6 @@ export interface PlayerProgressionSnapshot {
     round: number;
     outcome: "win" | "defeat";
     xpDelta: number;
-    rankXpDelta: number;
     level: number;
     xp: number;
 }
@@ -51,7 +50,6 @@ function getPersistMode(room: Room) {
     const soloMode = getSoloPersistMode(room);
     if (soloMode) return soloMode;
     if (room.gameConfig.mode === "quickplay") return "quickPlay";
-    if (room.gameConfig.mode === "league") return "tetraLeague";
     return null;
 }
 
@@ -152,10 +150,6 @@ async function persistRegisteredResult(
                 tetrises: input.state?.tetrises ?? 0,
                 clearedAfterHalfHeight: input.state?.clearedAfterHalfHeight ?? false,
                 roundsPlayed: Math.max(1, input.completedRounds),
-                rankLabel:
-                    input.room.gameConfig.mode === "league"
-                        ? player.profile?.rank ?? "D"
-                        : null,
                 progression: playerProgression
                     ? {
                         level: playerProgression.level,
@@ -222,7 +216,6 @@ export default function createProgressionService(room: Room) {
                     round: input.state?.round ?? 1,
                     outcome,
                     xpDelta,
-                    rankXpDelta: outcome === "win" ? 10 : -5,
                     level: profile.level,
                     xp: profile.xp,
                 };

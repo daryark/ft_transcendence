@@ -88,7 +88,7 @@ export default class RoomService {
   addPlayer(roomId: RoomId, player: Player): void {
     const room = this.rooms.get(roomId);
     if (!room) return;
-    //check in config.roomConfig if anonymousAllowed, if room is public, maxPlayers, unrankedAllowed, rankLimit and (levelLimit??)
+    //check in config.roomConfig if anonymousAllowed, if room is public and maxPlayers
 
     if (!room.players.has(player.id)) {
       player.roomId = roomId;

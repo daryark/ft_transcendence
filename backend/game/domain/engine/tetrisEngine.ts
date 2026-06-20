@@ -399,7 +399,7 @@ export default function createEngine(room: Room, roomService: RoomService) {
 
 // game ends
 //     ↓
-// calculate rewards/rank/level/xt/rankXp/wins/losses //if applicable
+// calculate rewards, level, XP, wins and losses when applicable
 //     ↓
 // persist to DB
 //     ↓

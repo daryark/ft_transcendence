@@ -4,7 +4,6 @@ import MultiplayerGameOver from "./MultiplayerGameOver";
 import QuickGameOver from "./QuickGameOver";
 import { getModeLabel } from "./gameUtils";
 import { useGameSession } from "./hooks/useGameSession";
-import DuelGameView from "./views/DuelGameView";
 import RoomGameView from "./views/RoomGameView";
 import SoloGameView from "./views/SoloGameView";
 import SoloResultsView from "./views/SoloResultsView";
@@ -92,8 +91,6 @@ export default function GamePage() {
     );
   }
 
-  const shouldUseDuelLayout = gameConfig?.mode === "league";
-
   const networkOverlay =
     session.networkStatus !== "online" ? (
       <div className="game-network-overlay" role="status">
@@ -105,18 +102,6 @@ export default function GamePage() {
         <span>Your game will resume from the server when possible.</span>
       </div>
     ) : null;
-
-  if (shouldUseDuelLayout) {
-    return (
-      <>
-        <DuelGameView session={session} />
-        <RoundResultOverlay result={session.roundResult} />
-        <CountdownLayer value={session.countdownStep} />
-        {networkOverlay}
-        <GameAudioPanel />
-      </>
-    );
-  }
 
   if (
     gameConfig?.mode === "custom" ||

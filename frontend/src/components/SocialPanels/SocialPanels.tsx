@@ -50,7 +50,6 @@ type MiniProfile = {
   avatarId: number;
   level: number;
   modes: {
-    league?: { tr?: number; rank?: string } | null;
     quickPlay?: ModeStats | null;
     fortyLines?: ModeStats | null;
     blitz?: ModeStats | null;
@@ -373,7 +372,6 @@ const ProfileModal = ({
   onOpenFullProfile: () => void;
 }) => {
   const modes = profile?.modes ?? {};
-  const league = modes.league;
   const fortyLines = modes.fortyLines;
   const blitz = modes.blitz;
   const quickPlay = modes.quickPlay;
@@ -434,15 +432,6 @@ const ProfileModal = ({
             </div>
 
             <div className="miniStatsGrid">
-              <article>
-                <span>TETRA LEAGUE</span>
-                <strong>
-                  {league?.rank ? `${league.rank.toUpperCase()} ` : ""}
-                  {typeof league?.tr === "number"
-                    ? `${formatModeValue(league.tr)}TR`
-                    : "NO DATA"}
-                </strong>
-              </article>
               <article>
                 <span>40 LINES</span>
                 <strong>{formatModeValue(fortyLines?.value)}</strong>

@@ -32,7 +32,7 @@
 👉 If it affects winning → matchConfig
 👉 If it affects who can join → roomConfig
 room = {
-  mode: 'quickplay' | 'solo' | 'league' | 'custom',
+  mode: 'quickplay' | 'solo' | 'custom',
   gameConfig: { ... },   // engine ONLY
   matchConfig: { ... },  // rounds, timers
   roomConfig: { ... },   // players, spectators
@@ -103,7 +103,7 @@ socket.data - your custom storage,data is a built-in plain! object provided by S
 Adds the listener function to the end of the listeners array for the event named eventName
 ->eventName on socket.on();
 Socket.IO event names are just strings, but you design them as:
-<domain>:<action>   ("quickplay:join"/"league:join"/"game:state"/"room:join"...)
+<domain>:<action>   ("quickplay:join"/"game:state"/"room:join"...)
 
 
 ***TypeScript***

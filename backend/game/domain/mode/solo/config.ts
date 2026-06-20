@@ -5,8 +5,7 @@ export const soloBase: Config = {
     roomConfig: {
         maxPlayers: 1,
         public: false,
-        anonymousAllowed: true,
-        unrankedAllowed: true
+        anonymousAllowed: true
     },
 
     gameConfig: {

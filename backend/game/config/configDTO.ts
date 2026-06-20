@@ -45,7 +45,6 @@ export const configDTO = {
         },
         roomRules: {
             anonymousAllowed: true,
-            unrankedAllowed: true,
         },
     },
     multiplayer: {
@@ -58,17 +57,6 @@ export const configDTO = {
             ],
             roomRules: {
                 anonymousAllowed: true,
-                unrankedAllowed: true,
-            },
-        },
-        league: {
-            requirements: {
-                minimumLevel: 10,
-                placementMatches: 10,
-            },
-            roomRules: {
-                anonymousAllowed: false,
-                unrankedAllowed: false,
             },
         },
         custom: customConfigDTO,

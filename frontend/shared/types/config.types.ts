@@ -1,6 +1,6 @@
 // src/shared/types/config.types.ts
 
-export type Mode = "solo" | "quickplay" | "custom" | "league";
+export type Mode = "solo" | "quickplay" | "custom";
 
 export type SoloPresetName = "zen" | "40Lines" | "blitz";
 
@@ -8,10 +8,7 @@ export interface RoomConfig {
   maxPlayers: number | null;
   public: boolean;
   anonymousAllowed: boolean;
-  unrankedAllowed: boolean;
   roomName?: string;
-  rankLimit?: string;
-  levelLimit?: number;
 }
 
 export interface MatchConfig {
@@ -83,7 +80,7 @@ export interface SoloGameConfig {
 }
 
 export interface MultiplayerGameConfig {
-  mode: "quickplay" | "custom" | "league";
+  mode: "quickplay" | "custom";
   general: GeneralConfig;
   controls: ControlsConfig;
   gravity: GravityConfig;
@@ -107,6 +104,4 @@ export interface Configs {
   solo: SoloPreset;
   quickplay: MultiplayerPreset;
   custom: MultiplayerPreset;
-
-  league: MultiplayerPreset;
 }

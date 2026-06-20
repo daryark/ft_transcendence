@@ -187,7 +187,7 @@ export async function getUserAchievements(userId: number) {
     prisma.match_players.aggregate({
       where: {
         user_id: userId,
-        matches: { gamemode: { in: ["quickPlay", "tetraLeague", "customGame"] } },
+        matches: { gamemode: { in: ["quickPlay", "customGame"] } },
       },
       _max: { score: true, duration_ms: true },
     }),

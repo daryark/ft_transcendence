@@ -18,13 +18,7 @@ import Dialog from "../../components/Dialog/Dialog";
 import { EmptyState, Skeleton } from "../../components/StateView/StateView";
 import BackButton from "../../components/BackButton/BackButton";
 
-type ModeKey = "league" | "quickPlay" | "fortyLines" | "blitz" | "zen";
-
-type LeagueStats = {
-  tr: number;
-  glicko: number;
-  rank: string;
-};
+type ModeKey = "quickPlay" | "fortyLines" | "blitz" | "zen";
 
 type SimpleModeStats = {
   value: string;
@@ -32,7 +26,6 @@ type SimpleModeStats = {
 };
 
 type ProfileModes = {
-  league?: LeagueStats | null;
   quickPlay?: SimpleModeStats | null;
   fortyLines?: SimpleModeStats | null;
   blitz?: SimpleModeStats | null;
@@ -53,8 +46,6 @@ type PlayerProfile = {
   playTimeHours: number;
   onlineGames: number;
   wins: number;
-  leagueGames?: number;
-  leagueWins?: number;
   modes: ProfileModes;
 };
 
@@ -82,7 +73,6 @@ const avatarColors = [
 ];
 
 const modeTitles: Record<ModeKey, string> = {
-  league: "TETRA LEAGUE",
   quickPlay: "QUICK PLAY",
   fortyLines: "40 LINES",
   blitz: "BLITZ",
@@ -90,7 +80,6 @@ const modeTitles: Record<ModeKey, string> = {
 };
 
 const modeAccents: Record<ModeKey, string> = {
-  league: "#9d64c8",
   quickPlay: "#f04b22",
   fortyLines: "#e47c2e",
   blitz: "#5f8b5b",
@@ -170,10 +159,8 @@ const normalizeProfile = (payload: ApiProfileResponse): PlayerProfile => {
     xp: profile.xp ?? 0,
     nextLevelXp: profile.nextLevelXp ?? 0,
     playTimeHours: profile.playTimeHours ?? 0,
-    onlineGames: profile.leagueGames ?? profile.onlineGames ?? 0,
-    wins: profile.leagueWins ?? profile.wins ?? 0,
-    leagueGames: profile.leagueGames ?? profile.onlineGames ?? 0,
-    leagueWins: profile.leagueWins ?? profile.wins ?? 0,
+    onlineGames: profile.onlineGames ?? 0,
+    wins: profile.wins ?? 0,
 
     modes: profile.modes ?? {},
   };
@@ -241,33 +228,11 @@ const NeverPlayed = () => (
   <div className="profile-page__never">Never played</div>
 );
 
-const LeaguePanel = ({ stats }: { stats?: LeagueStats | null }) => (
-  <section
-    className="profile-page__panel profile-page__panel--league"
-    style={{ "--mode-accent": modeAccents.league } as CSSProperties}
-  >
-    <div className="profile-page__tag">{modeTitles.league}</div>
-    {!stats ? (
-      <NeverPlayed />
-    ) : (
-      <>
-        <div className="profile-page__panelTop">
-          <div className="profile-page__leagueScore">
-            <span>{stats.rank}</span>
-            <strong>{stats.tr.toLocaleString()} TR</strong>
-            <small>Glicko: {stats.glicko}</small>
-          </div>
-        </div>
-      </>
-    )}
-  </section>
-);
-
 const SimplePanel = ({
   mode,
   stats,
 }: {
-  mode: Exclude<ModeKey, "league">;
+  mode: ModeKey;
   stats?: SimpleModeStats | null;
 }) => (
   <section
@@ -547,10 +512,10 @@ export default function Profile() {
               <dl>
                 <dt>PLAY TIME</dt>
                 <dd>{formatPlayTime(profile.playTimeHours)}</dd>
-                <dt>TOTAL LEAGUE GAMES</dt>
-                <dd>{profile.leagueGames ?? profile.onlineGames}</dd>
-                <dt>LEAGUE WINS</dt>
-                <dd>{profile.leagueWins ?? profile.wins}</dd>
+                <dt>ONLINE GAMES</dt>
+                <dd>{profile.onlineGames}</dd>
+                <dt>WINS</dt>
+                <dd>{profile.wins}</dd>
               </dl>
               <small>User ID: {profile.id || "local-preview"}</small>
             </section>
@@ -567,7 +532,6 @@ export default function Profile() {
 
           <main className="profile-page__content">
             {error && <p className="profile-page__notice">{error}</p>}
-            <LeaguePanel stats={profile.modes.league} />
             <SimplePanel mode="quickPlay" stats={profile.modes.quickPlay} />
             <SimplePanel mode="fortyLines" stats={profile.modes.fortyLines} />
             <SimplePanel mode="blitz" stats={profile.modes.blitz} />

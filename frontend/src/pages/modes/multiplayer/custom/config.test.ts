@@ -40,13 +40,11 @@ describe("custom room config", () => {
         roomConfig: {
           ...DEFAULT_CUSTOM_CONFIG.roomConfig,
           roomName: "  ROOM  ",
-          rankLimit: "  A+  ",
         },
       },
     );
 
     expect(patch.roomConfig?.roomName).toBe("ROOM");
-    expect(patch.roomConfig?.rankLimit).toBe("A+");
     expect(patch.roomConfig).not.toHaveProperty("maxPlayers");
   });
 });

@@ -150,9 +150,7 @@ export default function createMatchService(
       roundWins,
       roundsToWin,
       label:
-        room.gameConfig.mode !== "league"
-          ? null
-          : playerIds.length === 2 && Object.values(roundWins).every((score) => score === roundsToWin - 1)
+        playerIds.length === 2 && Object.values(roundWins).every((score) => score === roundsToWin - 1)
           ? "tiebreaker"
           : leadingScore === roundsToWin - 1
             ? "match_point"

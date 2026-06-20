@@ -12,13 +12,16 @@ import Play from "./pages/play/Play";
 import TetraChannel from "./pages/tetra-channel/TetraChannel";
 import About from "./pages/about/About";
 import Auth from "./pages/auth/Auth";
+import {
+  PrivacyPolicyPage,
+  TermsOfServicePage,
+} from "./pages/legal/LegalPage";
 import Leaderboard from "./pages/leaderboard/Leaderboard";
 import MyStatistics from "./pages/statistics/MyStatistics";
 import Achievements from "./pages/achievements/Achievements";
 import NotFound from "./pages/notFound/NotFound";
 import SoloModePage from "./pages/modes/solo/SoloModePage";
 import Quick from "./pages/modes/multiplayer/Quick";
-import League from "./pages/modes/multiplayer/League";
 import Rooms from "./pages/modes/multiplayer/Rooms";
 import Custom from "./pages/modes/multiplayer/Custom";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
@@ -141,14 +144,6 @@ export default function App() {
             }
           />
           <Route
-            path="play/multiplayer/league"
-            element={
-              <ProtectedRoute>
-                <League />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="play/multiplayer/rooms"
             element={
               <ProtectedRoute>
@@ -199,6 +194,8 @@ export default function App() {
             }
           />
           <Route path="about" element={<About />} />
+          <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="terms-of-service" element={<TermsOfServicePage />} />
           <Route path="forbidden" element={<ForbiddenPage />} />
           <Route path="offline" element={<OfflinePage />} />
           <Route path="profile/:username" element={<Profile />} />

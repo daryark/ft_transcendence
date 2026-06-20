@@ -206,12 +206,10 @@
   font-weight: 800;
 }
 
-.profile-page__leagueScore,
 .profile-page__modeScore {
   margin-top: 1rem;
 }
 
-.profile-page__leagueScore strong,
 .profile-page__modeScore strong {
   display: block;
   color: var(--app-text);
@@ -221,8 +219,6 @@
   line-height: 1;
 }
 
-.profile-page__leagueScore span,
-.profile-page__leagueScore small,
 .profile-page__modeScore small,
 .profile-page__notice {
   color: var(--app-muted);

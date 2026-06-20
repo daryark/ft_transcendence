@@ -22,8 +22,7 @@ export default function disconnectHandlers(
             ? roomService.getRoom(currentPlayer.roomId)
             : undefined;
 
-        const shouldWaitForReconnect = currentRoom?.gameConfig.mode === "league";
-        const reconnectTimeoutMs = shouldWaitForReconnect ? undefined : 0;
+        const reconnectTimeoutMs = 0;
 
         if (identity.type === "registered" && currentPlayer) {
             const userId = Number(identity.id);

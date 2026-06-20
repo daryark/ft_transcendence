@@ -21,7 +21,6 @@ export type CustomRoomPlayer = {
   id: number | string;
   username: string;
   country?: string;
-  rank?: string;
   role?: "player" | "spectator";
   isHost?: boolean;
   matchWins?: number;

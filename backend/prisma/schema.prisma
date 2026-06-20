@@ -17,8 +17,6 @@ model users {
   level                                       Int?                @default(1)
   xp                                          Int?                @default(0)
   next_level_xp                               Int?                @default(100)
-  league_elo                                  Int?                @default(1000)
-  league_rank                                 String?             @default("D") @db.VarChar(16)
   play_time_seconds                           Int?                @default(0)
   wins                                        Int?                @default(0)
   created_at                                  DateTime?           @default(now()) @db.Timestamp(6)
@@ -51,7 +49,6 @@ model match_players {
   user_id                   Int
   score                     Int?           @default(0)
   metric_value              Float?
-  rank_label                String?        @db.VarChar(16)
   result                    player_result?
   lines                     Int            @default(0)
   pieces_placed             Int            @default(0)
@@ -160,7 +157,6 @@ enum player_result {
 
 enum gamemode {
   quickPlay
-  tetraLeague
   fortyLines
   blitz
   zen

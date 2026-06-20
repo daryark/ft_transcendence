@@ -54,7 +54,6 @@ export function getCountdownSequence(
 export function getModeLabel(config: GameConfig | null) {
   if (config?.mode === "custom") return "CUSTOM ROOM";
   if (config?.mode === "quickplay") return "QUICK PLAY";
-  if (config?.mode === "league") return "LEAGUE";
   if (config?.mode !== "solo") return "GAME";
   if (config.preset === "40Lines") return "40 LINES";
   if (config.preset === "blitz") return "BLITZ";

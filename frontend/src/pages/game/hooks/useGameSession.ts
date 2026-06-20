@@ -75,7 +75,6 @@ function getActiveCountdownStep(
 function getMultiplayerExitPath(config: GameConfig | null) {
   if (config?.mode === "custom") return "/play/multiplayer/custom";
   if (config?.mode === "quickplay") return "/play/multiplayer/quick";
-  if (config?.mode === "league") return "/play/multiplayer/league";
 
   return null;
 }

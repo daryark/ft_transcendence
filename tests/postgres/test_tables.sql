@@ -12,11 +12,11 @@ TRUNCATE TABLE
 	users
 RESTART IDENTITY CASCADE;
 
-INSERT INTO users (email, username, password_hash, league_elo, league_rank)
+INSERT INTO users (email, username, password_hash)
 VALUES
-	('alice@example.com', 'alice', 'hash_alice', 1000, 'D'),
-	('bob@example.com', 'bob', 'hash_bob', 1050, 'D+'),
-	('carol@example.com', 'carol', 'hash_carol', 1100, 'C-');
+	('alice@example.com', 'alice', 'hash_alice'),
+	('bob@example.com', 'bob', 'hash_bob'),
+	('carol@example.com', 'carol', 'hash_carol');
 
 INSERT INTO friends (user_id, friend_id, status)
 VALUES
@@ -28,12 +28,12 @@ VALUES
 	('active'),
 	('finished');
 
-INSERT INTO match_players (match_id, user_id, score, metric_value, rank_label, result)
+INSERT INTO match_players (match_id, user_id, score, metric_value, result)
 VALUES
-	(1, 1, 12, 12.5, NULL, 'win'),
-	(1, 2, 7, 7.75, NULL, 'lose'),
-	(2, 2, 9, NULL, 'C', 'draw'),
-	(2, 3, 9, NULL, 'C', 'draw');
+	(1, 1, 12, 12.5, 'win'),
+	(1, 2, 7, 7.75, 'lose'),
+	(2, 2, 9, NULL, 'draw'),
+	(2, 3, 9, NULL, 'draw');
 
 INSERT INTO messages (sender_id, receiver_id, content)
 VALUES
@@ -57,7 +57,6 @@ SELECT
 	mp.user_id,
 	mp.score,
 	mp.metric_value,
-	mp.rank_label,
 	mp.result
 FROM matches m
 JOIN match_players mp ON mp.match_id = m.id

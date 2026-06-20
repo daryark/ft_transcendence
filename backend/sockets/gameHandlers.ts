@@ -53,7 +53,6 @@ function serializeResumePayload(room: NonNullable<ReturnType<RoomService["getRoo
             versusPlayers[playerId] = {
                 id: player.id,
                 username: player.profile?.nickname ?? `Player ${playerId.slice(0, 5)}`,
-                rank: player.profile?.rank,
                 state,
                 gameOver: Boolean(
                     state?.gameOver ||
