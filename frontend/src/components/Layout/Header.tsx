@@ -58,6 +58,9 @@ const Header = () => {
 
   const [isSocialOpen, setIsSocialOpen] = useState(false);
   const [socialInitialTab, setSocialInitialTab] = useState<SocialTab>("friends");
+  const [socialConversationUserId, setSocialConversationUserId] = useState<
+    number | null
+  >(null);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
   const [playerMeta, setPlayerMeta] = useState({
@@ -183,15 +186,23 @@ const Header = () => {
                     isOpen={isNotificationsOpen}
                     onClose={() => setIsNotificationsOpen(false)}
                     onUnreadCountChange={setNotificationCount}
-                    onOpenSocialTab={(tab) => {
+                    onOpenSocialTab={(tab, conversationUserId) => {
                       setSocialInitialTab(tab);
+                      setSocialConversationUserId(conversationUserId ?? null);
                       setIsSocialOpen(true);
                     }}
                   />
                   <SocialPanels
                     isOpen={isSocialOpen}
-                    onClose={() => setIsSocialOpen(false)}
+                    onClose={() => {
+                      setIsSocialOpen(false);
+                      setSocialConversationUserId(null);
+                    }}
                     initialTab={socialInitialTab}
+                    initialConversationUserId={socialConversationUserId}
+                    onInitialConversationOpened={() =>
+                      setSocialConversationUserId(null)
+                    }
                   />
                   {!user.isAnonymous && (
                     <button
@@ -215,6 +226,7 @@ const Header = () => {
                       onClick={() => {
                         setIsNotificationsOpen(false);
                         setSocialInitialTab("friends");
+                        setSocialConversationUserId(null);
                         setIsSocialOpen(true);
                       }}
                     >

@@ -8,6 +8,7 @@
   box-shadow:
     0 0 0 1px rgba(0, 0, 0, 0.88),
     0 1.2rem 3.5rem rgba(0, 0, 0, 0.44);
+  transform-origin: 50% 100%;
   transition:
     border-color 180ms ease,
     box-shadow 180ms ease;
@@ -29,6 +30,29 @@
     0 0 0 1px rgba(0, 0, 0, 0.9),
     0 0 1.1rem rgba(255, 59, 48, 0.72),
     0 1.2rem 3.5rem rgba(0, 0, 0, 0.52);
+  animation: game-board-danger-pulse 850ms ease-in-out infinite alternate;
+}
+
+@keyframes game-board-danger-pulse {
+  from {
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.9),
+      0 0 0.85rem rgba(255, 59, 48, 0.5),
+      0 1.2rem 3.5rem rgba(0, 0, 0, 0.52);
+  }
+  to {
+    box-shadow:
+      0 0 0 1px rgba(0, 0, 0, 0.9),
+      0 0 1.35rem rgba(255, 59, 48, 0.86),
+      0 1.2rem 3.5rem rgba(0, 0, 0, 0.52);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-board,
+  .game-board--danger {
+    animation: none;
+  }
 }
 
 @media (max-width: 560px) {

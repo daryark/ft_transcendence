@@ -10,7 +10,6 @@ import {
     type MultiplayerEngine,
 } from "../../../services/multiplayerEngineService";
 import { emitRoomSystemMessage } from "../../../services/roomChatService";
-import { emitAchievementUnlocked } from "../../../../sockets/realtime";
 
 import type Config from "../../../config/config.types";
 import type Room from "../../room";
@@ -32,6 +31,18 @@ const CLIMB_METERS_PER_SECOND = CLIMB_METERS_PER_10_SECONDS / 10;
 
 function getPlayerName(player: Player) {
     return player.profile?.nickname ?? String(player.id);
+}
+
+function notifyAchievementUnlocks(userId: number, achievements: unknown[]) {
+    if (achievements.length === 0) return;
+
+    void import("../../../../notifications/service.js")
+        .then(({ notifyAchievementUnlocks: notify }) =>
+            notify(userId, achievements as never),
+        )
+        .catch((error) => {
+            console.error("Failed to notify quickplay achievements", error);
+        });
 }
 
 function getAttackLines(linesCleared: number) {
@@ -232,7 +243,7 @@ function persistQuickplayResult(
                     },
                     result: isWinner ? "win" : "lose",
                 });
-                emitAchievementUnlocked(userId, achievements ?? []);
+                notifyAchievementUnlocks(userId, achievements ?? []);
             })
             .catch((error) => {
                 console.error("Failed to persist quickplay result", reason, error);

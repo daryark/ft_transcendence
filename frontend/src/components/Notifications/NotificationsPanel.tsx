@@ -29,7 +29,10 @@ type Props = {
   isOpen: boolean;
   onClose: () => void;
   onUnreadCountChange?: (count: number) => void;
-  onOpenSocialTab?: (tab: "friends" | "requests" | "blocked") => void;
+  onOpenSocialTab?: (
+    tab: "friends" | "requests" | "blocked",
+    conversationUserId?: number,
+  ) => void;
 };
 
 const NOTIFICATIONS_ENDPOINT = "/api/notifications";
@@ -110,6 +113,20 @@ const parseError = async (response: Response, fallback: string) => {
 };
 
 const notificationRoute = (notification: NotificationItem) => {
+  if (notification.type === "new_message") {
+    const payload = asRecord(notification.payload);
+    const conversationUserId =
+      toNumber(payload.conversationUserId ?? payload.senderId) ??
+      notification.actor?.id ??
+      undefined;
+
+    return {
+      kind: "social" as const,
+      tab: "friends" as const,
+      conversationUserId,
+    };
+  }
+
   if (notification.type === "friend_request") {
     return { kind: "social" as const, tab: "requests" as const };
   }
@@ -290,7 +307,10 @@ export default function NotificationsPanel({
     onClose();
 
     if (route.kind === "social") {
-      onOpenSocialTab?.(route.tab);
+      onOpenSocialTab?.(
+        route.tab,
+        "conversationUserId" in route ? route.conversationUserId : undefined,
+      );
       return;
     }
 

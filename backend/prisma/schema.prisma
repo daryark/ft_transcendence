@@ -98,13 +98,19 @@ model matches {
 }
 
 model messages {
-  id                                Int       @id @default(autoincrement())
+  id                                Int        @id @default(autoincrement())
   sender_id                         Int
   receiver_id                       Int
   content                           String
-  created_at                        DateTime? @default(now()) @db.Timestamp(6)
-  users_messages_receiver_idTousers users     @relation("messages_receiver_idTousers", fields: [receiver_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_messages_receiver")
-  users_messages_sender_idTousers   users     @relation("messages_sender_idTousers", fields: [sender_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_messages_sender")
+  reply_to_id                       Int?
+  created_at                        DateTime?  @default(now()) @db.Timestamp(6)
+  read_at                           DateTime?  @db.Timestamp(6)
+  users_messages_receiver_idTousers users      @relation("messages_receiver_idTousers", fields: [receiver_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_messages_receiver")
+  messages                          messages?  @relation("messagesTomessages", fields: [reply_to_id], references: [id], onUpdate: NoAction, map: "fk_messages_reply")
+  other_messages                    messages[] @relation("messagesTomessages")
+  users_messages_sender_idTousers   users      @relation("messages_sender_idTousers", fields: [sender_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_messages_sender")
+
+  @@index([sender_id, receiver_id, id], map: "idx_messages_conversation")
 }
 
 model notifications {

@@ -871,6 +871,8 @@ body.game-session-active {
 .room-game {
   --room-main-board-width: 18.75rem;
   --room-package-scale: 1;
+  --solo-package-scale: var(--room-package-scale);
+  --room-board-border-color: rgba(255, 255, 255, 0.96);
 
   min-height: 100vh;
   padding: 0;
@@ -881,6 +883,7 @@ body.game-session-active {
 }
 
 .room-game--quickplay {
+  --room-board-border-color: #45e7ff;
   background:
     linear-gradient(90deg, rgba(0, 0, 0, 0.34), rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.28)),
     linear-gradient(180deg, rgba(18, 54, 48, 0.48), rgba(1, 5, 8, 0.22));
@@ -927,9 +930,9 @@ body.game-session-active {
 
   display: grid;
   grid-template-columns:
-    calc(9.5rem * var(--room-package-scale))
+    calc(11rem * var(--room-package-scale))
     max-content
-    calc(9.5rem * var(--room-package-scale));
+    calc(10.75rem * var(--room-package-scale));
   align-items: start;
   justify-content: center;
   gap: calc(0.65rem * var(--room-package-scale));
@@ -941,7 +944,7 @@ body.game-session-active {
   min-width: 0;
   display: grid;
   align-content: start;
-  gap: calc(1.25rem * var(--room-package-scale));
+  gap: calc(0.7rem * var(--room-package-scale));
   overflow: hidden;
 }
 
@@ -961,11 +964,18 @@ body.game-session-active {
 .room-game__main-board .game-board {
   width: auto;
   max-width: none;
-  border: 2px solid rgba(255, 255, 255, 0.92);
+  border: 3px solid var(--room-board-border-color);
   border-radius: 0;
   box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.85),
-    0 1rem 3rem rgba(0, 0, 0, 0.36);
+    0 0 0 1px rgba(0, 0, 0, 0.88),
+    0 1.2rem 3.5rem rgba(0, 0, 0, 0.44);
+}
+
+.room-game--quickplay .room-game__main-board .game-board {
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.88),
+    0 0 1.1rem rgba(69, 231, 255, 0.36),
+    0 1.2rem 3.5rem rgba(0, 0, 0, 0.44);
 }
 
 .solo-game__stage .game-board--danger,
@@ -998,63 +1008,119 @@ body.game-session-active {
 
 .room-game__hold h2,
 .room-game__next h2 {
-  min-height: calc(1.6rem * var(--room-package-scale));
+  min-height: calc(1.75rem * var(--room-package-scale));
   display: grid;
   align-items: center;
   margin: 0;
-  padding: 0 calc(0.45rem * var(--room-package-scale));
-  background: rgba(255, 255, 255, 0.92);
-  color: #101217;
-  font-size: clamp(0.72rem, calc(1rem * var(--room-package-scale)), 1rem);
+  padding: 0 calc(0.38rem * var(--room-package-scale));
+  background: rgba(255, 255, 255, 0.96);
+  color: #07090a;
+  font-family: var(--app-font-display);
+  font-size: clamp(0.78rem, calc(1.2rem * var(--room-package-scale)), 1.2rem);
+  font-weight: 900;
+  line-height: 1;
 }
 
 .room-game__hold .solo-game__preview,
 .room-game__next .solo-game__preview {
-  min-height: calc(5.8rem * var(--room-package-scale));
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  min-height: calc(6rem * var(--room-package-scale));
+  border: 2px solid rgba(255, 255, 255, 0.94);
+  border-top: 0;
   border-radius: 0;
-  background: rgba(5, 8, 13, 0.82);
+  background: rgba(1, 4, 5, 0.88);
+}
+
+.room-game__hold .solo-game__preview {
+  min-height: calc(6.25rem * var(--room-package-scale));
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 1rem 100%, 0 calc(100% - 1rem));
 }
 
 .room-game__next .solo-game__next {
-  gap: calc(0.4rem * var(--room-package-scale));
-  padding-top: calc(0.4rem * var(--room-package-scale));
+  gap: 0;
+  padding: calc(0.45rem * var(--room-package-scale)) 0 calc(0.65rem * var(--room-package-scale));
+  border: 2px solid rgba(255, 255, 255, 0.94);
+  border-top: 0;
+  background: rgba(1, 4, 5, 0.88);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - 1rem), calc(100% - 1rem) 100%, 0 100%);
+}
+
+.room-game__next .solo-game__preview {
+  min-height: calc(5.25rem * var(--room-package-scale));
+  border: 0;
+  background: transparent;
 }
 
 .room-game__stats {
+  align-self: end;
   display: grid;
-  gap: calc(0.9rem * var(--room-package-scale));
-  padding-right: calc(0.25rem * var(--room-package-scale));
-  color: #fff;
+  width: 100%;
+  gap: calc(0.7rem * var(--room-package-scale));
+  justify-items: end;
+  padding: calc(1rem * var(--room-package-scale)) calc(0.65rem * var(--room-package-scale)) calc(0.4rem * var(--room-package-scale)) 0;
+  color: var(--app-text);
   text-align: right;
-  text-shadow: 0 0 0.7rem rgba(0, 0, 0, 0.9);
+  text-shadow: 0 0 0.75rem rgba(0, 0, 0, 0.7);
 }
 
 .room-game__stats > div {
   display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: end;
-  column-gap: 0.4rem;
+  gap: 0.08rem;
 }
 
 .room-game__stats span {
-  grid-column: 1 / -1;
-  color: rgba(255, 255, 255, 0.68);
+  color: rgba(255, 255, 255, 0.86);
   font-family: var(--app-font-display);
-  font-size: clamp(0.52rem, calc(0.7rem * var(--room-package-scale)), 0.7rem);
+  font-size: clamp(0.58rem, calc(0.82rem * var(--room-package-scale)), 0.82rem);
   font-weight: 900;
+  letter-spacing: 0;
+  white-space: nowrap;
 }
 
 .room-game__stats strong {
+  color: #ffffff;
   font-family: var(--app-font-display);
-  font-size: clamp(1.15rem, calc(2.5rem * var(--room-package-scale)), 2.5rem);
-  line-height: 0.9;
+  font-size: clamp(1.2rem, calc(2.8rem * var(--room-package-scale)), 2.8rem);
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.game-stat-pop {
+  animation: game-stat-pop 220ms cubic-bezier(0.2, 1.6, 0.32, 1) both;
+  transform-origin: 100% 80%;
 }
 
 .room-game__stats small {
-  color: rgba(255, 255, 255, 0.7);
-  font-size: clamp(0.52rem, calc(0.72rem * var(--room-package-scale)), 0.72rem);
+  color: rgba(255, 255, 255, 0.86);
+  font-family: var(--app-font-display);
+  font-size: clamp(0.58rem, calc(0.82rem * var(--room-package-scale)), 0.82rem);
   font-weight: 900;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+@keyframes game-stat-pop {
+  0% {
+    color: #ffffff;
+    filter: drop-shadow(0 0 0.7rem rgba(255, 255, 255, 0.8));
+    transform: scale(1);
+  }
+  42% {
+    color: #ffe45c;
+    filter: drop-shadow(0 0 1rem rgba(255, 228, 92, 0.7));
+    transform: scale(1.14);
+  }
+  100% {
+    color: inherit;
+    filter: none;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-stat-pop {
+    animation: none;
+  }
 }
 
 .room-game__population {

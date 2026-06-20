@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { applyConfigPatch, createConfig } from "../../../config/configBase";
 import { ConfigPatchSchema } from "../../../config/config.schema";
-import { emitAchievementUnlocked } from "../../../../sockets/realtime";
 import {
   clearRoomMessages,
   emitRoomSystemMessage,
@@ -181,6 +180,16 @@ function calculateCustomXpDelta(elapsedMs, isWinner) {
   return Math.round(isWinner ? winnerXp : Math.max(0, winnerXp - 100));
 }
 
+function notifyAchievementUnlocks(userId, achievements) {
+  if (!achievements?.length) return;
+
+  void import("../../../../notifications/service.js")
+    .then(({ notifyAchievementUnlocks: notify }) => notify(userId, achievements))
+    .catch((error) => {
+      console.error("Failed to notify custom achievements", error);
+    });
+}
+
 function serializeCustomGame(room, engine) {
   return serializeMultiplayerGame(room, engine, getPlayerName);
 }
@@ -331,7 +340,7 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
           },
           result: isWinner ? "win" : "lose",
         });
-        emitAchievementUnlocked(userId, achievements ?? []);
+        notifyAchievementUnlocks(userId, achievements ?? []);
       })
       .catch((error) => {
         console.error("Failed to persist custom progression", error);

@@ -8,11 +8,10 @@ import {
 import { saveGameConfig, type GameConfigDTO } from "./gameConfigStorage";
 import { connectSocket, disconnectSocket } from "./socketClient";
 import { useToast } from "../components/Toast/ToastProvider";
-import type { AchievementToast } from "../components/Toast/ToastProvider";
 import { clearStoredActiveGame } from "../pages/game/gameStorage";
 
 export default function SocketConfigSync() {
-  const { showAchievement, showToast } = useToast();
+  const { showToast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
   const [session, setSession] = useState<SessionData | null>(() =>
@@ -56,9 +55,6 @@ export default function SocketConfigSync() {
         }
       }
     };
-    const handleAchievementUnlocked = (achievement: AchievementToast) => {
-      showAchievement(achievement);
-    };
     const handleNotifications = (payload: unknown) => {
       const object =
         payload && typeof payload === "object"
@@ -82,17 +78,15 @@ export default function SocketConfigSync() {
     socket.on("game:config", handleGameConfig);
     socket.on("connect_error", handleConnectError);
     socket.on("server:error", handleServerError);
-    socket.on("achievement:unlocked", handleAchievementUnlocked);
     socket.on("notifications", handleNotifications);
 
     return () => {
       socket.off("game:config", handleGameConfig);
       socket.off("connect_error", handleConnectError);
       socket.off("server:error", handleServerError);
-      socket.off("achievement:unlocked", handleAchievementUnlocked);
       socket.off("notifications", handleNotifications);
     };
-  }, [location.pathname, navigate, session, showAchievement, showToast]);
+  }, [location.pathname, navigate, session, showToast]);
 
   return null;
 }
