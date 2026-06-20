@@ -12,6 +12,10 @@ import Play from "./pages/play/Play";
 import TetraChannel from "./pages/tetra-channel/TetraChannel";
 import About from "./pages/about/About";
 import Auth from "./pages/auth/Auth";
+import {
+  PrivacyPolicyPage,
+  TermsOfServicePage,
+} from "./pages/legal/LegalPage";
 import Leaderboard from "./pages/leaderboard/Leaderboard";
 import MyStatistics from "./pages/statistics/MyStatistics";
 import Achievements from "./pages/achievements/Achievements";
@@ -199,6 +203,8 @@ export default function App() {
             }
           />
           <Route path="about" element={<About />} />
+          <Route path="privacy-policy" element={<PrivacyPolicyPage />} />
+          <Route path="terms-of-service" element={<TermsOfServicePage />} />
           <Route path="forbidden" element={<ForbiddenPage />} />
           <Route path="offline" element={<OfflinePage />} />
           <Route path="profile/:username" element={<Profile />} />

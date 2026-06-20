@@ -56,32 +56,6 @@ body::before {
   opacity: 0.72;
 }
 
-body::after {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 90;
-  height: var(--app-footer-height);
-  display: flex;
-  align-items: center;
-  padding: 0 0.75rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(26, 29, 36, 0.94);
-  box-shadow: 0 -3px 12px rgba(0, 0, 0, 0.5);
-  color: #aeb3c2;
-  content: "WELCOME TO TETR.IO!";
-  font-size: 1.18rem;
-  font-weight: 900;
-  text-transform: uppercase;
-  pointer-events: none;
-  transition: opacity 160ms ease;
-}
-
-body.app-panel-open::after {
-  opacity: 0.12;
-}
-
 button,
 input,
 select,
@@ -142,10 +116,4 @@ body.reduced-game-effects *::after {
   animation-duration: 0.001ms !important;
   animation-iteration-count: 1 !important;
   transition-duration: 0.001ms !important;
-}
-
-@media (max-width: 700px) {
-  body::after {
-    font-size: 0.92rem;
-  }
 }

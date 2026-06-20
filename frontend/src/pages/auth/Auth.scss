@@ -209,6 +209,21 @@
   color: #101006;
 }
 
+.auth__legal {
+  margin: 0.85rem 0 0;
+  color: #8f93a2;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.auth__legal a {
+  color: #d6cc1e;
+  text-decoration: underline;
+  text-underline-offset: 0.18rem;
+}
+
 @keyframes auth-fall {
   from {
     opacity: 0;

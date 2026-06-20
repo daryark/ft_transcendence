@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { apiJson } from "../../api/client";
 import {
   createAnonymousSession,
@@ -286,6 +286,11 @@ export default function Auth() {
           >
             Play as anonymous
           </button>
+          <p className="auth__legal">
+            By continuing, you agree to the{" "}
+            <Link to="/terms-of-service">Terms of Service</Link> and
+            acknowledge the <Link to="/privacy-policy">Privacy Policy</Link>.
+          </p>
         </div>
       </div>
     </div>
