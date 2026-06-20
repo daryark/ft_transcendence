@@ -21,21 +21,13 @@ export function emitSocialUpdate(
   }
 }
 
-export function emitAchievementUnlocked(
-  userId: number | string,
-  achievements: Array<{
-    id: number;
-    code: string;
-    name: string;
-    description: string;
-    rarity: string;
-  }>,
+export function emitMessageUpdate(
+  userIds: Array<number | string>,
+  payload: Record<string, unknown>,
 ) {
-  if (!socketServer || achievements.length === 0) return;
+  if (!socketServer) return;
 
-  for (const achievement of achievements) {
-    socketServer
-      .to(userSocketRoom(userId))
-      .emit("achievement:unlocked", achievement);
+  for (const userId of new Set(userIds.map(String))) {
+    socketServer.to(userSocketRoom(userId)).emit("messages", payload);
   }
 }
