@@ -43,6 +43,10 @@ const getPageTitle = (pathname: string) => {
     return titles.leaderboards;
   }
 
+  if (parts[0] === "profile") {
+    return null;
+  }
+
   const lastPart = parts[parts.length - 1];
 
   return titles[lastPart] || lastPart.replaceAll("-", " ").toUpperCase();
@@ -148,7 +152,7 @@ const Header = () => {
           <div className="content">
             <div className="left">
               {isLoggedIn ? (
-                <div className="pageTitle">{pageTitle}</div>
+                pageTitle ? <div className="pageTitle">{pageTitle}</div> : null
               ) : (
                 <nav className="nav">
                   <Link

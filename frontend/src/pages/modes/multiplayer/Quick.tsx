@@ -8,24 +8,28 @@ const quickMods = [
     id: "double-hole",
     label: "II",
     name: "DOUBLE HOLE",
+    image: "/cards/Doublehole.png",
     description: "Garbage has two wells.",
   },
   {
     id: "no-hold",
     label: "H",
     name: "NO HOLD",
+    image: "/cards/Nohold.png",
     description: "Hold queue is disabled.",
   },
   {
     id: "messier-garbage",
     label: "M",
     name: "MESSIER GARBAGE",
+    image: "/cards/Messy.png",
     description: "Garbage is significantly messier.",
   },
   {
     id: "faster-gravity",
     label: "G",
     name: "FASTER GRAVITY",
+    image: "/cards/Gravity.png",
     description: "The stack gets heavier faster.",
   },
 ] as const;
@@ -126,6 +130,13 @@ export default function Quick() {
                   title={mod.name}
                   type="button"
                 >
+                  <img
+                    alt=""
+                    aria-hidden="true"
+                    className="mp-mod-card__image"
+                    loading="lazy"
+                    src={mod.image}
+                  />
                   <span className="mp-mod-card__badge">{mod.label}</span>
                   <span className="mp-mod-card__name">{mod.name}</span>
                   <span className="mp-mod-card__desc">{mod.description}</span>

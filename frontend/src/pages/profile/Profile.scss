@@ -32,7 +32,7 @@
   box-shadow: var(--app-shadow-panel);
 }
 
-.profile-page__top h1 {
+.profile-page__top h2 {
   margin: 0;
   font-family: var(--app-font-display);
   font-size: clamp(3rem, 11vw, 7rem);
@@ -171,10 +171,6 @@
   background: rgba(79, 209, 197, 0.12);
 }
 
-.profile-page .back-button {
-  justify-self: end;
-}
-
 .profile-page__content {
   display: grid;
   gap: 1rem;
@@ -302,10 +298,6 @@
 @media (max-width: 880px) {
   .profile-page__top {
     grid-template-columns: 1fr;
-  }
-
-  .profile-page .back-button {
-    width: 100%;
   }
 
   .profile-page__grid {

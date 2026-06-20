@@ -1,4 +1,8 @@
 .back-button {
+  position: fixed;
+  left: 0;
+  top: calc(var(--app-header-height) + 0.75rem);
+  z-index: 30;
   width: 8.1rem;
   min-height: 3.55rem;
   display: inline-flex;

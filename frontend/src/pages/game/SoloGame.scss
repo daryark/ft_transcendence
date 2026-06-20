@@ -698,7 +698,6 @@ body.game-session-active {
   font-size: 1.25rem;
 }
 
-.solo-game-results__back,
 .solo-game-results__again {
   display: inline-grid;
   min-height: 3rem;
@@ -712,7 +711,38 @@ body.game-session-active {
 }
 
 .solo-game-results__back {
-  padding: 0 1.25rem;
+  position: fixed;
+  left: 0;
+  top: calc(var(--app-header-height) + 0.75rem);
+  z-index: 30;
+  width: 8.1rem;
+  min-height: 3.55rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 0 1.35rem 0 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background:
+    linear-gradient(180deg, rgba(55, 59, 64, 0.92), rgba(33, 36, 39, 0.96));
+  box-shadow:
+    0 0.25rem 0 rgba(0, 0, 0, 0.72),
+    0 0 0.75rem rgba(0, 0, 0, 0.46);
+  color: #d6d6dc;
+  font-size: 1.75rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition:
+    width 120ms ease,
+    filter 120ms ease,
+    background 120ms ease;
+}
+
+.solo-game-results__back:hover {
+  width: 10.65rem;
+  background:
+    linear-gradient(180deg, rgba(68, 72, 77, 0.96), rgba(38, 41, 45, 0.98));
+  filter: brightness(1.18);
 }
 
 .solo-game-results__card {

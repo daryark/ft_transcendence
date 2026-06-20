@@ -8,13 +8,6 @@
   gap: 0.85rem;
 }
 
-.my-statistics > .back-button {
-  position: fixed;
-  left: 0;
-  top: calc(var(--app-header-height) + 0.75rem);
-  z-index: 30;
-}
-
 .my-statistics__panel {
   padding: 0.75rem;
   border: 1px solid rgba(101, 226, 111, 0.36);
