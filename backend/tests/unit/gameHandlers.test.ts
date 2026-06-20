@@ -257,7 +257,7 @@ describe('gameHandlers', () => {
     expect(roomService.deleteRoom).not.toHaveBeenCalled();
   });
 
-  test('mode:leave deletes room after the last player leaves', () => {
+  test('mode:leave keeps the quickplay pool room after the last player leaves', () => {
     const socket = createSocket({
       data: {
         identity: { id: 'user-1', type: 'anonymous' },
@@ -284,7 +284,7 @@ describe('gameHandlers', () => {
     handler();
 
     expect(roomService.removePlayer).toHaveBeenCalledWith('ROOM1', 'user-1');
-    expect(roomService.deleteRoom).toHaveBeenCalledWith('ROOM1');
+    expect(roomService.deleteRoom).not.toHaveBeenCalled();
   });
 
   test('player:move pushes input to room engine when socket has roomId', () => {

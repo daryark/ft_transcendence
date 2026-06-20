@@ -70,9 +70,13 @@ export default function GamePage() {
     if (gameConfig.mode === "quickplay") {
       return (
         <QuickGameOver
+          chatMessages={session.quickplayLobby.chatMessages}
+          climbers={session.quickplayLobby.players}
           onAgain={session.restartQuickplay}
+          onChatMessage={session.sendQuickplayChatMessage}
           onExit={session.leaveResults}
           onSendToChat={session.sendQuickplayResultToChat}
+          onSpectate={session.spectateQuickplay}
           quickplay={result.quickplay}
           stats={result.stats}
         />

@@ -43,6 +43,12 @@ type QuickChatMessage = {
   text: string;
 };
 
+type QuickLobbyPlayer = {
+  id: string | number;
+  username?: string;
+  quickplayMeters?: number;
+};
+
 function normalizeQuickChatMessage(
   message: {
     actor?: string;
@@ -69,6 +75,7 @@ export default function Quick() {
   const [selectedMods, setSelectedMods] = useState<string[]>([]);
   const [chatMessages, setChatMessages] = useState<QuickChatMessage[]>([]);
   const [chatMessage, setChatMessage] = useState("");
+  const [climbers, setClimbers] = useState<QuickLobbyPlayer[]>([]);
   const [waitingStatus, setWaitingStatus] = useState("");
   const waitingToastShownRef = useRef("");
 
@@ -98,6 +105,17 @@ export default function Quick() {
         showToast("Need two players. Waiting for pool to start.", "info");
       }
     };
+    const handleQuickplayLobby = (snapshot: {
+      players?: QuickLobbyPlayer[];
+      chatMessages?: Array<Parameters<typeof normalizeQuickChatMessage>[0]>;
+    }) => {
+      setClimbers(snapshot.players ?? []);
+      setChatMessages(
+        (snapshot.chatMessages ?? []).map((message, index) =>
+          normalizeQuickChatMessage(message, index),
+        ),
+      );
+    };
 
     const handleChatMessage = (data: Parameters<typeof normalizeQuickChatMessage>[0]) => {
       setChatMessages((current) => [
@@ -107,10 +125,13 @@ export default function Quick() {
     };
 
     socket.on("room:update", handleRoomUpdate);
+    socket.on("quickplay:lobby", handleQuickplayLobby);
     socket.on("chat:message", handleChatMessage);
+    socket.emit("quickplay:lobby");
 
     return () => {
       socket.off("room:update", handleRoomUpdate);
+      socket.off("quickplay:lobby", handleQuickplayLobby);
       socket.off("chat:message", handleChatMessage);
     };
   }, [showToast]);
@@ -157,6 +178,26 @@ export default function Quick() {
 
     getSocket()?.emit("chat:message", { message });
     setChatMessage("");
+  };
+
+  const spectateClimber = () => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleGameStart = (payload: { roomId?: string }) => {
+      if (!payload.roomId) return;
+
+      socket.off("game:start", handleGameStart);
+      navigate(`/game/${payload.roomId}`, {
+        state: {
+          ...payload,
+          from: "/play/multiplayer/quick",
+        },
+      });
+    };
+
+    socket.once("game:start", handleGameStart);
+    socket.emit("quickplay:spectate");
   };
 
   return (
@@ -266,8 +307,24 @@ export default function Quick() {
         </section>
 
         <aside className="mp-quick-standings" aria-label="Quick Play standings">
-          <strong>0 PLAYING NOW</strong>
-          <div className="mp-quick-empty">NO ACTIVE CLIMBERS</div>
+          <strong>{climbers.length} PLAYING NOW</strong>
+          {climbers.length > 0 ? (
+            <div className="mp-quick-players">
+              {climbers.map((player, index) => (
+                <button
+                  key={player.id}
+                  onClick={spectateClimber}
+                  type="button"
+                >
+                  <span>{index + 1}</span>
+                  <strong>{player.username ?? "PLAYER"}</strong>
+                  <em>{(player.quickplayMeters ?? 0).toFixed(1)}m</em>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="mp-quick-empty">NO ACTIVE CLIMBERS</div>
+          )}
         </aside>
       </main>
 

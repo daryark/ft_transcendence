@@ -1581,13 +1581,137 @@ body.game-session-active {
 .quick-results {
   min-height: 100vh;
   display: grid;
+  grid-template-columns: minmax(12rem, 22vw) minmax(31rem, 42vw) minmax(13rem, 19vw);
   align-content: start;
-  justify-items: center;
+  justify-content: center;
+  gap: clamp(0.75rem, 1.7vw, 1.75rem);
   padding: calc(var(--app-header-height) + 4.75rem) 1rem calc(var(--app-footer-height) + 2rem);
   background:
     linear-gradient(90deg, rgba(58, 10, 2, 0.78), rgba(119, 44, 19, 0.28), rgba(43, 4, 3, 0.8)),
     url("/background/forest_fog.jpg") center / cover;
   color: #ffc2a1;
+}
+
+.quick-results__center {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  width: 100%;
+}
+
+.quick-results__chat {
+  min-height: calc(100vh - var(--app-header-height) - var(--app-footer-height) - 7rem);
+  display: grid;
+  grid-template-rows: minmax(8rem, 1fr) auto;
+  align-content: end;
+  gap: 0.7rem;
+  padding-bottom: 1.2rem;
+  color: rgba(255, 215, 194, 0.58);
+  font-weight: 900;
+  text-shadow: 0 0.08rem 0 #000;
+}
+
+.quick-results__chat-log {
+  max-height: min(54vh, 34rem);
+  overflow: auto;
+  display: grid;
+  align-content: end;
+  gap: 0.35rem;
+  padding-right: 0.3rem;
+}
+
+.quick-results__chat p {
+  margin: 0;
+  color: rgba(255, 235, 222, 0.82);
+  font-family: var(--app-font-display);
+  font-size: clamp(0.82rem, 1vw, 1rem);
+  line-height: 1.15;
+}
+
+.quick-results__chat strong {
+  color: #ff8b38;
+}
+
+.quick-results__chat form input {
+  width: 100%;
+  min-height: 1.6rem;
+  padding: 0 0.45rem;
+  border: 1px solid rgba(255, 135, 70, 0.18);
+  background: rgba(10, 3, 2, 0.7);
+  color: #fff;
+  font-family: var(--app-font-display);
+  font-size: 0.85rem;
+}
+
+.quick-results__standings {
+  display: grid;
+  gap: 0.6rem;
+  justify-self: end;
+  width: min(18rem, 100%);
+  margin-top: 0.35rem;
+  color: #f9e0c8;
+  font-family: var(--app-font-display);
+  font-weight: 900;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.quick-results__standings > strong {
+  color: rgba(255, 239, 220, 0.92);
+  font-size: 1.1rem;
+  text-shadow: 0 0.08rem 0 #000;
+}
+
+.quick-results__players {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.quick-results__players button {
+  min-height: 2.35rem;
+  display: grid;
+  grid-template-columns: 1.8rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(255, 74, 136, 0.54);
+  background: linear-gradient(90deg, rgba(106, 24, 68, 0.88), rgba(49, 11, 35, 0.76));
+  color: #fff;
+  font-family: var(--app-font-display);
+  font-weight: 900;
+  text-align: left;
+}
+
+.quick-results__players button:hover,
+.quick-results__players button:focus-visible {
+  transform: translateX(-0.28rem);
+  border-color: #ff9f2f;
+  filter: brightness(1.12);
+}
+
+.quick-results__players span {
+  color: #ff9f2f;
+  text-align: right;
+}
+
+.quick-results__players strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.quick-results__players em {
+  color: #ffd7ff;
+  font-style: normal;
+}
+
+.quick-results__empty {
+  min-height: 3rem;
+  display: grid;
+  place-items: center end;
+  padding: 0.55rem 0.75rem;
+  border-left: 2px solid rgba(255, 118, 48, 0.55);
+  background: linear-gradient(90deg, rgba(90, 26, 24, 0.48), rgba(23, 6, 10, 0.7));
+  color: rgba(255, 218, 197, 0.62);
 }
 
 .quick-game__topbar {
@@ -1789,6 +1913,10 @@ body.game-session-active {
 }
 
 @media (max-width: 680px) {
+  .quick-results {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .quick-results__share {
     grid-template-columns: minmax(0, 1fr);
     padding: 0.5rem;

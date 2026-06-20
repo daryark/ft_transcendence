@@ -240,6 +240,48 @@
   color: rgba(255, 218, 197, 0.62);
 }
 
+.mp-quick-players {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.mp-quick-players button {
+  min-height: 2.35rem;
+  display: grid;
+  grid-template-columns: 1.8rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(255, 74, 136, 0.54);
+  background: linear-gradient(90deg, rgba(106, 24, 68, 0.88), rgba(49, 11, 35, 0.76));
+  color: #fff;
+  font-family: var(--app-font-display);
+  font-weight: 900;
+  text-align: left;
+}
+
+.mp-quick-players button:hover,
+.mp-quick-players button:focus-visible {
+  transform: translateX(-0.28rem);
+  border-color: #ff9f2f;
+  filter: brightness(1.12);
+}
+
+.mp-quick-players span {
+  color: #ff9f2f;
+  text-align: right;
+}
+
+.mp-quick-players strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mp-quick-players em {
+  color: #ffd7ff;
+  font-style: normal;
+}
+
 .mp-card,
 .mp-mods,
 .mp-help,

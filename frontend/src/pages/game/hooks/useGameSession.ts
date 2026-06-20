@@ -53,6 +53,45 @@ export type GameResult = {
   };
 };
 
+type QuickplayLobbyPlayer = {
+  id: string | number;
+  username?: string;
+  quickplayMeters?: number;
+};
+
+type QuickplayChatMessage = {
+  id: string;
+  author: string;
+  actor?: string;
+  system?: boolean;
+  text: string;
+};
+
+type QuickplayLobbySnapshot = {
+  players: QuickplayLobbyPlayer[];
+  chatMessages: QuickplayChatMessage[];
+};
+
+function normalizeQuickplayChatMessage(
+  message: {
+    actor?: string;
+    id?: string;
+    message?: string;
+    sender?: string;
+    system?: boolean;
+    text?: string;
+  },
+  index: number,
+): QuickplayChatMessage {
+  return {
+    id: message.id ?? `${Date.now()}-${index}`,
+    author: message.sender ?? "PLAYER",
+    actor: message.actor,
+    system: message.system,
+    text: message.text ?? message.message ?? "",
+  };
+}
+
 function getInitialPayload(locationState: unknown, gameId?: string) {
   const locationPayload = toActiveGamePayload(locationState);
 
@@ -105,6 +144,10 @@ export function useGameSession() {
     Record<string, VersusPlayerState>
   >(() => initialPayload.players ?? {});
   const [result, setResult] = useState<GameResult | null>(null);
+  const [quickplayLobby, setQuickplayLobby] = useState<QuickplayLobbySnapshot>({
+    players: [],
+    chatMessages: [],
+  });
   const [roundResult, setRoundResult] = useState<RoundEndPayload | null>(null);
   const [countdownStep, setCountdownStep] = useState<CountdownStep>(() => {
     if (initialPayload.roomId !== gameId) return null;
@@ -141,14 +184,17 @@ export function useGameSession() {
   }, [countdownStep, gameConfig, gameState]);
 
   useEffect(() => {
-    const isMultiplayer = !!gameConfig && gameConfig.mode !== "solo";
+    const isMultiplayer =
+      !!gameConfig &&
+      gameConfig.mode !== "solo" &&
+      !(gameConfig.mode === "quickplay" && result);
 
     document.body.classList.toggle("game-session-active", isMultiplayer);
 
     return () => {
       document.body.classList.remove("game-session-active");
     };
-  }, [gameConfig]);
+  }, [gameConfig, result]);
 
   useEffect(() => {
     const payload = toActiveGamePayload(location.state);
@@ -412,6 +458,30 @@ export function useGameSession() {
         "info",
       );
     };
+    const handleQuickplayLobby = (payload: {
+      players?: QuickplayLobbyPlayer[];
+      chatMessages?: Array<Parameters<typeof normalizeQuickplayChatMessage>[0]>;
+    }) => {
+      setQuickplayLobby({
+        players: payload.players ?? [],
+        chatMessages: (payload.chatMessages ?? []).map((message, index) =>
+          normalizeQuickplayChatMessage(message, index),
+        ),
+      });
+    };
+    const handleChatMessage = (
+      payload: Parameters<typeof normalizeQuickplayChatMessage>[0],
+    ) => {
+      if (gameConfigRef.current?.mode !== "quickplay") return;
+
+      setQuickplayLobby((current) => ({
+        ...current,
+        chatMessages: [
+          ...current.chatMessages,
+          normalizeQuickplayChatMessage(payload, current.chatMessages.length),
+        ],
+      }));
+    };
     const handleRoundEnd = (payload: RoundEndPayload) => {
       if (payload.roomId !== gameId) return;
 
@@ -432,6 +502,8 @@ export function useGameSession() {
     socket.on("game:end", handleEnd);
     socket.on("quickplay:result", handleQuickplayResult);
     socket.on("quickplay:warning", handleQuickplayWarning);
+    socket.on("quickplay:lobby", handleQuickplayLobby);
+    socket.on("chat:message", handleChatMessage);
     socket.on("round:end", handleRoundEnd);
     socket.on("server:error", handleServerError);
 
@@ -444,6 +516,8 @@ export function useGameSession() {
       socket.off("game:end", handleEnd);
       socket.off("quickplay:result", handleQuickplayResult);
       socket.off("quickplay:warning", handleQuickplayWarning);
+      socket.off("quickplay:lobby", handleQuickplayLobby);
+      socket.off("chat:message", handleChatMessage);
       socket.off("round:end", handleRoundEnd);
       socket.off("server:error", handleServerError);
     };
@@ -497,6 +571,7 @@ export function useGameSession() {
     players,
     result,
     roundResult,
+    quickplayLobby,
     countdownStep,
     connectionStatus,
     networkStatus,
@@ -566,6 +641,31 @@ export function useGameSession() {
         message: `Quick Play result: ${currentResult.quickplay.meters.toFixed(1)}m${floor}.${best}`,
       });
       showToast("Result sent to Quick Play chat.", "success");
+    },
+    sendQuickplayChatMessage: (message: string) => {
+      const text = message.trim();
+      if (!socket || !text || gameConfigRef.current?.mode !== "quickplay") return;
+
+      socket.emit("chat:message", { message: text });
+    },
+    spectateQuickplay: () => {
+      if (!socket || gameConfigRef.current?.mode !== "quickplay") return;
+
+      const handleStart = (payload: GameStartPayload) => {
+        if (!payload.roomId) return;
+
+        socket.off("game:start", handleStart);
+        navigate(`/game/${payload.roomId}`, {
+          replace: true,
+          state: {
+            ...payload,
+            from: "/play/multiplayer/quick",
+          },
+        });
+      };
+
+      socket.once("game:start", handleStart);
+      socket.emit("quickplay:spectate");
     },
     restartSolo: () => socket?.emit("room:start"),
     retryConnection: () => {

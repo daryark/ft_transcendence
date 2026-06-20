@@ -153,7 +153,8 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
               ` / ${eliminatedPlayers.length} OUT`}
           </span>
         </div>
-        {gameConfig.mode === "custom" && isSpectating && (
+        {(gameConfig.mode === "custom" || gameConfig.mode === "quickplay") &&
+          isSpectating && (
           <button
             className="versus-game__exit"
             onClick={session.leaveActiveGameView}
