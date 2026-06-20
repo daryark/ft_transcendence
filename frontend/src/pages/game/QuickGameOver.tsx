@@ -1,19 +1,28 @@
-import type { GameStats, QuickplayStats } from "./types";
+import type { GameStats } from "./types";
 
 type QuickGameOverProps = {
   onAgain: () => void;
   onExit: () => void;
-  quickplay?: QuickplayStats;
+  onSendToChat: () => void;
+  quickplay?: {
+    meters: number;
+    floor: number;
+    floorName?: string;
+    previousBestMeters: number | null;
+    isPersonalBest: boolean;
+  };
   stats: GameStats;
 };
 
 export default function QuickGameOver({
   onAgain,
   onExit,
+  onSendToChat,
   quickplay,
   stats,
 }: QuickGameOverProps) {
   const altitude = quickplay?.meters ?? stats.lines + stats.piecesPlaced / 100;
+  const previousBest = quickplay?.previousBestMeters;
 
   return (
     <main className="solo-game quick-results">
@@ -25,11 +34,32 @@ export default function QuickGameOver({
       </header>
 
       <section className="quick-results__panel" aria-label="Quick Play results">
+        <div className="quick-results__spectate">QUICK PLAY</div>
         <div className="quick-results__kicker">YOUR FINAL ALTITUDE</div>
-        <strong className="quick-results__altitude">
-          {altitude.toFixed(1)}M
-        </strong>
+        <div className="quick-results__altitude-box">
+          <strong className="quick-results__altitude">
+            {altitude.toFixed(1)}M
+          </strong>
+        </div>
+        <div className="quick-results__best">
+          {quickplay?.isPersonalBest ? (
+            <strong>NEW PERSONAL BEST</strong>
+          ) : previousBest !== null && previousBest !== undefined ? (
+            <span>PERSONAL BEST {previousBest.toFixed(1)}M</span>
+          ) : (
+            <span>NO SAVED PERSONAL BEST</span>
+          )}
+        </div>
       </section>
+
+      <div className="quick-results__share">
+        <span>
+          REPLAY ID: R:{Math.round(altitude * 1000).toString(16).toUpperCase()}
+        </span>
+        <button onClick={onSendToChat} type="button">
+          SEND TO CHAT
+        </button>
+      </div>
 
       <button className="quick-results__again" onClick={onAgain} type="button">
         AGAIN
@@ -39,7 +69,7 @@ export default function QuickGameOver({
         <h2>STATS</h2>
         <div>
           <span>FLOOR</span>
-          <strong>{quickplay?.floor ?? 1}</strong>
+          <strong>{quickplay?.floorName ?? quickplay?.floor ?? 1}</strong>
         </div>
         <div>
           <span>PIECES</span>

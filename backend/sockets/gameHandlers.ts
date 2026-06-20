@@ -28,6 +28,8 @@ export type ServerToClientEvents =
     | "game:end"
     | "round:start"
     | "round:end"
+    | "quickplay:result"
+    | "quickplay:warning"
     | "room:update"
     | "rooms:update"
     | "social:update"

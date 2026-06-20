@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import MultiplayerGameOver from "./MultiplayerGameOver";
+import QuickGameOver from "./QuickGameOver";
 import { getModeLabel } from "./gameUtils";
 import { useGameSession } from "./hooks/useGameSession";
 import DuelGameView from "./views/DuelGameView";
@@ -67,6 +68,18 @@ export default function GamePage() {
   }
 
   if (result && gameConfig && gameConfig.mode !== "solo") {
+    if (gameConfig.mode === "quickplay") {
+      return (
+        <QuickGameOver
+          onAgain={session.restartQuickplay}
+          onExit={session.leaveResults}
+          onSendToChat={session.sendQuickplayResultToChat}
+          quickplay={result.quickplay}
+          stats={result.stats}
+        />
+      );
+    }
+
     return (
       <MultiplayerGameOver
         modeLabel={getModeLabel(gameConfig)}

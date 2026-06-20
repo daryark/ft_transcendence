@@ -9,7 +9,10 @@ import {
     serializeMultiplayerGame,
     type MultiplayerEngine,
 } from "../../../services/multiplayerEngineService";
-import { emitRoomSystemMessage } from "../../../services/roomChatService";
+import {
+    emitRoomSystemMessage,
+    getRoomMessages,
+} from "../../../services/roomChatService";
 
 import type Config from "../../../config/config.types";
 import type Room from "../../room";
@@ -20,6 +23,10 @@ import type { QuickplayModifier } from "../../../config/gameConfig.types";
 const quickplayEngines = new Map<string, MultiplayerEngine>();
 const quickplayPlayerConfigs = new WeakMap<Room, Map<string, Config["gameConfig"]>>();
 const quickplayPlayerAltitudes = new WeakMap<Room, Map<string, QuickplayAltitude>>();
+const quickplayLastPlayerTimers = new WeakMap<
+    Room,
+    { playerId: string; timeout: ReturnType<typeof setTimeout> }
+>();
 
 type QuickplayAltitude = {
     bonusMeters: number;
@@ -28,6 +35,7 @@ type QuickplayAltitude = {
 
 const CLIMB_METERS_PER_10_SECONDS = 2.5;
 const CLIMB_METERS_PER_SECOND = CLIMB_METERS_PER_10_SECONDS / 10;
+const LAST_PLAYER_END_DELAY_MS = 60_000;
 
 function getPlayerName(player: Player) {
     return player.profile?.nickname ?? String(player.id);
@@ -43,6 +51,36 @@ function notifyAchievementUnlocks(userId: number, achievements: unknown[]) {
         .catch((error) => {
             console.error("Failed to notify quickplay achievements", error);
         });
+}
+
+function getRegisteredUserId(player: Player | undefined) {
+    if (!player || player.identityType === "anonymous") return null;
+
+    const userId = Number(player.id);
+    return Number.isInteger(userId) && userId > 0 ? userId : null;
+}
+
+async function getBestQuickplayMeters(userId: number) {
+    const { prisma } = await import("../../../../prisma/prisma.js");
+    const best = await (prisma.match_players as any).findFirst({
+        where: {
+            user_id: userId,
+            matches: {
+                gamemode: "quickPlay",
+            },
+            metric_value: {
+                not: null,
+            },
+        },
+        orderBy: {
+            metric_value: "desc",
+        },
+        select: {
+            metric_value: true,
+        },
+    });
+
+    return typeof best?.metric_value === "number" ? best.metric_value : null;
 }
 
 function getAttackLines(linesCleared: number) {
@@ -180,6 +218,102 @@ function stopQuickplayEngine(roomId: string) {
     engine.stop();
 }
 
+function clearLastPlayerTimer(room: Room) {
+    const timer = quickplayLastPlayerTimers.get(room);
+    if (!timer) return;
+
+    clearTimeout(timer.timeout);
+    quickplayLastPlayerTimers.delete(room);
+}
+
+function buildQuickplayPlayerResult(
+    room: Room,
+    engine: MultiplayerEngine,
+    playerId: string,
+    reason = "game_over",
+    best?: {
+        previousBestMeters: number | null;
+        isPersonalBest: boolean;
+    },
+) {
+    const playerEngine = engine.playerEngines.get(playerId);
+    const state = playerEngine?.room?.state ?? null;
+    const meters = getQuickplayMeters(room, playerId, state);
+    const floor = getQuickplayFloor(meters);
+
+    return {
+        roomId: room.id,
+        playerId,
+        reason,
+        quickplay: {
+            meters,
+            floor: floor.index,
+            floorName: floor.name,
+            previousBestMeters: best?.previousBestMeters ?? null,
+            isPersonalBest: best?.isPersonalBest ?? false,
+        },
+        stats: state?.update ?? null,
+    };
+}
+
+const QUICKPLAY_FLOORS = [
+    { name: "Hall of Beginnings", min: 0 },
+    { name: "The Hotel", min: 50 },
+    { name: "The Casino", min: 150 },
+    { name: "The Arena", min: 300 },
+    { name: "The Museum", min: 450 },
+    { name: "Abandoned Offices", min: 650 },
+    { name: "The Laboratory", min: 850 },
+    { name: "The Core", min: 1100 },
+    { name: "Corruption", min: 1350 },
+    { name: "Platform of the Gods", min: 1650 },
+];
+
+function getQuickplayFloor(meters: number) {
+    const floorIndex = QUICKPLAY_FLOORS.reduce(
+        (current, floor, index) => (meters >= floor.min ? index : current),
+        0,
+    );
+
+    return {
+        ...QUICKPLAY_FLOORS[floorIndex],
+        index: floorIndex + 1,
+    };
+}
+
+function emitQuickplayPlayerResult(
+    room: Room,
+    roomService: RoomService,
+    engine: MultiplayerEngine,
+    playerId: string,
+    reason = "game_over",
+) {
+    const player = room.players.get(playerId as never);
+    const userId = getRegisteredUserId(player);
+    const immediatePayload = buildQuickplayPlayerResult(room, engine, playerId, reason);
+
+    roomService.broadcast(room.id, "quickplay:result", immediatePayload);
+
+    if (!userId) return;
+
+    void getBestQuickplayMeters(userId)
+        .then((previousBestMeters) => {
+            const meters = immediatePayload.quickplay.meters;
+            roomService.broadcast(
+                room.id,
+                "quickplay:result",
+                buildQuickplayPlayerResult(room, engine, playerId, reason, {
+                    previousBestMeters,
+                    isPersonalBest:
+                        previousBestMeters === null || meters > previousBestMeters,
+                }),
+            );
+        })
+        .catch((error) => {
+            console.error("Failed to load quickplay best result", error);
+        });
+}
+
 function persistQuickplayResult(
     room: Room,
     engine: MultiplayerEngine,
@@ -255,7 +389,56 @@ function maybeEndQuickplay(room: Room, roomService: RoomService, engine: Multipl
     if (room.status !== "playing") return false;
 
     const activePlayerIds = getActiveMultiplayerPlayerIds(engine);
-    if (activePlayerIds.length > 0) return false;
+    if (activePlayerIds.length > 1) {
+        clearLastPlayerTimer(room);
+        return false;
+    }
+
+    if (activePlayerIds.length === 1) {
+        const playerId = activePlayerIds[0];
+        const currentTimer = quickplayLastPlayerTimers.get(room);
+        if (currentTimer?.playerId === playerId) return false;
+
+        clearLastPlayerTimer(room);
+        roomService.broadcast(room.id, "quickplay:warning", {
+            roomId: room.id,
+            playerId,
+            seconds: LAST_PLAYER_END_DELAY_MS / 1000,
+            message:
+                "Only one player remains. Quick Play ends in 60 seconds if nobody joins.",
+        });
+        emitRoomSystemMessage(
+            roomService,
+            room,
+            "only one player remains; quickplay ends in 60 seconds if nobody joins",
+        );
+        quickplayLastPlayerTimers.set(room, {
+            playerId,
+            timeout: setTimeout(() => {
+                const currentEngine = quickplayEngines.get(room.id);
+                if (!currentEngine || room.status !== "playing") return;
+
+                const currentActivePlayerIds = getActiveMultiplayerPlayerIds(currentEngine);
+                if (
+                    currentActivePlayerIds.length === 1 &&
+                    currentActivePlayerIds[0] === playerId
+                ) {
+                    emitQuickplayPlayerResult(
+                        room,
+                        roomService,
+                        currentEngine,
+                        playerId,
+                        "game_over",
+                    );
+                    currentEngine.eliminatedPlayerIds.add(playerId);
+                    maybeEndQuickplay(room, roomService, currentEngine, "game_over");
+                }
+            }, LAST_PLAYER_END_DELAY_MS),
+        });
+        return false;
+    }
+
+    clearLastPlayerTimer(room);
 
     const winnerId = activePlayerIds[0] ?? null;
     const payload = {
@@ -279,6 +462,7 @@ function maybeEndQuickplay(room: Room, roomService: RoomService, engine: Multipl
     quickplayEngines.delete(room.id);
     quickplayPlayerConfigs.delete(room);
     quickplayPlayerAltitudes.delete(room);
+    clearLastPlayerTimer(room);
     roomService.deleteRoom(room.id);
     return true;
 }
@@ -296,6 +480,8 @@ function startQuickplay(room: Room, roomService: RoomService) {
             maybeEndQuickplay(room, roomService, nextEngine, reason),
         onStop: () => quickplayEngines.delete(room.id),
         onPlayerUpdate: (playerId, state) => updateQuickplayAltitude(room, playerId, state),
+        onPlayerOut: (playerId, _state, nextEngine, reason) =>
+            emitQuickplayPlayerResult(room, roomService, nextEngine, playerId, reason),
         getPlayerGameConfig: (player) =>
             getRoomPlayerConfigs(room).get(String(player.id)) ?? room.gameConfig,
         serializeGame: (engine) => serializeQuickplayGame(room, engine),
@@ -346,6 +532,7 @@ export function join(
             applyQuickplayModifiers(activeQuickplayRoom.gameConfig, modifiers),
         );
         resetQuickplayAltitude(activeQuickplayRoom, String(player.id));
+        clearLastPlayerTimer(activeQuickplayRoom);
         (activeQuickplayRoom.engine as unknown as MultiplayerEngine).addPlayer(player, {
             startedAt: Date.now(),
         });
@@ -398,6 +585,7 @@ export function join(
             status: room.status,
             players: room.players.size,
             waitingFor: 2,
+            chatMessages: getRoomMessages(room),
         });
     }
 

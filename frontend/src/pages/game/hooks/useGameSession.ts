@@ -44,6 +44,13 @@ export type GameResult = {
   reason: GameEndPayload["reason"];
   stats: GameStats;
   winnerId?: GameEndPayload["winnerId"];
+  quickplay?: {
+    meters: number;
+    floor: number;
+    floorName?: string;
+    previousBestMeters: number | null;
+    isPersonalBest: boolean;
+  };
 };
 
 function getInitialPayload(locationState: unknown, gameId?: string) {
@@ -324,7 +331,87 @@ export function useGameSession() {
         reason: payload.reason,
         stats: finalStats,
         winnerId: payload.winnerId,
+        quickplay:
+          gameConfigRef.current?.mode === "quickplay"
+            ? {
+                meters:
+                  (payload.players?.[playerIdentityId ?? ""]?.quickplayMeters ??
+                    (state?.quickplay?.meters ??
+                      state?.update?.quickplay?.meters ??
+                      0)),
+                floor:
+                  state?.quickplay?.floor ??
+                  state?.update?.quickplay?.floor ??
+                  1,
+                floorName: undefined,
+                previousBestMeters: null,
+                isPersonalBest: false,
+              }
+            : undefined,
       });
+    };
+    const handleQuickplayResult = (payload: {
+      roomId?: string;
+      playerId?: string | number;
+      reason?: GameEndPayload["reason"];
+      quickplay?: {
+        meters?: number;
+        floor?: number;
+        floorName?: string;
+        previousBestMeters?: number | null;
+        isPersonalBest?: boolean;
+      };
+      stats?: GameStats | null;
+    }) => {
+      if (payload.roomId !== gameId) return;
+      if (String(payload.playerId) !== String(playerIdentityId)) return;
+
+      clearStoredActiveGame(gameId);
+      setConnectionStatus("ENDED");
+      setCountdownStep(null);
+
+      const finalStats: GameStats =
+        payload.stats ??
+        gameStateRef.current?.update ?? {
+          score: 0,
+          lines: 0,
+          piecesPlaced: 0,
+          elapsedMs: 0,
+          remainingMs: null,
+          piecesPerSecond: 0,
+          round: 1,
+          serverNow: Date.now(),
+          objective: null,
+        };
+
+      setResult({
+        reason: payload.reason ?? "game_over",
+        stats: finalStats,
+        quickplay: {
+          meters: payload.quickplay?.meters ?? 0,
+          floor: payload.quickplay?.floor ?? 1,
+          floorName: payload.quickplay?.floorName,
+          previousBestMeters: payload.quickplay?.previousBestMeters ?? null,
+          isPersonalBest: Boolean(payload.quickplay?.isPersonalBest),
+        },
+      });
+    };
+    const handleQuickplayWarning = (payload: {
+      roomId?: string;
+      playerId?: string | number;
+      message?: string;
+      seconds?: number;
+    }) => {
+      if (payload.roomId !== gameId) return;
+      if (String(payload.playerId) !== String(playerIdentityId)) return;
+
+      showToast(
+        payload.message ??
+          `Only one player remains. Quick Play ends in ${
+            payload.seconds ?? 60
+          } seconds if nobody joins.`,
+        "info",
+      );
     };
     const handleRoundEnd = (payload: RoundEndPayload) => {
       if (payload.roomId !== gameId) return;
@@ -344,6 +431,8 @@ export function useGameSession() {
     socket.on("game:start", handleStart);
     socket.on("game:resume", handleResume);
     socket.on("game:end", handleEnd);
+    socket.on("quickplay:result", handleQuickplayResult);
+    socket.on("quickplay:warning", handleQuickplayWarning);
     socket.on("round:end", handleRoundEnd);
     socket.on("server:error", handleServerError);
 
@@ -354,10 +443,12 @@ export function useGameSession() {
       socket.off("game:start", handleStart);
       socket.off("game:resume", handleResume);
       socket.off("game:end", handleEnd);
+      socket.off("quickplay:result", handleQuickplayResult);
+      socket.off("quickplay:warning", handleQuickplayWarning);
       socket.off("round:end", handleRoundEnd);
       socket.off("server:error", handleServerError);
     };
-  }, [gameId, navigate, playerIdentityId, returnPath, socket]);
+  }, [gameId, navigate, playerIdentityId, returnPath, showToast, socket]);
 
   const playerEntries = useMemo(() => Object.values(players), [players]);
   const selfPlayer =
@@ -429,6 +520,53 @@ export function useGameSession() {
         socket?.emit("mode:leave");
       }
       navigate(returnPath);
+    },
+    restartQuickplay: () => {
+      const config = gameConfigRef.current;
+      if (!socket || config?.mode !== "quickplay") return;
+
+      const handleStart = (payload: GameStartPayload) => {
+        if (!payload.roomId) return;
+
+        socket.off("game:start", handleStart);
+        navigate(`/game/${payload.roomId}`, {
+          replace: true,
+          state: {
+            ...payload,
+            from: "/play/multiplayer/quick",
+          },
+        });
+      };
+
+      socket.once("game:start", handleStart);
+      setResult(null);
+      socket.emit("mode:join", {
+        mode: "quickplay",
+        payload: {
+          gameConfig: {
+            mode: "quickplay",
+            modifiers: config.modifiers ?? [],
+          },
+        },
+      });
+    },
+    sendQuickplayResultToChat: () => {
+      const currentResult = result;
+      if (!socket || gameConfigRef.current?.mode !== "quickplay" || !currentResult?.quickplay) {
+        return;
+      }
+
+      const floor = currentResult.quickplay.floorName
+        ? ` on ${currentResult.quickplay.floorName}`
+        : "";
+      const best = currentResult.quickplay.isPersonalBest
+        ? " New personal best!"
+        : "";
+
+      socket.emit("chat:message", {
+        message: `Quick Play result: ${currentResult.quickplay.meters.toFixed(1)}m${floor}.${best}`,
+      });
+      showToast("Result sent to Quick Play chat.", "success");
     },
     restartSolo: () => socket?.emit("room:start"),
     retryConnection: () => {
