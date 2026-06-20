@@ -2,7 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { awardAchievements, type AchievementGameStats } from "./achievements";
 import { prisma } from "./prisma";
 
-type PersistMode = "quickPlay" | "fortyLines" | "blitz" | "tetraLeague" | "customGame";
+type PersistMode = "quickPlay" | "fortyLines" | "blitz" | "customGame";
 
 type PersistGameResultInput = {
 	userId: number;
@@ -10,7 +10,6 @@ type PersistGameResultInput = {
 	score: number;
 	achievementScore?: number;
 	metricValue?: number | null;
-	rankLabel?: string | null;
 	result: "win" | "lose" | "draw";
 	elapsedMs?: number;
 	lines?: number;
@@ -24,7 +23,6 @@ type PersistGameResultInput = {
 	tetrises?: number;
 	clearedAfterHalfHeight?: boolean;
 	roundsPlayed?: number;
-	opponentElo?: number;
 	stats?: AchievementGameStats;
 	progression?: {
 		level: number;
@@ -54,7 +52,7 @@ function getAchievementStats(
 		clearedAfterHalfHeight:
 			input.stats?.clearedAfterHalfHeight ?? input.clearedAfterHalfHeight ?? false,
 		score: input.achievementScore ?? input.score,
-		multiplayer: ["quickPlay", "tetraLeague", "customGame"].includes(input.mode),
+		multiplayer: ["quickPlay", "customGame"].includes(input.mode),
 	};
 }
 
@@ -96,10 +94,6 @@ export async function persistGameResult(input: PersistGameResultInput) {
 					typeof input.metricValue === "number" && Number.isFinite(input.metricValue)
 						? input.metricValue
 						: null,
-				rank_label:
-					typeof input.rankLabel === "string" && input.rankLabel.trim().length > 0
-						? input.rankLabel.trim().slice(0, 16)
-						: null,
 				result: input.result,
 				lines: Math.max(0, Math.floor(stats.lines)),
 				pieces_placed: Math.max(0, Math.floor(stats.piecesPlaced)),
@@ -131,7 +125,6 @@ export async function persistGameResult(input: PersistGameResultInput) {
 				lines: input.lines,
 				piecesPlaced: input.piecesPlaced,
 				roundsPlayed: input.roundsPlayed,
-				opponentElo: input.opponentElo,
 			});
 		} catch (error) {
 			console.error("Failed to award player progression", error);

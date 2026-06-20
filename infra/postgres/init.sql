@@ -10,8 +10,6 @@ CREATE TABLE IF NOT EXISTS users (
 	level INT DEFAULT 1,
 	xp INT DEFAULT 0,
 	next_level_xp INT DEFAULT 100,
-	league_elo INT DEFAULT 1000,
-	league_rank VARCHAR(16) DEFAULT 'D',
 	play_time_seconds INT DEFAULT 0,
 	wins INT DEFAULT 0,
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -56,7 +54,7 @@ CREATE TABLE IF NOT EXISTS friends (
 
 -- MATCHES
 CREATE TYPE match_status AS ENUM('active', 'finished');
-CREATE TYPE gamemode AS ENUM('quickPlay', 'tetraLeague', 'fortyLines', 'blitz', 'zen', 'customGame');
+CREATE TYPE gamemode AS ENUM('quickPlay', 'fortyLines', 'blitz', 'zen', 'customGame');
 
 CREATE TABLE IF NOT EXISTS matches (
 	id SERIAL PRIMARY KEY,
@@ -74,7 +72,6 @@ CREATE TABLE IF NOT EXISTS match_players (
 	user_id INT NOT NULL,
 	score INT DEFAULT 0,
 	metric_value DOUBLE PRECISION DEFAULT NULL,
-	rank_label VARCHAR(16) DEFAULT NULL,
 	result player_result DEFAULT NULL,
 	lines INT NOT NULL DEFAULT 0,
 	pieces_placed INT NOT NULL DEFAULT 0,
@@ -98,12 +95,7 @@ CREATE TABLE IF NOT EXISTS match_players (
 );
 
 ALTER TABLE match_players
-	ADD COLUMN IF NOT EXISTS metric_value DOUBLE PRECISION DEFAULT NULL,
-	ADD COLUMN IF NOT EXISTS rank_label VARCHAR(16) DEFAULT NULL;
-
-ALTER TABLE users
-	ADD COLUMN IF NOT EXISTS league_elo INT DEFAULT 1000,
-	ADD COLUMN IF NOT EXISTS league_rank VARCHAR(16) DEFAULT 'D';
+	ADD COLUMN IF NOT EXISTS metric_value DOUBLE PRECISION DEFAULT NULL;
 
 -- ACHIEVEMENTS
 CREATE TABLE IF NOT EXISTS achievements (
@@ -273,7 +265,7 @@ WITH seed_users (seed_number, username, country) AS (
 		(37, 'harddropper', 'Chile'),
 		(38, 'zen_builder', 'Italy'),
 		(39, 'blitz_runner', 'Morocco'),
-		(40, 'league_pro', 'Poland'),
+		(40, 'quickplay_pro', 'Poland'),
 		(41, 'quickfox', 'Germany'),
 		(42, 'matrix_42', 'France'),
 		(43, 'cyan_stack', 'Brazil'),
@@ -399,11 +391,10 @@ WHERE user_id % 5 <> 0;
 WITH modes (gamemode, mode_number) AS (
 	VALUES
 		('quickPlay'::gamemode, 1),
-		('tetraLeague'::gamemode, 2),
-		('fortyLines'::gamemode, 3),
-		('blitz'::gamemode, 4),
-		('zen'::gamemode, 5),
-		('customGame'::gamemode, 6)
+		('fortyLines'::gamemode, 2),
+		('blitz'::gamemode, 3),
+		('zen'::gamemode, 4),
+		('customGame'::gamemode, 5)
 )
 INSERT INTO matches (status, gamemode, created_at)
 SELECT
@@ -489,11 +480,10 @@ FROM (
 WITH modes (gamemode, mode_number) AS (
 	VALUES
 		('quickPlay'::gamemode, 1),
-		('tetraLeague'::gamemode, 2),
-		('fortyLines'::gamemode, 3),
-		('blitz'::gamemode, 4),
-		('zen'::gamemode, 5),
-		('customGame'::gamemode, 6)
+		('fortyLines'::gamemode, 2),
+		('blitz'::gamemode, 3),
+		('zen'::gamemode, 4),
+		('customGame'::gamemode, 5)
 )
 INSERT INTO matches (status, gamemode, created_at)
 SELECT
@@ -503,13 +493,12 @@ SELECT
 FROM modes
 ORDER BY mode_number;
 
-INSERT INTO match_players (match_id, user_id, score, metric_value, rank_label, result)
+INSERT INTO match_players (match_id, user_id, score, metric_value, result)
 SELECT
 	id,
-	((id - 151) * 2) + 1,
+	((id - 126) * 2) + 1,
 	0,
 	CASE WHEN gamemode = 'quickPlay' THEN 0.0 ELSE NULL END,
-	CASE WHEN gamemode = 'tetraLeague' THEN 'B' ELSE NULL END,
 	NULL
 FROM matches
 WHERE status = 'active';
@@ -530,13 +519,12 @@ WHERE achievements.id <= CASE
 	ELSE 1 + (users.id % 20)
 END;
 
-INSERT INTO match_players (match_id, user_id, score, metric_value, rank_label, result)
+INSERT INTO match_players (match_id, user_id, score, metric_value, result)
 SELECT
 	id,
-	((id - 151) * 2) + 2,
+	((id - 126) * 2) + 2,
 	0,
 	CASE WHEN gamemode = 'quickPlay' THEN 0.0 ELSE NULL END,
-	CASE WHEN gamemode = 'tetraLeague' THEN 'C+' ELSE NULL END,
 	NULL
 FROM matches
 WHERE status = 'active';

@@ -23,7 +23,7 @@ export interface GameState {
   lines: number;
   piecesPlaced: number;
   round: number;
-  mode?: "quickplay" | "custom" | "league";
+  mode?: "quickplay" | "custom";
   startedAt: number;
   update: GameUpdateStats;
   garbageQueue?: GarbageQueueItem[];
@@ -93,7 +93,6 @@ export interface GameEndPayload {
     progression?: Array<{
       playerId: string;
       xpDelta: number;
-      rankXpDelta: number;
       level: number;
       xp: number;
     }>;
@@ -114,7 +113,6 @@ export interface RoundEndPayload {
 export interface VersusPlayerState {
   id: number | string;
   username: string;
-  rank?: string;
   config?: GameConfig;
   state: GameState;
   stockLeft?: number;

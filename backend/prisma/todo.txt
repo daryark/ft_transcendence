@@ -30,7 +30,6 @@
     onlineGames: number;
     wins: number;
     modes: {
-      league?: { tr: number; glicko: number; rank: string } | null;
       quickPlay?: { value: string; achievedAgo?: string } | null;
       fortyLines?: { value: string; achievedAgo?: string } | null;
       blitz?: { value: string; achievedAgo?: string } | null;
@@ -46,10 +45,6 @@
     "miniprofile": {
       "level": 12,
       "modes": {
-        "league": {
-          "tr": 14523,
-          "rank": "A+"
-        },
         "fortyLines": {
           "value": "0:42.123",
           "achievedAgo": "2 DAYS AGO"

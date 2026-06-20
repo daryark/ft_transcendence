@@ -130,7 +130,6 @@ export function serializeMultiplayerGame(
     players[playerId] = {
       id: player.id,
       username: getPlayerName(player),
-      rank: player.profile?.rank,
       config: getPlayerGameConfig?.(player, room),
       state,
       stockLeft: engine.stockLeft?.get?.(playerId) ?? 0,

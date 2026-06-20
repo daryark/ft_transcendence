@@ -21,26 +21,6 @@ const quickplayModifierSchema = z.enum([
 const objectiveTypeSchema = z.enum(["score", "lines", "time", "none"]);
 const garbageTargetingSchema = z.enum(["payback", "even", "random"]);
 
-const rankLimitSchema = z.enum([
-    "D",
-    "D+",
-    "C-",
-    "C",
-    "C+",
-    "B-",
-    "B",
-    "B+",
-    "A-",
-    "A",
-    "A+",
-    "S-",
-    "S",
-    "S+",
-    "SS",
-    "U",
-    "X",
-]);
-
 const roomNameSchema = z.string().trim().min(1);
 const positiveIntSchema = z.number().int().min(1);
 const nonNegativeIntSchema = z.number().int().min(0);
@@ -54,9 +34,6 @@ const roomConfigPatchSchema = z
         maxPlayers: maxPlayersSchema,
         public: z.boolean(),
         anonymousAllowed: z.boolean(),
-        unrankedAllowed: z.boolean(),
-        levelLimit: positiveIntSchema,
-        rankLimit: rankLimitSchema,
     })
     .partial()
     .strict();
@@ -196,10 +173,6 @@ const multiplayerGameConfigPatchSchema = z
     .partial()
     .strict();
 
-const leagueGameConfigPatchSchema = multiplayerGameConfigPatchSchema.extend({
-    mode: z.literal("league"),
-});
-
 const customGameConfigPatchSchema = multiplayerGameConfigPatchSchema.extend({
     mode: z.literal("custom"),
 });
@@ -217,7 +190,6 @@ const gameConfigPatchSchema = z.union([
     gameConfigPatchWithoutModeSchema,
     soloGameConfigPatchSchema,
     quickplayGameConfigPatchSchema,
-    leagueGameConfigPatchSchema,
     customGameConfigPatchSchema,
 ]);
 
@@ -242,7 +214,6 @@ export {
     gameGravityPatchSchema,
     gameObjectivePatchSchema,
     gameSurvivalPatchSchema,
-    leagueGameConfigPatchSchema,
     matchConfigPatchSchema,
     multiplayerGameConfigPatchSchema,
     quickplayGameConfigPatchSchema,

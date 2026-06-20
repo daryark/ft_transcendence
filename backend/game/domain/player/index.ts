@@ -9,10 +9,6 @@ export const PlayerProfileSchema = z.object({
   nickname: z.string().min(1),
   level: z.number().int().min(1).optional(),
   xp: z.number().int().min(0).optional(),
-  rank: z.string().optional(),
-  rankXp: z.number().int().min(0).optional(),
-  rankWins: z.number().int().min(0).optional(),
-  rankLosses: z.number().int().min(0).optional(),
 });
 
 export const PlayerSchema = z.object({

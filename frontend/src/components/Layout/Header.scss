@@ -161,8 +161,7 @@
   gap: 0.3rem;
 }
 
-.levelBadge,
-.rankBadge {
+.levelBadge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -174,12 +173,6 @@
   font-size: 0.72rem;
   font-weight: 900;
   line-height: 1;
-}
-
-.rankBadge {
-  background: transparent;
-  color: #9a64ff;
-  font-size: 1rem;
 }
 
 .anonymousLabel {

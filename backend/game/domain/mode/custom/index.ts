@@ -85,7 +85,6 @@ function serializePlayer(player, hostId, room) {
   return {
     id: player.id,
     username: getPlayerName(player),
-    rank: player.profile?.rank,
     role: player.role,
     isHost: player.id === hostId,
     connected: player.connected,
@@ -301,7 +300,6 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
     payload.result.progression.push({
       playerId,
       xpDelta,
-      rankXpDelta: 0,
       level: player.profile?.level ?? 1,
       xp: player.profile?.xp ?? 0,
     });

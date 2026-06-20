@@ -7,7 +7,6 @@ import { prisma } from "./prisma";
 export type MatchStatus = "active" | "finished";
 export type GameMode =
 	| "quickPlay"
-	| "tetraLeague"
 	| "fortyLines"
 	| "blitz"
 	| "zen"

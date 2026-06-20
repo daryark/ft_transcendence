@@ -22,7 +22,6 @@ import Achievements from "./pages/achievements/Achievements";
 import NotFound from "./pages/notFound/NotFound";
 import SoloModePage from "./pages/modes/solo/SoloModePage";
 import Quick from "./pages/modes/multiplayer/Quick";
-import League from "./pages/modes/multiplayer/League";
 import Rooms from "./pages/modes/multiplayer/Rooms";
 import Custom from "./pages/modes/multiplayer/Custom";
 import ProtectedRoute from "./components/Auth/ProtectedRoute";
@@ -141,14 +140,6 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <Quick />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="play/multiplayer/league"
-            element={
-              <ProtectedRoute>
-                <League />
               </ProtectedRoute>
             }
           />

@@ -20,7 +20,6 @@ const titles: Record<string, string> = {
   multiplayer: "MULTIPLAYER",
   solo: "SOLO",
   quick: "QUICK PLAY",
-  league: "TETRA LEAGUE",
   rooms: "ROOM LISTING",
   custom: "CUSTOM GAME",
   channel: "TETRA CHANNEL",
@@ -65,7 +64,6 @@ const Header = () => {
   const [notificationCount, setNotificationCount] = useState(0);
   const [playerMeta, setPlayerMeta] = useState({
     level: 1,
-    rank: "UNRANKED",
   });
 
   const isActive = (path: string) => location.pathname === path;
@@ -120,14 +118,11 @@ const Header = () => {
     void apiJson<{
       miniprofile?: {
         level?: number;
-        modes?: { league?: { rank?: string } | null };
       };
       profile?: {
         level?: number;
-        modes?: { league?: { rank?: string } | null };
       };
       level?: number;
-      modes?: { league?: { rank?: string } | null };
     }>(`/api/users/${encodeURIComponent(user.username)}/miniprofile`, {
       signal: controller.signal,
     })
@@ -135,12 +130,11 @@ const Header = () => {
         const profile = payload.miniprofile ?? payload.profile ?? payload;
         setPlayerMeta({
           level: profile.level ?? 1,
-          rank: profile.modes?.league?.rank ?? "UNRANKED",
         });
       })
       .catch((error) => {
         if (!(error instanceof DOMException && error.name === "AbortError")) {
-          setPlayerMeta({ level: 1, rank: "UNRANKED" });
+          setPlayerMeta({ level: 1 });
         }
       });
 
@@ -250,7 +244,6 @@ const Header = () => {
                       ) : (
                         <span className="playerMeta">
                           <span className="levelBadge">{playerMeta.level}</span>
-                          <span className="rankBadge">{playerMeta.rank}</span>
                         </span>
                       )}
                     </span>

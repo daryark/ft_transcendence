@@ -82,7 +82,6 @@
 .mp-back,
 .mp-refresh,
 .mp-start,
-.mp-league-action,
 .mp-create-actions button {
   min-height: 2.9rem;
   padding: 0 1rem;
@@ -98,7 +97,6 @@
 .mp-back:hover,
 .mp-refresh:hover,
 .mp-start:hover,
-.mp-league-action:hover,
 .mp-create-actions button:hover:not(:disabled),
 .mp-room-row:hover {
   transform: translateX(-1rem);
@@ -196,7 +194,6 @@
 .mp-card,
 .mp-mods,
 .mp-help,
-.mp-league-rank,
 .mp-queue,
 .mp-create-card,
 .mp-room-hero,
@@ -208,7 +205,6 @@
 
 .mp-card,
 .mp-help,
-.mp-league-rank,
 .mp-queue,
 .mp-create-card,
 .mp-room-hero {
@@ -299,7 +295,6 @@
 .mp-card p,
 .mp-help p,
 .mp-room-hero p,
-.mp-league-stats,
 .mp-queue small,
 .mp-best,
 .mp-room-row p {
@@ -321,8 +316,7 @@
   line-height: 1;
 }
 
-.mp-start,
-.mp-league-action {
+.mp-start {
   background: #ff8b38;
   color: #120906;
   font-size: 1.7rem;
@@ -563,27 +557,11 @@
   }
 }
 
-.mp-league-rank {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  background: rgba(84, 26, 30, 0.78);
-}
-
-.mp-tr {
-  color: #ff8d80;
-  font-size: clamp(3.5rem, 9vw, 6rem);
-  font-weight: 900;
-  line-height: 0.9;
-}
-
-.mp-tr small,
 .mp-queue span,
 .mp-queue small {
   font-size: 0.28em;
 }
 
-.mp-rank-mark,
 .mp-room-logo,
 .mp-room-count {
   display: grid;
@@ -593,23 +571,10 @@
   font-weight: 900;
 }
 
-.mp-rank-mark {
-  min-width: 8rem;
-}
-
-.mp-rank-mark span:last-child {
-  font-size: 4rem;
-}
-
 .mp-queue {
   color: #fff;
   font-size: 2.2rem;
   font-weight: 900;
-}
-
-.mp-league-action span {
-  display: block;
-  font-size: 0.72rem;
 }
 
 .mp-access-notice {
@@ -625,10 +590,6 @@
   line-height: 1.05;
   text-transform: uppercase;
   text-shadow: 0 0.08rem 0 #000;
-}
-
-.mp-access-notice--league {
-  border-color: rgba(255, 104, 88, 0.38);
 }
 
 .mp-create-card {
@@ -1201,14 +1162,12 @@ body.mp-custom-active .mp-custom-status {
 }
 
 @media (max-width: 620px) {
-  .mp-league-rank,
   .mp-room-hero {
     grid-template-columns: 1fr;
   }
 
   .mp-create-actions button,
-  .mp-start,
-  .mp-league-action {
+  .mp-start {
     width: 100%;
   }
 

@@ -3,7 +3,6 @@ import { z } from 'zod';
 
 export type GameMode =
   | 'quickPlay'
-  | 'tetraLeague'
   | 'fortyLines'
   | 'blitz'
   | 'zen'
@@ -35,10 +34,8 @@ export interface LeaderboardOptions {
 const modeMap: Record<string, string> = {
   quick: 'quickPlay',
   blitz: 'blitz',
-  league: 'tetraLeague',
   quickPlay: 'quickPlay',
   fortyLines: 'fortyLines',
-  tetraLeague: 'tetraLeague',
 };
 
 const scopeSchema = z.enum(['global', 'country', 'friends']);

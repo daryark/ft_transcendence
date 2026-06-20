@@ -25,7 +25,7 @@ const privacyPolicy: LegalPageContent = {
       heading: "Information we collect",
       body: [
         "Account data such as username, email address, password hash, avatar choice, authentication provider identifiers, and account creation date.",
-        "Gameplay and profile data such as match history, room activity, scores, ranks, achievements, statistics, friends, blocked users, messages, and notifications.",
+        "Gameplay and profile data such as match history, room activity, scores, achievements, statistics, friends, blocked users, messages, and notifications.",
         "Technical data such as session tokens, socket connection state, request metadata, and IP-related information needed for security and abuse prevention.",
       ],
     },
@@ -90,7 +90,7 @@ const termsOfService: LegalPageContent = {
       heading: "Fair play and conduct",
       body: [
         "Do not cheat, exploit bugs, automate gameplay, spam messages, harass users, impersonate others, or upload content that is illegal or harmful.",
-        "Leaderboards, ranks, achievements, and match records may be corrected or removed when they are affected by bugs, cheating, or test data.",
+        "Leaderboards, achievements, and match records may be corrected or removed when they are affected by bugs, cheating, or test data.",
       ],
     },
     {

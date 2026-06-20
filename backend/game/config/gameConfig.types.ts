@@ -21,7 +21,7 @@ export type soloPreset =
 
 export type ObjectiveType = "score" | "lines" | "time" | "none";
 
-export type MultiplayerMode = "quickplay" | "league" | "custom";
+export type MultiplayerMode = "quickplay" | "custom";
 
 export type GameMode = MultiplayerMode | "solo";
 

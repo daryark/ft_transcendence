@@ -6,18 +6,12 @@ import { type SessionUser } from "../../auth/session";
 import { getAvatarStyle } from "./avatarStyle";
 import "./ProfileHeader.scss";
 
-type LeagueStats = {
-  tr?: number;
-  rank?: string;
-};
-
 type SimpleModeStats = {
   value?: string;
   achievedAgo?: string;
 };
 
 type ProfileModes = {
-  league?: LeagueStats | null;
   fortyLines?: SimpleModeStats | null;
   blitz?: SimpleModeStats | null;
   quickPlay?: SimpleModeStats | null;
@@ -71,9 +65,6 @@ const unwrapProfile = (payload: ApiProfileResponse): ProfileDetails => {
 
   return payload as ProfileDetails;
 };
-
-const formatNumber = (value: number | undefined) =>
-  typeof value === "number" && Number.isFinite(value) ? value.toLocaleString() : "0";
 
 type ProfileHeaderProps = {
   user: SessionUser;
@@ -140,7 +131,6 @@ const ProfileHeader = ({
   }, [user.isAnonymous, user.username]);
 
   const modes = profileDetails?.modes ?? {};
-  const leagueStats = modes.league;
   const fortyLinesStats = modes.fortyLines;
   const blitzStats = modes.blitz;
   const quickPlayStats = modes.quickPlay;
@@ -184,22 +174,6 @@ const ProfileHeader = ({
           {error && <div className="profileStatsNotice">{error}</div>}
 
           <div className="profileStats">
-            <article>
-              <span>TETRA LEAGUE</span>
-              {isLoading ? (
-                <strong>LOADING...</strong>
-              ) : leagueStats ? (
-                <>
-                  <strong>{formatNumber(leagueStats.tr)} TR</strong>
-                  <small>{leagueStats.rank ?? "UNRANKED"}</small>
-                </>
-              ) : (
-                <>
-                  <strong>0 TR</strong>
-                  <small>NO RECORD</small>
-                </>
-              )}
-            </article>
             <article>
               <span>40 LINES</span>
               {isLoading ? (

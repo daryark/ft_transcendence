@@ -84,7 +84,6 @@ export function getReturnPath(locationState: unknown, gameId?: string) {
     return saved.from;
   }
 
-  if (saved?.config?.mode === "league") return "/play/multiplayer/league";
   if (saved?.config?.mode === "quickplay") return "/play/multiplayer/quick";
   if (saved?.config?.mode === "custom") return "/play/multiplayer/custom";
 

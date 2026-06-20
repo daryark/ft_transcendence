@@ -9,27 +9,6 @@ import type {
   CustomEditableConfig,
 } from "./types";
 
-export const RANK_OPTIONS = [
-  "",
-  "D",
-  "D+",
-  "C-",
-  "C",
-  "C+",
-  "B-",
-  "B",
-  "B+",
-  "A-",
-  "A",
-  "A+",
-  "S-",
-  "S",
-  "S+",
-  "SS",
-  "U",
-  "X",
-];
-
 export const DEFAULT_MATCH_CONFIG: MatchConfig = {
   roundsToWin: 1,
   winByRounds: 0,
@@ -43,8 +22,6 @@ export const DEFAULT_CUSTOM_CONFIG: CustomEditableConfig = {
     public: true,
     maxPlayers: null,
     anonymousAllowed: true,
-    unrankedAllowed: true,
-    rankLimit: "",
     autoStart: 0,
   },
   matchConfig: DEFAULT_MATCH_CONFIG,
@@ -116,9 +93,6 @@ export function readCustomEditableConfig(
       public: toBoolean(sourceRoom.public, true),
       maxPlayers: finiteOrNull(sourceRoom.maxPlayers),
       anonymousAllowed: toBoolean(sourceRoom.anonymousAllowed, true),
-      unrankedAllowed: toBoolean(sourceRoom.unrankedAllowed, true),
-      rankLimit: toStringValue(sourceRoom.rankLimit),
-      levelLimit: finiteOrNull(sourceRoom.levelLimit) ?? undefined,
       autoStart: finiteOrNull(sourceRoom.autoStart) ?? 0,
     },
     matchConfig: {
@@ -187,15 +161,11 @@ export function createBackendConfigPatch(
   config: CustomEditableConfig,
   roomNameOverride?: string,
 ): ConfigPatch {
-  const rankLimit = config.roomConfig.rankLimit?.trim();
   const roomConfig = compactObject({
     roomName: roomNameOverride ?? config.roomConfig.roomName?.trim() ?? undefined,
     maxPlayers: config.roomConfig.maxPlayers ?? undefined,
     public: config.roomConfig.public,
     anonymousAllowed: config.roomConfig.anonymousAllowed,
-    unrankedAllowed: config.roomConfig.unrankedAllowed,
-    levelLimit: config.roomConfig.levelLimit,
-    rankLimit: rankLimit || undefined,
   }) as Partial<RoomConfig>;
 
   return {

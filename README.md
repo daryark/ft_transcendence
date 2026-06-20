@@ -95,7 +95,7 @@ limiting, documentation, and at least 5 endpoints:
 - Users have a profile page displaying their information.  
 
 #### Minor: Game statistics and match history (requires a game module).   + Masha(Front), Sasha(Back)  
-- Track user game statistics (wins, losses, ranking, level, etc.).  
+- Track user game statistics (wins, losses, level, XP, etc.).  
 - Display match history (1v1 games, dates, results, opponents).  
 - Show achievements and progression.  
 - Leaderboard integration.  

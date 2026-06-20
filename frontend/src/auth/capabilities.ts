@@ -17,7 +17,6 @@ export const userCapabilities = (user: SessionUser | null | undefined) => {
     canJoinPublicRooms: signedIn,
     canCreatePrivateRooms: signedIn,
     canCreatePublicRooms: registered,
-    canEnterTetraLeague: registered,
     canViewOwnProfile: registered,
     canUsePersonalStats: registered,
     canUseAchievements: registered,

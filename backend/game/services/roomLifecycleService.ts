@@ -24,7 +24,6 @@ function getRegisteredUserId(player: Player | undefined) {
 
 function getPersistMode(room: NonNullable<ReturnType<RoomService["getRoom"]>>) {
     if (room.gameConfig.mode === "quickplay") return "quickPlay";
-    if (room.gameConfig.mode === "league") return "tetraLeague";
     return null;
 }
 
@@ -64,10 +63,6 @@ async function persistMultiplayerExitResult(
                 lines: room.state?.lines ?? 0,
                 piecesPlaced: room.state?.piecesPlaced ?? 0,
                 roundsPlayed: room.state?.round ?? 1,
-                rankLabel:
-                    room.gameConfig.mode === "league"
-                        ? row.player?.profile?.rank ?? "D"
-                        : null,
                 result: row.result,
             });
         } catch (error) {

@@ -29,7 +29,6 @@ export type GameConfigDTO = {
     >;
     roomRules: {
       anonymousAllowed: boolean;
-      unrankedAllowed: boolean;
     };
   };
   multiplayer: {
@@ -37,28 +36,15 @@ export type GameConfigDTO = {
       modifiers: string[];
       roomRules: {
         anonymousAllowed: boolean;
-        unrankedAllowed: boolean;
-      };
-    };
-    league: {
-      requirements: {
-        minimumLevel: number;
-        placementMatches: number;
-      };
-      roomRules: {
-        anonymousAllowed: boolean;
-        unrankedAllowed: boolean;
       };
     };
     custom: {
       editableConfig: Record<string, unknown>;
       publicRoomRules: {
         anonymousAllowed: boolean;
-        unrankedAllowed: boolean;
       };
       privateRoomRules: {
         anonymousAllowed: boolean;
-        unrankedAllowed: boolean;
       };
     };
   };

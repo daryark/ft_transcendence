@@ -23,7 +23,6 @@ import { useToast } from "../../../components/Toast/ToastProvider";
 import {
   createBackendConfigPatch,
   DEFAULT_MATCH_CONFIG,
-  RANK_OPTIONS,
   readCustomEditableConfig,
 } from "./custom/config";
 import { NumberField, ReadOnlyField, TextField, ToggleField } from "./custom/fields";
@@ -685,34 +684,6 @@ export default function Custom() {
                 label="ALLOW ANONYMOUS USERS TO JOIN"
                 onChange={(value) => updateRoom({ anonymousAllowed: value })}
               />
-              <ToggleField
-                {...settingProps}
-                checked={config.roomConfig.unrankedAllowed}
-                label="ALLOW UNRANKED USERS TO PLAY"
-                onChange={(value) => updateRoom({ unrankedAllowed: value })}
-              />
-              {isCurrentUserHost ? (
-                <label className="mp-custom-setting">
-                  <span>RANK LIMIT</span>
-                  <select
-                    onChange={(event) =>
-                      updateRoom({ rankLimit: event.target.value })
-                    }
-                    value={config.roomConfig.rankLimit ?? ""}
-                  >
-                    {RANK_OPTIONS.map((rank) => (
-                      <option key={rank || "none"} value={rank}>
-                        {rank || "NONE"}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              ) : (
-                <ReadOnlyField
-                  label="RANK LIMIT"
-                  value={config.roomConfig.rankLimit || "NONE"}
-                />
-              )}
             </div>
           )}
 

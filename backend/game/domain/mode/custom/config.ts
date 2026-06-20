@@ -7,8 +7,6 @@ export const customMultiBase: Config = {
         public: true,
         maxPlayers: Infinity,
         anonymousAllowed: true,
-        unrankedAllowed: true,
-        rankLimit: "D" // {D, D+, C, C+, B, B+, A, A+} or null for no limit
     },
 
     matchConfig: {

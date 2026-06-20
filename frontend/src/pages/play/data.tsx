@@ -8,7 +8,6 @@ import aboutIcon from "../../../public/button-icons/about.svg";
 
 // Иконки для multiplayer
 import quickIcon from "../../../public/button-icons/quickplay.svg";
-import leagueIcon from "../../../public/button-icons/league.svg";
 import customIcon from "../../../public/button-icons/customgame.svg";
 import roomsIcon from "../../../public/button-icons/roomlisting.svg";
 
@@ -56,7 +55,7 @@ export const ALL_MODES: Record<string, Mode[]> = {
       id: "about",
       path: aboutIcon,
       title: "ABOUT",
-      description: "ALL ABOUT TETR.IO",
+      description: "ALL ABOUT TETRA",
       route: "/about",
     },
   ],
@@ -69,13 +68,6 @@ export const ALL_MODES: Record<string, Mode[]> = {
       title: "QUICK PLAY",
       description: "SCALE THE TOWER! HOW FAR CAN YOU GET?",
       route: "/play/multiplayer/quick",
-    },
-    {
-      id: "league",
-      path: leagueIcon,
-      title: "TETRA LEAGUE",
-      description: "FIGHT PLAYERS OF YOUR SKILL IN RANKED DUELS",
-      route: "/play/multiplayer/league",
     },
     {
       id: "custom",

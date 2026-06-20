@@ -78,20 +78,18 @@ describe("profile service", () => {
 			{
 				score: 1200,
 				metric_value: null,
-				rank_label: "B",
 				result: "win",
 				matches: {
-					gamemode: "tetraLeague",
+					gamemode: "customGame",
 					created_at: new Date("2026-05-29T12:00:00.000Z"),
 				},
 			},
 			{
 				score: 1100,
 				metric_value: null,
-				rank_label: "C+",
 				result: "lose",
 				matches: {
-					gamemode: "tetraLeague",
+					gamemode: "customGame",
 					created_at: new Date("2026-05-28T12:00:00.000Z"),
 				},
 			},
@@ -108,12 +106,9 @@ describe("profile service", () => {
 			xp: 420,
 			nextLevelXp: 1000,
 			playTimeHours: 2,
-			onlineGames: 2,
-			wins: 1,
-			leagueGames: 2,
-			leagueWins: 1,
+			onlineGames: 4,
+			wins: 2,
 			modes: {
-				league: { tr: 1200, glicko: 1200, rank: "B" },
 				quickPlay: { value: "34.25 m", achievedAgo: "3 days ago" },
 				fortyLines: null,
 				blitz: { value: "60 pts", achievedAgo: "1 days ago" },
@@ -160,8 +155,6 @@ describe("profile service", () => {
 			playTimeHours: 3,
 			onlineGames: 0,
 			wins: 0,
-			leagueGames: 0,
-			leagueWins: 0,
 		});
 	});
 });
