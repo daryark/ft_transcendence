@@ -39,8 +39,13 @@ type QuickChatMessage = {
   id: string;
   author: string;
   actor?: string;
+  floor?: number;
+  floorName?: string;
+  isPersonalBest?: boolean;
+  meters?: number;
   system?: boolean;
   text: string;
+  variant?: string;
 };
 
 type QuickLobbyPlayer = {
@@ -52,11 +57,16 @@ type QuickLobbyPlayer = {
 function normalizeQuickChatMessage(
   message: {
     actor?: string;
+    floor?: number;
+    floorName?: string;
     id?: string;
+    isPersonalBest?: boolean;
     message?: string;
+    meters?: number;
     sender?: string;
     system?: boolean;
     text?: string;
+    variant?: string;
   },
   index: number,
 ): QuickChatMessage {
@@ -64,8 +74,13 @@ function normalizeQuickChatMessage(
     id: message.id ?? `${Date.now()}-${index}`,
     author: message.sender ?? "PLAYER",
     actor: message.actor,
+    floor: message.floor,
+    floorName: message.floorName,
+    isPersonalBest: message.isPersonalBest,
+    meters: message.meters,
     system: message.system,
     text: message.text ?? message.message ?? "",
+    variant: message.variant,
   };
 }
 
@@ -78,6 +93,14 @@ export default function Quick() {
   const [climbers, setClimbers] = useState<QuickLobbyPlayer[]>([]);
   const [waitingStatus, setWaitingStatus] = useState("");
   const waitingToastShownRef = useRef("");
+
+  useEffect(() => {
+    document.body.classList.add("mp-quick-active");
+
+    return () => {
+      document.body.classList.remove("mp-quick-active");
+    };
+  }, []);
 
   useEffect(() => {
     const socket = getSocket();
@@ -153,6 +176,7 @@ export default function Quick() {
 
       socket.off("game:start", handleGameStart);
       navigate(`/game/${payload.roomId}`, {
+        replace: true,
         state: {
           ...payload,
           from: "/play/multiplayer/quick",
@@ -189,6 +213,7 @@ export default function Quick() {
 
       socket.off("game:start", handleGameStart);
       navigate(`/game/${payload.roomId}`, {
+        replace: true,
         state: {
           ...payload,
           from: "/play/multiplayer/quick",
@@ -221,16 +246,30 @@ export default function Quick() {
                 <strong>[SYS]</strong>: This chat is linked with the active tower.
               </p>
               {chatMessages.map((message) => (
-                <p key={message.id}>
-                  <strong>[{message.author}]</strong>:{" "}
-                  {message.system && message.actor ? (
-                    <>
-                      <strong>{message.actor}</strong>: {message.text}
-                    </>
-                  ) : (
-                    message.text
-                  )}
-                </p>
+                message.variant === "quickplay-result" ? (
+                  <p
+                    className={`quick-chat-result quick-chat-result--floor-${message.floor ?? 1}`}
+                    key={message.id}
+                  >
+                    <strong>{message.author}</strong>
+                    <span>{message.meters?.toFixed(1) ?? message.text}M</span>
+                    <em>
+                      {message.floorName ?? `Floor ${message.floor ?? 1}`}
+                      {message.isPersonalBest ? " / new PB" : ""}
+                    </em>
+                  </p>
+                ) : (
+                  <p key={message.id}>
+                    <strong>[{message.author}]</strong>:{" "}
+                    {message.system && message.actor ? (
+                      <>
+                        <strong>{message.actor}</strong>: {message.text}
+                      </>
+                    ) : (
+                      message.text
+                    )}
+                  </p>
+                )
               ))}
             </div>
             <form

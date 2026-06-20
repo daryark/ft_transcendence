@@ -25,6 +25,19 @@ export default function chatHandlers(
             typeof data.message === "string"
                 ? data.message.trim()
                 : "";
+        const quickplayResult =
+            data &&
+            typeof data === "object" &&
+            "quickplayResult" in data &&
+            data.quickplayResult &&
+            typeof data.quickplayResult === "object"
+                ? data.quickplayResult as {
+                    floor?: unknown;
+                    floorName?: unknown;
+                    isPersonalBest?: unknown;
+                    meters?: unknown;
+                }
+                : null;
 
         if (!roomId || !identity || !message || message.length > 500) {
             socket.emit("server:error", { reason: "INVALID_CHAT_MESSAGE" });
@@ -35,6 +48,15 @@ export default function chatHandlers(
         const payload = appendRoomChatMessage(room, {
             sender: getPlayerName(roomService, roomId, String(identity.id)),
             message,
+            ...(quickplayResult && room?.gameConfig.mode === "quickplay"
+                ? {
+                    variant: "quickplay-result",
+                    floor: typeof quickplayResult.floor === "number" ? quickplayResult.floor : undefined,
+                    floorName: typeof quickplayResult.floorName === "string" ? quickplayResult.floorName : undefined,
+                    meters: typeof quickplayResult.meters === "number" ? quickplayResult.meters : undefined,
+                    isPersonalBest: Boolean(quickplayResult.isPersonalBest),
+                }
+                : {}),
         });
 
         io.to(roomId).emit("chat:message", payload);

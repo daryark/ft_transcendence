@@ -63,8 +63,13 @@ type QuickplayChatMessage = {
   id: string;
   author: string;
   actor?: string;
+  floor?: number;
+  floorName?: string;
+  isPersonalBest?: boolean;
+  meters?: number;
   system?: boolean;
   text: string;
+  variant?: string;
 };
 
 type QuickplayLobbySnapshot = {
@@ -75,11 +80,16 @@ type QuickplayLobbySnapshot = {
 function normalizeQuickplayChatMessage(
   message: {
     actor?: string;
+    floor?: number;
+    floorName?: string;
     id?: string;
+    isPersonalBest?: boolean;
     message?: string;
+    meters?: number;
     sender?: string;
     system?: boolean;
     text?: string;
+    variant?: string;
   },
   index: number,
 ): QuickplayChatMessage {
@@ -87,8 +97,13 @@ function normalizeQuickplayChatMessage(
     id: message.id ?? `${Date.now()}-${index}`,
     author: message.sender ?? "PLAYER",
     actor: message.actor,
+    floor: message.floor,
+    floorName: message.floorName,
+    isPersonalBest: message.isPersonalBest,
+    meters: message.meters,
     system: message.system,
     text: message.text ?? message.message ?? "",
+    variant: message.variant,
   };
 }
 
@@ -182,6 +197,21 @@ export function useGameSession() {
     gameConfigRef.current = gameConfig;
     countdownRef.current = countdownStep;
   }, [countdownStep, gameConfig, gameState]);
+
+  useEffect(() => {
+    const leaveQuickplayOnHistoryNavigation = () => {
+      if (gameConfigRef.current?.mode !== "quickplay") return;
+
+      getSocket()?.emit("mode:leave");
+      clearStoredActiveGame(gameId);
+    };
+
+    window.addEventListener("popstate", leaveQuickplayOnHistoryNavigation);
+
+    return () => {
+      window.removeEventListener("popstate", leaveQuickplayOnHistoryNavigation);
+    };
+  }, [gameId]);
 
   useEffect(() => {
     const isMultiplayer =
@@ -639,6 +669,12 @@ export function useGameSession() {
 
       socket.emit("chat:message", {
         message: `Quick Play result: ${currentResult.quickplay.meters.toFixed(1)}m${floor}.${best}`,
+        quickplayResult: {
+          floor: currentResult.quickplay.floor,
+          floorName: currentResult.quickplay.floorName,
+          isPersonalBest: currentResult.quickplay.isPersonalBest,
+          meters: currentResult.quickplay.meters,
+        },
       });
       showToast("Result sent to Quick Play chat.", "success");
     },
