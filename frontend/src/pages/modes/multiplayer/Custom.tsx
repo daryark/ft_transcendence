@@ -780,6 +780,21 @@ export default function Custom() {
                 />
                 <NumberField
                 {...settingProps}
+                  label="LOCK DECREASE"
+                  min={0}
+                  onChange={(value) => updateGravity({ lockDelayDecrease: value })}
+                  step={0.1}
+                  value={config.gameConfig.gravity.lockDelayDecrease}
+                />
+                <NumberField
+                {...settingProps}
+                  label="MIN LOCK DELAY"
+                  min={0}
+                  onChange={(value) => updateGravity({ minimumLockDelay: value })}
+                  value={config.gameConfig.gravity.minimumLockDelay}
+                />
+                <NumberField
+                {...settingProps}
                   label="GRAVITY"
                   min={0}
                   onChange={(value) => updateGravity({ gravity: value })}

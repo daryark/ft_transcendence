@@ -34,7 +34,7 @@ type QuickplayAltitude = {
     lastPiecesPlaced: number;
 };
 
-const CLIMB_METERS_PER_10_SECONDS = 2.5;
+const CLIMB_METERS_PER_10_SECONDS = 3.35;
 const CLIMB_METERS_PER_SECOND = CLIMB_METERS_PER_10_SECONDS / 10;
 const LAST_PLAYER_END_DELAY_MS = 60_000;
 

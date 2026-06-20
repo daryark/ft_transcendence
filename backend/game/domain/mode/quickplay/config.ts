@@ -27,9 +27,11 @@ export const quickplayBase: Config = {
 
         gravity: {
             lockDelay: 30,
+            lockDelayDecrease: 1,
+            minimumLockDelay: 16,
             gravity: 0.02, // how fast pieces fall (0-1, where 1 is instant)
-            gravityIncrease: 0.0007, // how much gravity increases per second/ per level (if useLeveling = true)
-            gravitMarginTime: 10000 // how long player has to survive before gravity starts increasing
+            gravityIncrease: 0.001, // how much gravity increases per second/ per level (if useLeveling = true)
+            gravitMarginTime: 8000 // how long player has to survive before gravity starts increasing
         },
 
         garbage: {

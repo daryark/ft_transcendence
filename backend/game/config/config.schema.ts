@@ -78,6 +78,8 @@ const gameControlsPatchSchema = z
 const gameGravityPatchSchema = z
     .object({
         lockDelay: nonNegativeIntSchema,
+        lockDelayDecrease: nonNegativeNumberSchema,
+        minimumLockDelay: nonNegativeIntSchema,
         gravity: normalizedGravitySchema,
         useLeveling: z.boolean(),
         gravityIncrease: nonNegativeNumberSchema,

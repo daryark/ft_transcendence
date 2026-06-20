@@ -68,6 +68,8 @@ interface GameControlsConfig {
 
 interface GameGravityConfig {
     lockDelay: number; // in ticks at 60 fps
+    lockDelayDecrease: number; // how many lock-delay ticks are removed each gravity interval
+    minimumLockDelay: number; // minimum lock delay in ticks at 60 fps
     gravity: number; // how fast pieces fall (0-1, where 1 is instant)
     useLeveling?: boolean; //overrides gravity
     gravityIncrease: number; // how much gravity increases per second/ per level (if useLeveling = true)

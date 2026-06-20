@@ -39,9 +39,11 @@ export const DEFAULT_CUSTOM_CONFIG: CustomEditableConfig = {
     },
     gravity: {
       lockDelay: 30,
+      lockDelayDecrease: 1,
+      minimumLockDelay: 16,
       gravity: 0.02,
-      gravityIncrease: 0.0007,
-      gravitMarginTime: 10000,
+      gravityIncrease: 0.001,
+      gravitMarginTime: 8000,
     },
     garbage: {
       garbageMult: 1,
@@ -118,9 +120,11 @@ export function readCustomEditableConfig(
       gravity: {
         ...DEFAULT_CUSTOM_CONFIG.gameConfig.gravity,
         lockDelay: toNumber(sourceGravity.lockDelay, 30),
+        lockDelayDecrease: toNumber(sourceGravity.lockDelayDecrease, 1),
+        minimumLockDelay: toNumber(sourceGravity.minimumLockDelay, 16),
         gravity: toNumber(sourceGravity.gravity, 0.02),
-        gravityIncrease: toNumber(sourceGravity.gravityIncrease, 0.0007),
-        gravitMarginTime: toNumber(sourceGravity.gravitMarginTime, 10000),
+        gravityIncrease: toNumber(sourceGravity.gravityIncrease, 0.001),
+        gravitMarginTime: toNumber(sourceGravity.gravitMarginTime, 8000),
       },
       garbage: {
         ...DEFAULT_CUSTOM_CONFIG.gameConfig.garbage,
