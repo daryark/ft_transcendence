@@ -490,10 +490,10 @@ export default function Profile() {
     <div className="profile-page">
       <div className="profile-page__wrap">
         <header className="profile-page__top">
-          <h1>
+          <h2>
             {profile.username}
             {profile.country && <span>{profile.country}</span>}
-          </h1>
+          </h2>
           <BackButton to="/play" />
         </header>
 

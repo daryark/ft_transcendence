@@ -4,7 +4,7 @@
   --mode-bg: rgba(34, 34, 38, 0.82);
   position: relative;
   justify-self: end;
-  width: calc(100% - 3.2rem);
+  width: calc(100% - 2rem);
   min-height: 5.7rem;
   display: grid;
   grid-template-columns: 9.6rem minmax(0, 1fr);
@@ -38,7 +38,7 @@
 }
 
 .button--disabled:hover {
-  width: calc(100% - 3.2rem);
+  width: calc(100% - 2rem);
   opacity: 0.56;
   filter: grayscale(0.2) brightness(0.9);
 }
@@ -160,7 +160,7 @@
 
 @media (max-width: 700px) {
   .button {
-    width: calc(100% - 0.8rem);
+    width: calc(100% - 0.4rem);
     grid-template-columns: 6.2rem minmax(0, 1fr);
     min-height: 4.75rem;
   }
@@ -170,7 +170,7 @@
   }
 
   .button--disabled:hover {
-    width: calc(100% - 0.8rem);
+    width: calc(100% - 0.4rem);
   }
 
   .button img {
