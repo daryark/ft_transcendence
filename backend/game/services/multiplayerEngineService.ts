@@ -33,6 +33,12 @@ type CreateMultiplayerEngineOptions = {
   onMaybeEnd: (engine: MultiplayerEngine, reason?: string) => boolean;
   onStop?: (engine: MultiplayerEngine) => void;
   onPlayerUpdate?: (playerId: string, state: NonNullable<Room["state"]>) => void;
+  onPlayerOut?: (
+    playerId: string,
+    state: Room["state"],
+    engine: MultiplayerEngine,
+    reason?: string,
+  ) => void;
   getPlayerGameConfig?: (player: Player, room: Room) => Room["gameConfig"];
   serializeGame?: (engine: MultiplayerEngine) => unknown;
 };
@@ -159,6 +165,7 @@ export function createMultiplayerEngine({
   onMaybeEnd,
   onStop,
   onPlayerUpdate,
+  onPlayerOut,
   getPlayerGameConfig,
   serializeGame,
 }: CreateMultiplayerEngineOptions): MultiplayerEngine {
@@ -245,6 +252,7 @@ export function createMultiplayerEngine({
     eliminatedPlayerIds.add(playerId);
     playerEngine.engine?.stop?.();
     playerEngine.room.status = "ended";
+    onPlayerOut?.(playerId, playerEngine.room.state, multiplayerEngine, reason);
     return onMaybeEnd(multiplayerEngine, reason);
   }
 

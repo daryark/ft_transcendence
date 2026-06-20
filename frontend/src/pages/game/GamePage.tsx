@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import MultiplayerGameOver from "./MultiplayerGameOver";
+import QuickGameOver from "./QuickGameOver";
 import { getModeLabel } from "./gameUtils";
 import { useGameSession } from "./hooks/useGameSession";
 import RoomGameView from "./views/RoomGameView";
@@ -66,6 +67,22 @@ export default function GamePage() {
   }
 
   if (result && gameConfig && gameConfig.mode !== "solo") {
+    if (gameConfig.mode === "quickplay") {
+      return (
+        <QuickGameOver
+          chatMessages={session.quickplayLobby.chatMessages}
+          climbers={session.quickplayLobby.players}
+          onAgain={session.restartQuickplay}
+          onChatMessage={session.sendQuickplayChatMessage}
+          onExit={session.leaveResults}
+          onSendToChat={session.sendQuickplayResultToChat}
+          onSpectate={session.spectateQuickplay}
+          quickplay={result.quickplay}
+          stats={result.stats}
+        />
+      );
+    }
+
     return (
       <MultiplayerGameOver
         mode={gameConfig.mode}

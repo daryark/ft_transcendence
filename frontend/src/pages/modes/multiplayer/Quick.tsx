@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getSocket } from "../../../socket/socketClient";
+import { useToast } from "../../../components/Toast/ToastProvider";
 import "./MultiplayerMode.scss";
 
 const quickMods = [
@@ -34,9 +35,106 @@ const quickMods = [
   },
 ] as const;
 
+type QuickChatMessage = {
+  id: string;
+  author: string;
+  actor?: string;
+  system?: boolean;
+  text: string;
+};
+
+type QuickLobbyPlayer = {
+  id: string | number;
+  username?: string;
+  quickplayMeters?: number;
+};
+
+function normalizeQuickChatMessage(
+  message: {
+    actor?: string;
+    id?: string;
+    message?: string;
+    sender?: string;
+    system?: boolean;
+    text?: string;
+  },
+  index: number,
+): QuickChatMessage {
+  return {
+    id: message.id ?? `${Date.now()}-${index}`,
+    author: message.sender ?? "PLAYER",
+    actor: message.actor,
+    system: message.system,
+    text: message.text ?? message.message ?? "",
+  };
+}
+
 export default function Quick() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [selectedMods, setSelectedMods] = useState<string[]>([]);
+  const [chatMessages, setChatMessages] = useState<QuickChatMessage[]>([]);
+  const [chatMessage, setChatMessage] = useState("");
+  const [climbers, setClimbers] = useState<QuickLobbyPlayer[]>([]);
+  const [waitingStatus, setWaitingStatus] = useState("");
+  const waitingToastShownRef = useRef("");
+
+  useEffect(() => {
+    const socket = getSocket();
+    if (!socket) return undefined;
+
+    const handleRoomUpdate = (snapshot: {
+      roomId?: string;
+      players?: number;
+      waitingFor?: number;
+      chatMessages?: Array<Parameters<typeof normalizeQuickChatMessage>[0]>;
+    }) => {
+      if (!snapshot.waitingFor) return;
+
+      setWaitingStatus(
+        `Need ${snapshot.waitingFor} players. Waiting for pool to start.`,
+      );
+      setChatMessages(
+        (snapshot.chatMessages ?? []).map((message, index) =>
+          normalizeQuickChatMessage(message, index),
+        ),
+      );
+
+      if (waitingToastShownRef.current !== snapshot.roomId) {
+        waitingToastShownRef.current = snapshot.roomId ?? "quickplay";
+        showToast("Need two players. Waiting for pool to start.", "info");
+      }
+    };
+    const handleQuickplayLobby = (snapshot: {
+      players?: QuickLobbyPlayer[];
+      chatMessages?: Array<Parameters<typeof normalizeQuickChatMessage>[0]>;
+    }) => {
+      setClimbers(snapshot.players ?? []);
+      setChatMessages(
+        (snapshot.chatMessages ?? []).map((message, index) =>
+          normalizeQuickChatMessage(message, index),
+        ),
+      );
+    };
+
+    const handleChatMessage = (data: Parameters<typeof normalizeQuickChatMessage>[0]) => {
+      setChatMessages((current) => [
+        ...current,
+        normalizeQuickChatMessage(data, current.length),
+      ]);
+    };
+
+    socket.on("room:update", handleRoomUpdate);
+    socket.on("quickplay:lobby", handleQuickplayLobby);
+    socket.on("chat:message", handleChatMessage);
+    socket.emit("quickplay:lobby");
+
+    return () => {
+      socket.off("room:update", handleRoomUpdate);
+      socket.off("quickplay:lobby", handleQuickplayLobby);
+      socket.off("chat:message", handleChatMessage);
+    };
+  }, [showToast]);
 
   const toggleMod = (modifier: string) => {
     setSelectedMods((current) =>
@@ -74,6 +172,34 @@ export default function Quick() {
     });
   };
 
+  const sendChatMessage = () => {
+    const message = chatMessage.trim();
+    if (!message) return;
+
+    getSocket()?.emit("chat:message", { message });
+    setChatMessage("");
+  };
+
+  const spectateClimber = () => {
+    const socket = getSocket();
+    if (!socket) return;
+
+    const handleGameStart = (payload: { roomId?: string }) => {
+      if (!payload.roomId) return;
+
+      socket.off("game:start", handleGameStart);
+      navigate(`/game/${payload.roomId}`, {
+        state: {
+          ...payload,
+          from: "/play/multiplayer/quick",
+        },
+      });
+    };
+
+    socket.once("game:start", handleGameStart);
+    socket.emit("quickplay:spectate");
+  };
+
   return (
     <section className="mp-page mp-page--quick">
       <button
@@ -86,12 +212,42 @@ export default function Quick() {
 
       <main className="mp-quick-lobby" aria-label="Quick Play">
         <aside className="mp-quick-feed" aria-label="Quick Play feed">
-          <div className="mp-quick-chat">
-            <p>Welcome to Quick Play chat! Please remember to be civil.</p>
-            <p>This chat is linked with the active tower.</p>
+          <div className="mp-quick-chat" aria-label="Quick Play chat">
+            <div className="mp-quick-chat-log">
+              <p>
+                <strong>[SYS]</strong>: Welcome to Quick Play chat! Please remember to be civil.
+              </p>
+              <p>
+                <strong>[SYS]</strong>: This chat is linked with the active tower.
+              </p>
+              {chatMessages.map((message) => (
+                <p key={message.id}>
+                  <strong>[{message.author}]</strong>:{" "}
+                  {message.system && message.actor ? (
+                    <>
+                      <strong>{message.actor}</strong>: {message.text}
+                    </>
+                  ) : (
+                    message.text
+                  )}
+                </p>
+              ))}
+            </div>
+            <form
+              onSubmit={(event) => {
+                event.preventDefault();
+                sendChatMessage();
+              }}
+            >
+              <input
+                onChange={(event) => setChatMessage(event.target.value)}
+                placeholder="message..."
+                value={chatMessage}
+              />
+            </form>
           </div>
           <div className="mp-quick-mini-list" aria-label="Recent climbers">
-            <span>WAITING FOR CLIMBERS</span>
+            <span>{waitingStatus || "WAITING FOR CLIMBERS"}</span>
           </div>
         </aside>
 
@@ -147,8 +303,24 @@ export default function Quick() {
         </section>
 
         <aside className="mp-quick-standings" aria-label="Quick Play standings">
-          <strong>0 PLAYING NOW</strong>
-          <div className="mp-quick-empty">NO ACTIVE CLIMBERS</div>
+          <strong>{climbers.length} PLAYING NOW</strong>
+          {climbers.length > 0 ? (
+            <div className="mp-quick-players">
+              {climbers.map((player, index) => (
+                <button
+                  key={player.id}
+                  onClick={spectateClimber}
+                  type="button"
+                >
+                  <span>{index + 1}</span>
+                  <strong>{player.username ?? "PLAYER"}</strong>
+                  <em>{(player.quickplayMeters ?? 0).toFixed(1)}m</em>
+                </button>
+              ))}
+            </div>
+          ) : (
+            <div className="mp-quick-empty">NO ACTIVE CLIMBERS</div>
+          )}
         </aside>
       </main>
 

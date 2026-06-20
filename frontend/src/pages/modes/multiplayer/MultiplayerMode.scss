@@ -138,13 +138,43 @@
 .mp-quick-chat {
   width: min(24rem, 100%);
   display: grid;
+  grid-template-rows: minmax(8rem, 1fr) auto;
   gap: 0.7rem;
   padding-left: 0.15rem;
   text-shadow: 0 0.08rem 0 #000;
 }
 
+.mp-quick-chat-log {
+  max-height: min(44vh, 28rem);
+  overflow: auto;
+  display: grid;
+  align-content: end;
+  gap: 0.35rem;
+  padding-right: 0.3rem;
+}
+
 .mp-quick-chat p {
   margin: 0;
+  color: rgba(255, 235, 222, 0.82);
+  font-family: var(--app-font-display);
+  font-size: clamp(0.82rem, 1vw, 1rem);
+  line-height: 1.15;
+  text-transform: none;
+}
+
+.mp-quick-chat strong {
+  color: #ff8b38;
+}
+
+.mp-quick-chat form input {
+  width: 100%;
+  min-height: 1.6rem;
+  padding: 0 0.45rem;
+  border: 1px solid rgba(255, 135, 70, 0.18);
+  background: rgba(10, 3, 2, 0.7);
+  color: #fff;
+  font-family: var(--app-font-display);
+  font-size: 0.85rem;
 }
 
 .mp-quick-mini-list {
@@ -184,6 +214,48 @@
   border-left: 2px solid rgba(255, 118, 48, 0.55);
   background: linear-gradient(90deg, rgba(90, 26, 24, 0.48), rgba(23, 6, 10, 0.7));
   color: rgba(255, 218, 197, 0.62);
+}
+
+.mp-quick-players {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.mp-quick-players button {
+  min-height: 2.35rem;
+  display: grid;
+  grid-template-columns: 1.8rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(255, 74, 136, 0.54);
+  background: linear-gradient(90deg, rgba(106, 24, 68, 0.88), rgba(49, 11, 35, 0.76));
+  color: #fff;
+  font-family: var(--app-font-display);
+  font-weight: 900;
+  text-align: left;
+}
+
+.mp-quick-players button:hover,
+.mp-quick-players button:focus-visible {
+  transform: translateX(-0.28rem);
+  border-color: #ff9f2f;
+  filter: brightness(1.12);
+}
+
+.mp-quick-players span {
+  color: #ff9f2f;
+  text-align: right;
+}
+
+.mp-quick-players strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mp-quick-players em {
+  color: #ffd7ff;
+  font-style: normal;
 }
 
 .mp-card,

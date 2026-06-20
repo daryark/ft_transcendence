@@ -121,6 +121,10 @@ export function leaveRoomParticipant(
 
     if (role === "spectator") {
         roomService.removeSpectator(roomId, playerId);
+        if (room.gameConfig.mode === "quickplay") {
+            roomService.isEmpty(roomId);
+            return true;
+        }
         if (roomService.isEmpty(roomId)) {
             roomService.deleteRoom(roomId);
         }
@@ -132,6 +136,13 @@ export function leaveRoomParticipant(
     roomService.removePlayer(roomId, playerId);
 
     if (roomService.isEmpty(roomId)) {
+        if (room.gameConfig.mode === "quickplay") {
+            room.status = "lobby";
+            room.engine = null;
+            room.match = null;
+            room.state = null;
+            return true;
+        }
         roomService.deleteRoom(roomId);
         return true;
     }

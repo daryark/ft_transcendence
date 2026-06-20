@@ -41,11 +41,16 @@ function StockCrystals({
 }
 
 const QUICKPLAY_FLOORS = [
-  { name: "HALL", min: 0, className: "floor-0" },
-  { name: "HOTEL", min: 250, className: "floor-1" },
-  { name: "CASINO", min: 500, className: "floor-2" },
-  { name: "SKYLINE", min: 900, className: "floor-3" },
-  { name: "ZENITH", min: 1400, className: "floor-4" },
+  { name: "HALL OF BEGINNINGS", min: 0, className: "floor-1" },
+  { name: "THE HOTEL", min: 50, className: "floor-2" },
+  { name: "THE CASINO", min: 150, className: "floor-3" },
+  { name: "THE ARENA", min: 300, className: "floor-4" },
+  { name: "THE MUSEUM", min: 450, className: "floor-5" },
+  { name: "ABANDONED OFFICES", min: 650, className: "floor-6" },
+  { name: "THE LABORATORY", min: 850, className: "floor-7" },
+  { name: "THE CORE", min: 1100, className: "floor-8" },
+  { name: "CORRUPTION", min: 1350, className: "floor-9" },
+  { name: "PLATFORM OF THE GODS", min: 1650, className: "floor-10" },
 ];
 
 function getQuickplayMeters(player: { quickplayMeters?: number }) {
@@ -148,7 +153,8 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
               ` / ${eliminatedPlayers.length} OUT`}
           </span>
         </div>
-        {gameConfig.mode === "custom" && isSpectating && (
+        {(gameConfig.mode === "custom" || gameConfig.mode === "quickplay") &&
+          isSpectating && (
           <button
             className="versus-game__exit"
             onClick={session.leaveActiveGameView}

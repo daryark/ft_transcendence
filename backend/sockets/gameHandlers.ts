@@ -2,6 +2,7 @@ import { Socket } from "socket.io";
 import { SocketData } from ".";
 import { isInput } from "../game/domain/engine/input";
 import { ModeService } from "../game/services/modeService";
+import PlayerService from "../game/services/playerService";
 import { GameMode } from "../game/config/gameConfig.types";
 import RoomService from "../game/services/roomService";
 import { ConfigPatch, ConfigPatchSchema } from "../game/config/config.schema";
@@ -9,6 +10,7 @@ import startGame from "../game/domain/match/startGame";
 import { leaveSocketRoomNow } from "./roomSocketExit";
 import { interruptGameSession } from "../game/services/gameInterruptService";
 import { startCustomRoom } from "../game/domain/mode/custom";
+import { joinQuickplayLobby, spectateQuickplay } from "../game/domain/mode/quickplay";
 
 export type ClientToServerEvents =
     | "mode:join"
@@ -18,7 +20,9 @@ export type ClientToServerEvents =
     | "room:switchRole"
     | "player:move"
     | "game:resume"
-    | "game:stop";
+    | "game:stop"
+    | "quickplay:lobby"
+    | "quickplay:spectate";
 
 export type ServerToClientEvents =
     | "session:identity"
@@ -28,6 +32,9 @@ export type ServerToClientEvents =
     | "game:end"
     | "round:start"
     | "round:end"
+    | "quickplay:result"
+    | "quickplay:warning"
+    | "quickplay:lobby"
     | "room:update"
     | "rooms:update"
     | "social:update"
@@ -73,8 +80,8 @@ function serializeResumePayload(room: NonNullable<ReturnType<RoomService["getRoo
 
 export default function gameHandlers(
     socket: Socket,
-    { modeService, roomService }:
-        { modeService: ModeService; roomService: RoomService }) {
+    { modeService, roomService, playerService }:
+        { modeService: ModeService; roomService: RoomService; playerService: PlayerService }) {
 
     socket.on("mode:join", ({ mode, payload = {} }:
         { mode: GameMode; payload?: ConfigPatch }) => {
@@ -89,6 +96,14 @@ export default function gameHandlers(
 
     socket.on("rooms:list", () => {
         socket.emit("rooms:update" as ServerToClientEvents, roomService.listPublicCustomRooms());
+    });
+
+    socket.on("quickplay:lobby" as ClientToServerEvents, () => {
+        joinQuickplayLobby(socket, { roomService, playerService });
+    });
+
+    socket.on("quickplay:spectate" as ClientToServerEvents, () => {
+        spectateQuickplay(socket, { roomService, playerService });
     });
 
     socket.on("player:move", (input: unknown) => {
