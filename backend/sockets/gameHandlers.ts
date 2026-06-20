@@ -8,6 +8,7 @@ import { ConfigPatch, ConfigPatchSchema } from "../game/config/config.schema";
 import startGame from "../game/domain/match/startGame";
 import { leaveSocketRoomNow } from "./roomSocketExit";
 import { interruptGameSession } from "../game/services/gameInterruptService";
+import { startCustomRoom } from "../game/domain/mode/custom";
 
 export type ClientToServerEvents =
     | "mode:join"
@@ -98,7 +99,11 @@ export default function gameHandlers(
         const { identity, roomId, role } = socket.data as SocketData;
         if (roomId && role === "player") {
             const room = roomService.getRoom(roomId);
-            if (room?.gameConfig?.mode === "custom" && identity) {
+            if (
+                (room?.gameConfig?.mode === "custom" ||
+                    room?.gameConfig?.mode === "quickplay") &&
+                identity
+            ) {
                 (room.engine as { pushInput?: (playerId: string, input: unknown) => void } | null)
                     ?.pushInput?.(String(identity.id), input);
                 return;
@@ -132,11 +137,19 @@ export default function gameHandlers(
     });
 
     socket.on("room:start", () => {
-        const { roomId } = socket.data as SocketData;
+        const { identity, roomId } = socket.data as SocketData;
         if (!roomId) return;
 
         const room = roomService.getRoom(roomId);
         if (!room || room.status === "playing") return;
+
+        if (room.gameConfig.mode === "custom") {
+            const playerId = identity?.id;
+            if (!playerId) return;
+            const result = startCustomRoom(roomService, roomId, playerId);
+            if (!result.ok) emitError(socket, result.reason ?? "ROOM_START_FAILED");
+            return;
+        }
 
         startGame(room, roomService);
     });

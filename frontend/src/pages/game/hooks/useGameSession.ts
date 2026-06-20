@@ -229,6 +229,14 @@ export function useGameSession() {
       }
     };
     const handleUpdate = (payload: GameUpdatePayload) => {
+      if (
+        isMultiplayerPayload(payload) &&
+        payload.roomId &&
+        payload.roomId !== gameId
+      ) {
+        return;
+      }
+
       setConnectionStatus("LIVE");
       if (countdownRef.current) return;
 

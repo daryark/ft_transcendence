@@ -1,7 +1,6 @@
 // @ts-nocheck
 import { applyConfigPatch, createConfig } from "../../../config/configBase";
 import { ConfigPatchSchema } from "../../../config/config.schema";
-import { isInput } from "../../engine/input";
 import { emitAchievementUnlocked } from "../../../../sockets/realtime";
 import {
   clearRoomMessages,
@@ -464,6 +463,18 @@ function startCustomVersus(room, roomService) {
   );
 }
 
+export function startCustomRoom(roomService, roomId, playerId) {
+  const room = roomService.getRoom(roomId);
+  if (!room || room.gameConfig.mode !== "custom") return { ok: false, reason: "ROOM_NOT_FOUND" };
+
+  if (customRoomHosts.get(room.id) !== playerId) {
+    return { ok: false, reason: "ONLY_HOST_CAN_START_ROOM" };
+  }
+
+  startCustomVersus(room, roomService);
+  return { ok: true };
+}
+
 function parseJoinCode(payload) {
   const roomName = payload?.roomConfig?.roomName;
 
@@ -647,9 +658,7 @@ function maybeAutoStart(roomService, room) {
 
 function registerCustomRoomEvents(socket, roomService) {
   socket.removeAllListeners("room:updateConfig"); //! do i need it on other modes?
-  socket.removeAllListeners("room:start"); //! is it native socket.io fn?
   socket.removeAllListeners("room:switchRole");
-  socket.removeAllListeners("player:move");
 
   socket.on("room:updateConfig", (payload = {}) => {
     const parsedPayload = ConfigPatchSchema.safeParse(payload);
@@ -686,22 +695,6 @@ function registerCustomRoomEvents(socket, roomService) {
     maybeAutoStart(roomService, room);
   });
 
-  socket.on("room:start", () => {
-    const roomId = socket.data.roomId;
-    const identity = socket.data.identity;
-    if (!roomId || !identity) return;
-
-    const room = roomService.getRoom(roomId);
-    if (!room || room.gameConfig.mode !== "custom") return;
-
-    if (customRoomHosts.get(room.id) !== identity.id) {
-      emitError(socket, "ONLY_HOST_CAN_START_ROOM");
-      return;
-    }
-
-    startCustomVersus(room, roomService);
-  });
-
   socket.on("room:switchRole", (payload = {}) => {
     const roomId = socket.data.roomId;
     const identity = socket.data.identity;
@@ -716,18 +709,6 @@ function registerCustomRoomEvents(socket, roomService) {
     socket.data.role = result.role;
   });
 
-  socket.on("player:move", (input) => {
-    if (!isInput(input)) return;
-
-    const roomId = socket.data.roomId;
-    const identity = socket.data.identity;
-    if (!roomId || !identity || socket.data.role !== "player") return;
-
-    const room = roomService.getRoom(roomId);
-    if (!room || room.gameConfig.mode !== "custom") return;
-
-    room.engine?.pushInput?.(identity.id, input);
-  });
 }
 
 export default function join(

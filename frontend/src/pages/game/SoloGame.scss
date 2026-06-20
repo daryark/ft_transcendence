@@ -880,6 +880,36 @@ body.game-session-active {
     rgba(0, 0, 0, 0.18);
 }
 
+.room-game--quickplay {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.34), rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.28)),
+    linear-gradient(180deg, rgba(18, 54, 48, 0.48), rgba(1, 5, 8, 0.22));
+}
+
+.room-game--floor-1 {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.34), rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.28)),
+    linear-gradient(180deg, rgba(49, 42, 93, 0.52), rgba(6, 8, 18, 0.24));
+}
+
+.room-game--floor-2 {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.32), rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.26)),
+    linear-gradient(180deg, rgba(102, 31, 62, 0.54), rgba(9, 5, 16, 0.25));
+}
+
+.room-game--floor-3 {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.32), rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.26)),
+    linear-gradient(180deg, rgba(26, 73, 112, 0.52), rgba(3, 13, 18, 0.24));
+}
+
+.room-game--floor-4 {
+  background:
+    linear-gradient(90deg, rgba(0, 0, 0, 0.34), rgba(255, 255, 255, 0.12), rgba(0, 0, 0, 0.28)),
+    linear-gradient(180deg, rgba(126, 94, 22, 0.5), rgba(10, 8, 4, 0.25));
+}
+
 .room-game__stage {
   min-height: calc(100vh - 3.1rem);
   display: grid;
@@ -889,7 +919,7 @@ body.game-session-active {
   gap: calc(clamp(1rem, 2vw, 2rem) * var(--room-package-scale));
   width: min(100%, 82rem);
   margin: 0 auto;
-  padding: clamp(0.8rem, 2vh, 1.5rem);
+  padding: clamp(2.6rem, 5vh, 4rem) clamp(0.8rem, 2vh, 1.5rem) clamp(0.8rem, 2vh, 1.5rem);
 }
 
 .room-game__self {
@@ -917,6 +947,7 @@ body.game-session-active {
 
 .room-game__main-board {
   display: grid;
+  justify-items: center;
 }
 
 .room-game__board-stack .game-garbage-queue {
@@ -1037,6 +1068,74 @@ body.game-session-active {
   margin-right: 0.9rem;
 }
 
+.room-game__meters {
+  display: grid;
+  justify-items: center;
+  margin-top: calc(0.38rem * var(--room-package-scale));
+  color: #fff;
+  font-family: var(--app-font-display);
+  text-shadow: 0 0 0.7rem rgba(0, 0, 0, 0.82);
+}
+
+.room-game__meters strong {
+  color: #ff8bff;
+  font-size: clamp(1.35rem, calc(2.15rem * var(--room-package-scale)), 2.15rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.room-game__meters span {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.room-game__meters small {
+  color: #ff6bff;
+  font-size: 1rem;
+  font-weight: 900;
+  animation: quickplay-meter-pop 1.35s ease-out both;
+}
+
+@keyframes quickplay-meter-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(0.4rem) scale(0.9);
+  }
+
+  20% {
+    opacity: 1;
+    transform: translateY(-0.1rem) scale(1.18);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(-1rem) scale(1);
+  }
+}
+
+.room-game__stocks {
+  display: flex;
+  justify-content: center;
+  gap: calc(0.45rem * var(--room-package-scale));
+  margin-top: calc(0.48rem * var(--room-package-scale));
+}
+
+.room-game__stocks span {
+  width: calc(0.62rem * var(--room-package-scale));
+  aspect-ratio: 1;
+  transform: rotate(45deg);
+  border: 1px solid rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.16);
+  box-shadow: 0 0 0.45rem rgba(255, 255, 255, 0.12);
+}
+
+.room-game__stocks span.is-active {
+  border-color: #ffe875;
+  background: #ffe875;
+  box-shadow: 0 0 0.75rem rgba(255, 232, 117, 0.72);
+}
+
 .room-game__opponents {
   display: grid;
   grid-template-columns: repeat(2, max-content);
@@ -1046,6 +1145,56 @@ body.game-session-active {
   max-height: calc(100vh - 5.5rem);
   overflow: auto;
   padding: 0.5rem;
+}
+
+.room-game__opponents--quickplay {
+  width: min(20rem, 26vw);
+  min-width: 16rem;
+  grid-template-columns: minmax(0, 1fr);
+  align-content: center;
+  gap: 0.28rem;
+  padding: 0.25rem;
+}
+
+.room-game__quick-card {
+  min-height: 2.35rem;
+  display: grid;
+  grid-template-columns: 1.8rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid rgba(255, 74, 136, 0.54);
+  background: linear-gradient(90deg, rgba(106, 24, 68, 0.88), rgba(49, 11, 35, 0.76));
+  color: #fff;
+  font-family: var(--app-font-display);
+  font-weight: 900;
+  text-align: left;
+  transition:
+    transform 0.14s ease,
+    border-color 0.14s ease,
+    filter 0.14s ease;
+}
+
+.room-game__quick-card:hover,
+.room-game__quick-card:focus-visible {
+  transform: translateX(-0.28rem);
+  border-color: #ff9f2f;
+  filter: brightness(1.12);
+}
+
+.room-game__quick-card span {
+  color: #ff9f2f;
+  text-align: right;
+}
+
+.room-game__quick-card strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.room-game__quick-card em {
+  color: #ffd7ff;
+  font-style: normal;
 }
 
 .room-game__opponents--1,

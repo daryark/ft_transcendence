@@ -16,6 +16,49 @@ const ROOM_PACKAGE_SCALE_FLOOR = 0.74;
 const ROOM_BASE_WIDTH_PX = 54 * 16;
 const ROOM_BASE_HEIGHT_PX = 45 * 16;
 
+function StockCrystals({
+  stockLeft,
+  stockTotal,
+}: {
+  stockLeft?: number;
+  stockTotal?: number;
+}) {
+  const total = Math.max(1, Math.floor(stockTotal ?? 1));
+  if (total <= 1) return null;
+
+  const active = Math.max(0, Math.min(total, Math.floor(stockLeft ?? 0) + 1));
+
+  return (
+    <div className="room-game__stocks" aria-label={`${active} stock left`}>
+      {Array.from({ length: total }, (_, index) => (
+        <span
+          className={index < active ? "is-active" : ""}
+          key={`stock-${index}`}
+        />
+      ))}
+    </div>
+  );
+}
+
+const QUICKPLAY_FLOORS = [
+  { name: "HALL", min: 0, className: "floor-0" },
+  { name: "HOTEL", min: 250, className: "floor-1" },
+  { name: "CASINO", min: 500, className: "floor-2" },
+  { name: "SKYLINE", min: 900, className: "floor-3" },
+  { name: "ZENITH", min: 1400, className: "floor-4" },
+];
+
+function getQuickplayMeters(player: { quickplayMeters?: number }) {
+  return Number((player.quickplayMeters ?? 0).toFixed(1));
+}
+
+function getQuickplayFloor(meters: number) {
+  return QUICKPLAY_FLOORS.reduce(
+    (current, floor) => (meters >= floor.min ? floor : current),
+    QUICKPLAY_FLOORS[0],
+  );
+}
+
 function getRoomPackageScale() {
   if (window.innerWidth <= TABLET_BREAKPOINT_PX) {
     return ROOM_PACKAGE_SCALE_FLOOR;
@@ -60,6 +103,7 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
     ? selectedTarget ?? alivePlayers[0]
     : selfPlayer;
   const targetState = targetPlayer?.state ?? gameState;
+  const targetConfig = targetPlayer?.config ?? gameConfig;
   const previewPlayers = alivePlayers.filter(
     (player) => String(player.id) !== String(targetPlayer?.id),
   );
@@ -67,12 +111,22 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
     previewPlayers.length <= 2 ? 13 : previewPlayers.length <= 3 ? 10 : 8;
   const mainCellSize = Math.round(32 * packageScale);
   const previewFigureSize = Math.round(30 * packageScale);
+  const isQuickplay = gameConfig.mode === "quickplay";
+  const targetMeters = targetPlayer ? getQuickplayMeters(targetPlayer) : 0;
+  const quickplayFloor = getQuickplayFloor(targetMeters);
+  const quickplayPlayers = [...alivePlayers]
+    .sort((a, b) => getQuickplayMeters(b) - getQuickplayMeters(a));
   const style = {
     "--room-package-scale": String(packageScale),
   } as CSSProperties;
 
   return (
-    <main className="solo-game room-game" style={style}>
+    <main
+      className={`solo-game room-game${
+        isQuickplay ? ` room-game--quickplay room-game--${quickplayFloor.className}` : ""
+      }`}
+      style={style}
+    >
       <header className="versus-game__topbar">
         <div className="versus-game__live">LIVE</div>
         <div className="versus-game__title">
@@ -81,7 +135,9 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
             {formatPlayerName(targetPlayer?.username, "PLAYER")}
           </strong>
           <span className="room-game__population">
-            {alivePlayers.length} ALIVE
+            {isQuickplay
+              ? `${quickplayPlayers.length} PLAYING`
+              : `${alivePlayers.length} ALIVE`}
             {eliminatedPlayers.length > 0 &&
               ` / ${eliminatedPlayers.length} OUT`}
           </span>
@@ -100,7 +156,7 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
       <section className="room-game__stage">
         <div className="room-game__self">
           <div className="room-game__left-rail">
-            {gameConfig.controls.hold && (
+            {targetConfig.controls.hold && (
               <GamePreviewPanel
                 className="solo-game__panel room-game__hold"
                 figureSize={previewFigureSize}
@@ -149,13 +205,26 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
                 isSpectating ? "SPECTATING" : "YOU",
               )}
             </div>
+            <StockCrystals
+              stockLeft={targetPlayer?.stockLeft}
+              stockTotal={targetPlayer?.stockTotal}
+            />
+            {isQuickplay && (
+              <div className="room-game__meters">
+                <strong>{targetMeters.toLocaleString()}m</strong>
+                <span>{quickplayFloor.name}</span>
+                {targetPlayer?.altitudeBonusMeters ? (
+                  <small>+{targetPlayer.altitudeBonusMeters.toFixed(1)}</small>
+                ) : null}
+              </div>
+            )}
           </div>
 
           <div className="room-game__right-rail">
             <GamePreviewPanel
               className="solo-game__panel room-game__next"
               figureSize={previewFigureSize}
-              nextCount={gameConfig.controls.nextPieces}
+              nextCount={targetConfig.controls.nextPieces}
               state={targetState}
               type="next"
             />
@@ -166,9 +235,28 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
           className={`room-game__opponents room-game__opponents--${Math.min(
             previewPlayers.length,
             6,
-          )}`}
-          aria-label="Opponents"
+          )}${isQuickplay ? " room-game__opponents--quickplay" : ""}`}
+          aria-label={isQuickplay ? "Quickplay standings" : "Opponents"}
         >
+          {isQuickplay ? (
+            quickplayPlayers.map((player, index) => {
+              const meters = getQuickplayMeters(player);
+
+              return (
+                <button
+                  className="room-game__quick-card"
+                  key={player.id}
+                  onClick={() => setSelectedTargetId(String(player.id))}
+                  type="button"
+                >
+                  <span>{index + 1}</span>
+                  <strong>{formatPlayerName(player.username, "PLAYER")}</strong>
+                  <em>{meters.toLocaleString()}m</em>
+                </button>
+              );
+            })
+          ) : (
+          <>
           {previewPlayers.length > 0 ? (
             previewPlayers.map((player) => (
               <button
@@ -179,12 +267,17 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
                 type="button"
               >
                 <div className="room-game__opponent-package">
-                  <GamePreviewPanel
-                    className="solo-game__panel room-game__opponent-hold"
-                    figureSize={Math.max(9, opponentCellSize - 2)}
-                    state={player.state}
-                    type="hold"
-                  />
+                  {(player.config?.controls.hold ??
+                    gameConfig.controls.hold) ? (
+                    <GamePreviewPanel
+                      className="solo-game__panel room-game__opponent-hold"
+                      figureSize={Math.max(9, opponentCellSize - 2)}
+                      state={player.state}
+                      type="hold"
+                    />
+                  ) : (
+                    <div />
+                  )}
                   <div className="room-game__opponent-board-stack">
                     <GameGarbageQueue
                       alwaysVisible
@@ -201,7 +294,11 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
                   <GamePreviewPanel
                     className="solo-game__panel room-game__opponent-next"
                     figureSize={Math.max(9, opponentCellSize - 2)}
-                    nextCount={Math.min(3, gameConfig.controls.nextPieces)}
+                    nextCount={Math.min(
+                      3,
+                      player.config?.controls.nextPieces ??
+                        gameConfig.controls.nextPieces,
+                    )}
                     state={player.state}
                     type="next"
                   />
@@ -224,6 +321,8 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
                 ? "WAITING FOR ROUND RESULT"
                 : "LAST PLAYER STANDING"}
             </div>
+          )}
+          </>
           )}
         </aside>
       </section>

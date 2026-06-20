@@ -22,6 +22,7 @@ export type MultiplayerEngine = {
   garbageService: ReturnType<typeof createGarbageService>;
   stockLeft: Map<string, number>;
   interval: ReturnType<typeof setInterval> | null;
+  addPlayer(player: Player, options?: { startedAt?: number }): void;
   pushInput(playerId: string | number, input: unknown): void;
   stop(): void;
 };
@@ -31,6 +32,9 @@ type CreateMultiplayerEngineOptions = {
   roomService: RoomService;
   onMaybeEnd: (engine: MultiplayerEngine, reason?: string) => boolean;
   onStop?: (engine: MultiplayerEngine) => void;
+  onPlayerUpdate?: (playerId: string, state: NonNullable<Room["state"]>) => void;
+  getPlayerGameConfig?: (player: Player, room: Room) => Room["gameConfig"];
+  serializeGame?: (engine: MultiplayerEngine) => unknown;
 };
 
 function toEngineGameConfig(gameConfig: Room["gameConfig"]): Room["gameConfig"] {
@@ -44,8 +48,13 @@ function toEngineGameConfig(gameConfig: Room["gameConfig"]): Room["gameConfig"] 
   } as Room["gameConfig"];
 }
 
-function createPlayerEngineRoom(room: Room, player: Player, startedAt: number): Room {
-  const { boardHeight, boardWidth } = room.gameConfig.general;
+function createPlayerEngineRoom(
+  room: Room,
+  player: Player,
+  startedAt: number,
+  gameConfig: Room["gameConfig"] = room.gameConfig,
+): Room {
+  const { boardHeight, boardWidth } = gameConfig.general;
   const round = (room as Room & { roundNumber?: number }).roundNumber ?? 1;
   const state = initGame(boardHeight, boardWidth, round, startedAt, {
     bagSeed: `${room.id}:round:${round}`,
@@ -61,7 +70,7 @@ function createPlayerEngineRoom(room: Room, player: Player, startedAt: number): 
     match: null,
     roomConfig: room.roomConfig,
     matchConfig: room.matchConfig,
-    gameConfig: toEngineGameConfig(room.gameConfig),
+    gameConfig: toEngineGameConfig(gameConfig),
   };
 }
 
@@ -109,6 +118,7 @@ export function serializeMultiplayerGame(
   room: Room,
   engine: MultiplayerEngine,
   getPlayerName: (player: Player) => string,
+  getPlayerGameConfig?: (player: Player, room: Room) => Room["gameConfig"],
 ) {
   const players: Record<string, unknown> = {};
 
@@ -121,7 +131,10 @@ export function serializeMultiplayerGame(
       id: player.id,
       username: getPlayerName(player),
       rank: player.profile?.rank,
+      config: getPlayerGameConfig?.(player, room),
       state,
+      stockLeft: engine.stockLeft?.get?.(playerId) ?? 0,
+      stockTotal: (room.matchConfig?.stock ?? 0) + 1,
       gameOver: Boolean(
         state?.gameOver || engine.eliminatedPlayerIds.has(playerId),
       ),
@@ -146,6 +159,9 @@ export function createMultiplayerEngine({
   roomService,
   onMaybeEnd,
   onStop,
+  onPlayerUpdate,
+  getPlayerGameConfig,
+  serializeGame,
 }: CreateMultiplayerEngineOptions): MultiplayerEngine {
   const startedAt = Date.now() + COUNTDOWN_STEP_MS * COUNTDOWN_STEPS;
   const playerEngines = new Map<string, PlayerEngine>();
@@ -173,6 +189,9 @@ export function createMultiplayerEngine({
     garbageService,
     stockLeft,
     interval: null,
+    addPlayer(player, options = {}) {
+      addPlayerToEngine(player, options.startedAt ?? Date.now());
+    },
     pushInput(playerId, input) {
       if (room.status !== "playing") return;
 
@@ -197,7 +216,12 @@ export function createMultiplayerEngine({
   };
 
   function respawnPlayer(playerId: string, playerEngine: PlayerEngine) {
-    const nextRoom = createPlayerEngineRoom(room, playerEngine.player, startedAt);
+    const nextRoom = createPlayerEngineRoom(
+      room,
+      playerEngine.player,
+      startedAt,
+      getPlayerGameConfig?.(playerEngine.player, room) ?? room.gameConfig,
+    );
     const playerRoomService = playerEngine.roomService;
 
     garbageService.syncState(playerId, nextRoom.state ?? undefined, Date.now());
@@ -225,18 +249,27 @@ export function createMultiplayerEngine({
     return onMaybeEnd(multiplayerEngine, reason);
   }
 
-  for (const player of room.players.values()) {
+  function addPlayerToEngine(player: Player, playerStartedAt = startedAt) {
     const playerId = String(player.id);
-    const playerRoom = createPlayerEngineRoom(room, player, startedAt);
+    const previousPlayerEngine = playerEngines.get(playerId);
+    previousPlayerEngine?.engine?.stop?.();
+
+    const playerRoom = createPlayerEngineRoom(
+      room,
+      player,
+      playerStartedAt,
+      getPlayerGameConfig?.(player, room) ?? room.gameConfig,
+    );
     const playerEngine: PlayerEngine = {
       player,
       room: playerRoom,
       engine: null,
       roomService: null,
     };
-    garbageService.syncState(playerId, playerRoom.state ?? undefined, startedAt);
+    garbageService.syncState(playerId, playerRoom.state ?? undefined, playerStartedAt);
     lastPiecesPlaced.set(playerId, playerRoom.state?.piecesPlaced ?? 0);
     stockLeft.set(playerId, room.matchConfig?.stock ?? 0);
+    eliminatedPlayerIds.delete(playerId);
     const playerRoomService = {
       broadcast(_roomId: string, event: string, payload: any) {
         if (event === "game:update") {
@@ -247,6 +280,7 @@ export function createMultiplayerEngine({
           const nextPiecesPlaced = state?.piecesPlaced ?? previousPiecesPlaced;
 
           if (nextPiecesPlaced > previousPiecesPlaced) {
+            onPlayerUpdate?.(playerId, state);
             garbageService.handlePieceLocked({
               playerId,
               state,
@@ -278,6 +312,10 @@ export function createMultiplayerEngine({
     playerEngines.set(playerId, playerEngine);
   }
 
+  for (const player of room.players.values()) {
+    addPlayerToEngine(player);
+  }
+
   multiplayerEngine.interval = setInterval(() => {
     if (room.status !== "playing") return;
 
@@ -293,9 +331,11 @@ export function createMultiplayerEngine({
     roomService.broadcast(
       room.id,
       "game:update",
-      serializeMultiplayerGame(room, multiplayerEngine, (player) =>
-        player.profile?.nickname ?? String(player.id),
-      ),
+      serializeGame?.(multiplayerEngine) ??
+        serializeMultiplayerGame(room, multiplayerEngine, (player) =>
+          player.profile?.nickname ?? String(player.id),
+          getPlayerGameConfig,
+        ),
     );
   }, TICK_MS);
 

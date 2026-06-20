@@ -106,7 +106,12 @@ export interface VersusPlayerState {
   id: number | string;
   username: string;
   rank?: string;
+  config?: GameConfig;
   state: GameState;
+  stockLeft?: number;
+  stockTotal?: number;
+  quickplayMeters?: number;
+  altitudeBonusMeters?: number;
   gameOver?: boolean;
 }
 
