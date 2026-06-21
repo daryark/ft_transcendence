@@ -38,7 +38,6 @@ export const quickplayBase: Config = {
             garbageMult: 1,
             garbageCap: 8, //max amnt of garbage to enter the board at once, the rest will be nullified
             garbageMaxCap: 40, //max amnt of garbage pending queue can hold, the rest will be nullified
-            garbagePassthrough: true, //true - opposing attacks in transit will cancel each other. false - do not cancel.
             allClearGarbage: 5, //amnt of lines send on all clear
             garbageDelay: 500, //delay before garbage enters the board after being sent, in ms
             garbageDelayOnClear: 100, //delay in ms on each clear(per clear, not per line)

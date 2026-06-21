@@ -1,4 +1,4 @@
-import { createFigure, Figure } from "./figures";
+import { createFigure, Figure, type FigureType } from "./figures";
 import { createBag } from "./logic";
 import {
   createBoardHeight,
@@ -149,16 +149,21 @@ export function initGame(
   cols: number,
   round = 1,
   startedAt = Date.now(),
-  sequence: { bagSeed?: string | null; nextBagIndex?: number } = {},
+  sequence: { bagSeed?: string | null; nextBagIndex?: number; bagType?: string } = {},
 ): GameState {
   const board = createEmptyBoard(createBoardHeight(rows), createBoardWidth(cols));
   const buffer = createEmptyBuffer(createBoardWidth(cols));
   const bagSeed = sequence.bagSeed ?? null;
+  const bagType = sequence.bagType ?? "7-bag";
   let nextBagIndex = Math.max(0, Math.floor(sequence.nextBagIndex ?? 0));
-  const nextTypes = [
-    ...createBag(bagSeed, nextBagIndex),
-    ...createBag(bagSeed, nextBagIndex + 1),
-  ];
+  const firstBag = createBag(bagSeed, nextBagIndex, bagType);
+  const secondBag = createBag(
+    bagSeed,
+    nextBagIndex + 1,
+    bagType,
+    firstBag[firstBag.length - 1] as FigureType | null,
+  );
+  const nextTypes = [...firstBag, ...secondBag];
   nextBagIndex += 2;
   const next = nextTypes.map((t) => createFigure(t, cols));
   const state: GameState = {

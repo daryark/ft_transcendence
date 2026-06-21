@@ -15,7 +15,6 @@ function createService(overrides = {}) {
     garbageMult: 1,
     garbageCap: 8,
     garbageMaxCap: 40,
-    garbagePassthrough: true,
     allClearGarbage: 0,
     garbageDelay: 1000,
     garbageDelayOnClear: 100,

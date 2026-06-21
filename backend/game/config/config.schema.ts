@@ -27,6 +27,10 @@ const nonNegativeIntSchema = z.number().int().min(0);
 const nonNegativeNumberSchema = z.number().min(0);
 const normalizedGravitySchema = z.number().min(0).max(1);
 const maxPlayersSchema = z.union([positiveIntSchema, z.literal(Infinity)]);
+const autoStartSchema = z.union([
+    z.literal(0),
+    z.number().int().min(15).max(60),
+]);
 
 const roomConfigPatchSchema = z
     .object({
@@ -34,6 +38,7 @@ const roomConfigPatchSchema = z
         maxPlayers: maxPlayersSchema,
         public: z.boolean(),
         anonymousAllowed: z.boolean(),
+        autoStart: autoStartSchema,
     })
     .partial()
     .strict();
@@ -52,7 +57,7 @@ const gameGeneralPatchSchema = z
     .object({
         bagType: bagTypeSchema,
         boardWidth: z.number().int().min(4).max(20),
-        boardHeight: z.number().int().min(4).max(40),
+        boardHeight: z.number().int().min(10).max(40),
     })
     .partial()
     .strict();
@@ -61,7 +66,7 @@ const gameGeneralQuickplayPatchSchema = z
     .object({
         bagType: bagTypeSchema,
         boardWidth: z.number().int().min(4).max(20),
-        boardHeight: z.number().int().min(4).max(40),
+        boardHeight: z.number().int().min(10).max(40),
     })
     .partial()
     .strict();
@@ -69,7 +74,7 @@ const gameGeneralQuickplayPatchSchema = z
 const gameControlsPatchSchema = z
     .object({
         hold: z.boolean(),
-        nextPieces: z.number().int().min(0).max(10),
+        nextPieces: z.number().int().min(0).max(7),
         showShadowPiece: z.boolean(),
     })
     .partial()
@@ -93,7 +98,6 @@ const gameGarbagePatchSchema = z
         garbageMult: nonNegativeNumberSchema,
         garbageCap: nonNegativeIntSchema,
         garbageMaxCap: nonNegativeIntSchema,
-        garbagePassthrough: z.boolean(),
         allClearGarbage: nonNegativeIntSchema,
         garbageDelay: nonNegativeIntSchema,
         garbageDelayOnClear: nonNegativeIntSchema,

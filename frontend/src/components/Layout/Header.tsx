@@ -256,7 +256,9 @@ const Header = () => {
                       className="playerAvatar"
                       style={getAvatarStyle(user.avatarId)}
                     >
-                      {user.isAnonymous ? "?" : ""}
+                      {user.isAnonymous ? (
+                        <img alt="" aria-hidden="true" src="/avatar_anonymous.png" />
+                      ) : null}
                     </span>
                   </button>
                 </>

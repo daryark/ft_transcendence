@@ -199,8 +199,14 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
   );
   const opponentCellSize =
     previewPlayers.length <= 2 ? 13 : previewPlayers.length <= 3 ? 10 : 8;
-  const mainCellSize = Math.round(32 * packageScale);
-  const previewFigureSize = Math.round(30 * packageScale);
+  const maxMainCellByHeight = Math.floor(
+    (window.innerHeight - 155) / (targetState.rows ?? 20),
+  );
+  const mainCellSize = Math.max(
+    8,
+    Math.min(Math.round(32 * packageScale), maxMainCellByHeight),
+  );
+  const previewFigureSize = Math.max(8, Math.round(mainCellSize * 0.94));
   const isQuickplay = gameConfig.mode === "quickplay";
   const targetMeters = targetPlayer ? getQuickplayMeters(targetPlayer) : 0;
   const quickplayFloor = getQuickplayFloor(targetMeters);
@@ -381,13 +387,15 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
           </div>
 
           <div className="room-game__right-rail">
-            <GamePreviewPanel
-              className="solo-game__panel room-game__next"
-              figureSize={previewFigureSize}
-              nextCount={targetConfig.controls.nextPieces}
-              state={targetState}
-              type="next"
-            />
+            {targetConfig.controls.nextPieces > 0 && (
+              <GamePreviewPanel
+                className="solo-game__panel room-game__next"
+                figureSize={previewFigureSize}
+                nextCount={targetConfig.controls.nextPieces}
+                state={targetState}
+                type="next"
+              />
+            )}
           </div>
         </div>
 
@@ -463,17 +471,22 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
                       showGhost={false}
                     />
                   </div>
-                  <GamePreviewPanel
-                    className="solo-game__panel room-game__opponent-next"
-                    figureSize={Math.max(9, opponentCellSize - 2)}
-                    nextCount={Math.min(
-                      3,
-                      player.config?.controls.nextPieces ??
-                        gameConfig.controls.nextPieces,
-                    )}
-                    state={player.state}
-                    type="next"
-                  />
+                  {(player.config?.controls.nextPieces ??
+                    gameConfig.controls.nextPieces) > 0 ? (
+                    <GamePreviewPanel
+                      className="solo-game__panel room-game__opponent-next"
+                      figureSize={Math.max(9, opponentCellSize - 2)}
+                      nextCount={Math.min(
+                        3,
+                        player.config?.controls.nextPieces ??
+                          gameConfig.controls.nextPieces,
+                      )}
+                      state={player.state}
+                      type="next"
+                    />
+                  ) : (
+                    <div />
+                  )}
                   {isSpectating && (
                     <span className="room-game__watch">WATCH</span>
                   )}

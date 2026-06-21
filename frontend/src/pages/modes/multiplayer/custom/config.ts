@@ -49,7 +49,6 @@ export const DEFAULT_CUSTOM_CONFIG: CustomEditableConfig = {
       garbageMult: 1,
       garbageCap: 8,
       garbageMaxCap: 10,
-      garbagePassthrough: true,
       allClearGarbage: 5,
       garbageDelay: 500,
       garbageDelayOnClear: 100,
@@ -131,10 +130,6 @@ export function readCustomEditableConfig(
         garbageMult: toNumber(sourceGarbage.garbageMult, 1),
         garbageCap: toNumber(sourceGarbage.garbageCap, 8),
         garbageMaxCap: toNumber(sourceGarbage.garbageMaxCap, 10),
-        garbagePassthrough: toBoolean(
-          sourceGarbage.garbagePassthrough,
-          true,
-        ),
         allClearGarbage: toNumber(sourceGarbage.allClearGarbage, 5),
         garbageDelay: toNumber(sourceGarbage.garbageDelay, 500),
         garbageDelayOnClear: toNumber(
@@ -166,10 +161,11 @@ export function createBackendConfigPatch(
   roomNameOverride?: string,
 ): ConfigPatch {
   const roomConfig = compactObject({
-    roomName: roomNameOverride ?? config.roomConfig.roomName?.trim() ?? undefined,
+    roomName: (roomNameOverride ?? config.roomConfig.roomName?.trim() ?? undefined)?.toUpperCase(),
     maxPlayers: config.roomConfig.maxPlayers ?? undefined,
     public: config.roomConfig.public,
     anonymousAllowed: config.roomConfig.anonymousAllowed,
+    autoStart: config.roomConfig.autoStart ?? 0,
   }) as Partial<RoomConfig>;
 
   return {

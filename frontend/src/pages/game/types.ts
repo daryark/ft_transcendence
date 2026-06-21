@@ -80,6 +80,11 @@ export interface GameStartPayload {
 export interface GameEndPayload {
   roomId: string;
   winnerId?: number | string | null;
+  round?: number;
+  roundWins?: Record<string, number>;
+  roundsToWin?: number;
+  winByRounds?: number;
+  goldenPoint?: number;
   reason:
     | "game_over"
     | "objective_complete"

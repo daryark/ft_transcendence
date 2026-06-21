@@ -39,6 +39,7 @@ function keyToMove(event: KeyboardEvent): PlayerMove | null {
     return "rotate";
   }
   if (event.key.toLowerCase() === "z") return "rotateCCW";
+  if (event.key.toLowerCase() === "a") return "rotate180";
   if (event.key === " ") return "drop";
   if (event.key.toLowerCase() === "c" || event.shiftKey) return "hold";
 

@@ -47,6 +47,11 @@ export type GameResult = {
   reason: GameEndPayload["reason"];
   stats: GameStats;
   winnerId?: GameEndPayload["winnerId"];
+  round?: number;
+  roundWins?: Record<string, number>;
+  roundsToWin?: number;
+  winByRounds?: number;
+  goldenPoint?: number;
   quickplay?: {
     meters: number;
     floor: number;
@@ -417,6 +422,11 @@ export function useGameSession() {
         reason: payload.reason,
         stats: finalStats,
         winnerId: payload.winnerId,
+        round: payload.round,
+        roundWins: payload.roundWins,
+        roundsToWin: payload.roundsToWin,
+        winByRounds: payload.winByRounds,
+        goldenPoint: payload.goldenPoint,
         quickplay:
           gameConfigRef.current?.mode === "quickplay"
             ? {

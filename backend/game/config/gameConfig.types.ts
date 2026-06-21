@@ -57,12 +57,12 @@ export interface SoloConfig extends BaseGameConfig {
 interface GameGeneralConfig {
     bagType: BagType;
     boardWidth: number; //4-20
-    boardHeight: number; //4-40
+    boardHeight: number; //10-40
 }
 
 interface GameControlsConfig {
     hold: boolean;
-    nextPieces: number; //0-10
+    nextPieces: number; //0-7
     showShadowPiece: boolean;
 }
 
@@ -80,7 +80,6 @@ interface GameGarbageConfig {
     garbageMult: number;
     garbageCap: number; //max amnt of garbage to enter the board at once, the rest will be nullified
     garbageMaxCap: number; //max amnt of garbage pending queue can hold, the rest will be nullified
-    garbagePassthrough: boolean; //true - opposing attacks in transit will cancel each other. false - do not cancel.
     allClearGarbage: number; //amnt of lines send on all clear
     garbageDelay: number; //delay before garbage enters the board after being sent, in ms
     garbageDelayOnClear: number; //delay in ms on each clear(per clear, not per line)

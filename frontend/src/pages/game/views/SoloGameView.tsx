@@ -63,8 +63,9 @@ export default function SoloGameView({ session }: SoloGameViewProps) {
       ? { label: "SCORE", value: `${stats.score}` }
       : { label: "LINES", value: lineProgress };
   const objectiveWarning = getObjectiveWarning(objective, stats);
-  const cellSize = Math.round(32 * packageScale);
-  const previewFigureSize = Math.round(30 * packageScale);
+  const maxCellByHeight = Math.floor((window.innerHeight - 155) / gameState.rows);
+  const cellSize = Math.max(8, Math.min(Math.round(32 * packageScale), maxCellByHeight));
+  const previewFigureSize = Math.max(8, Math.round(cellSize * 0.94));
   const style = {
     "--solo-package-scale": String(packageScale),
   } as CSSProperties;
@@ -118,13 +119,15 @@ export default function SoloGameView({ session }: SoloGameViewProps) {
           showGhost={gameConfig.controls.showShadowPiece}
         />
 
-        <GamePreviewPanel
-          className="solo-game__panel solo-game__panel--next"
-          figureSize={previewFigureSize}
-          nextCount={gameConfig.controls.nextPieces}
-          state={gameState}
-          type="next"
-        />
+        {gameConfig.controls.nextPieces > 0 && (
+          <GamePreviewPanel
+            className="solo-game__panel solo-game__panel--next"
+            figureSize={previewFigureSize}
+            nextCount={gameConfig.controls.nextPieces}
+            state={gameState}
+            type="next"
+          />
+        )}
       </section>
 
       {session.countdownStep && (

@@ -1264,11 +1264,21 @@ body.mp-custom-active .mp-custom-status {
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: 0.35rem;
+  width: 100%;
   padding: 0 0.6rem;
+  border: 0;
   background: rgba(88, 56, 130, 0.78);
   color: #d9c4ff;
+  cursor: pointer;
+  font: inherit;
   font-weight: 900;
+  text-align: left;
   text-transform: uppercase;
+}
+
+.mp-custom-player:hover,
+.mp-custom-player:focus-visible {
+  filter: brightness(1.16);
 }
 
 .mp-custom-player strong {
@@ -1315,7 +1325,7 @@ body.mp-custom-active .mp-custom-status {
 
 .mp-custom-tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 2px;
 }
 
@@ -1409,6 +1419,7 @@ body.mp-custom-active .mp-custom-status {
 }
 
 .mp-custom-setting {
+  position: relative;
   min-height: 1.85rem;
   display: grid;
   grid-template-columns: minmax(10rem, 1fr) minmax(5rem, 12rem);
@@ -1421,6 +1432,33 @@ body.mp-custom-active .mp-custom-status {
   text-transform: uppercase;
 }
 
+.mp-custom-setting[data-hint]::after {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 0.35rem);
+  z-index: 45;
+  width: min(22rem, 80vw);
+  padding: 0.55rem 0.7rem;
+  border: 1px solid rgba(199, 122, 255, 0.45);
+  background: rgba(21, 12, 29, 0.96);
+  color: #e8cbff;
+  content: attr(data-hint);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.35;
+  opacity: 0;
+  pointer-events: none;
+  text-transform: none;
+  transform: translateY(0.35rem) scale(0.98);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.mp-custom-setting[data-hint]:hover::after,
+.mp-custom-setting[data-hint]:focus-within::after {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
 .mp-custom-setting--wide {
   grid-template-columns: minmax(7rem, auto) minmax(0, 1fr);
 }
@@ -1429,9 +1467,30 @@ body.mp-custom-active .mp-custom-status {
 .mp-custom-setting select {
   min-height: 1.7rem;
   padding: 0 0.4rem;
-  border-color: rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.46);
-  color: #fff;
+  border: 1px solid rgba(155, 90, 210, 0.42);
+  background: rgba(26, 13, 38, 0.86);
+  color: #f1dcff;
+  font-weight: 900;
+}
+
+.mp-custom-setting select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #d68cff 50%),
+    linear-gradient(135deg, #d68cff 50%, transparent 50%);
+  background-position:
+    calc(100% - 0.85rem) 50%,
+    calc(100% - 0.55rem) 50%;
+  background-repeat: no-repeat;
+  background-size: 0.32rem 0.32rem, 0.32rem 0.32rem;
+  cursor: pointer;
+  text-transform: uppercase;
+}
+
+.mp-custom-setting select option {
+  background: #1a0d26;
+  color: #f1dcff;
+  font-weight: 900;
 }
 
 .mp-custom-toggle {
@@ -1519,6 +1578,35 @@ body.mp-custom-active .mp-custom-status {
   font-size: 0.58rem;
 }
 
+.mp-custom-autostart-count {
+  display: inline-block;
+  margin-left: 0.55rem;
+  color: #ffe45f;
+  font-size: 1.35em;
+  font-weight: 1000;
+  text-shadow:
+    0 0 0.35rem rgba(255, 240, 120, 0.9),
+    0 0 1.1rem rgba(255, 190, 40, 0.58);
+  animation: mp-custom-autostart-pop 1s ease-out both;
+}
+
+@keyframes mp-custom-autostart-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(0.3rem) scale(0.78);
+  }
+
+  18% {
+    opacity: 1;
+    transform: translateY(0) scale(1.16);
+  }
+
+  100% {
+    opacity: 0.86;
+    transform: translateY(-0.1rem) scale(1);
+  }
+}
+
 .mp-custom-setting--readonly strong {
   min-height: 2rem;
   display: grid;
@@ -1534,6 +1622,33 @@ body.mp-custom-active .mp-custom-status {
 .mp-custom-role-toggle--spectator {
   background: rgba(37, 18, 54, 0.92);
   color: rgba(211, 183, 232, 0.7);
+}
+
+.mp-custom-profile-overlay {
+  display: grid;
+  place-items: center;
+  gap: 0.45rem;
+}
+
+.mp-custom-profile-actions {
+  width: min(38rem, 100%);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.35rem;
+}
+
+.mp-custom-profile-actions button {
+  min-height: 2.6rem;
+  border: 0;
+  background: rgba(37, 90, 43, 0.98);
+  color: #d4ffd6;
+  font-family: var(--app-font-display);
+  font-weight: 900;
+}
+
+.mp-custom-profile-actions button:last-child {
+  background: rgba(118, 34, 39, 0.98);
+  color: #ffd2d2;
 }
 
 .mp-custom-role-toggle small {

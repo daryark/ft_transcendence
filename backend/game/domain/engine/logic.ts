@@ -26,8 +26,8 @@ function createSeededRandom(seed: number) {
   };
 }
 
-function shuffleBag(random: () => number) {
-  const bag = [...BAG];
+function shufflePieces(pieces: FigureType[], random: () => number) {
+  const bag = [...pieces];
 
   for (let index = bag.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(random() * (index + 1));
@@ -37,16 +37,72 @@ function shuffleBag(random: () => number) {
   return bag;
 }
 
-export function createIndexedBag(seed: string, bagIndex: number): FigureType[] {
-  return shuffleBag(createSeededRandom(hashSequence(seed, bagIndex)));
+function randomPiece(random: () => number) {
+  return BAG[Math.floor(random() * BAG.length)];
 }
 
-export function createBag(seed?: string | null, bagIndex?: number): FigureType[] {
-  if (seed && typeof bagIndex === "number") {
-    return createIndexedBag(seed, bagIndex);
+export function createIndexedBag(seed: string, bagIndex: number): FigureType[] {
+  return shufflePieces(BAG, createSeededRandom(hashSequence(seed, bagIndex)));
+}
+
+export function createBag(
+  seed?: string | null,
+  bagIndex?: number,
+  bagType = "7-bag",
+  previousType: FigureType | null = null,
+): FigureType[] {
+  const random =
+    seed && typeof bagIndex === "number"
+      ? createSeededRandom(hashSequence(`${seed}:${bagType}`, bagIndex))
+      : Math.random;
+
+  if (bagType === "14-bag") {
+    return shufflePieces([...BAG, ...BAG], random);
   }
 
-  return shuffleBag(Math.random);
+  if (bagType === "7+1-bag" || bagType === "7+2-bag" || bagType === "7+X-bag") {
+    const extras =
+      bagType === "7+1-bag"
+        ? 1
+        : bagType === "7+2-bag"
+          ? 2
+          : 1 + Math.floor(random() * 7);
+
+    return shufflePieces(
+      [...BAG, ...Array.from({ length: extras }, () => randomPiece(random))],
+      random,
+    );
+  }
+
+  if (bagType === "pairs") {
+    const first = randomPiece(random);
+    let second = randomPiece(random);
+    while (second === first) {
+      second = randomPiece(random);
+    }
+
+    return shufflePieces([first, second, first, second, first, second], random);
+  }
+
+  if (bagType === "classic" || bagType === "total_mayhem") {
+    const bag: FigureType[] = [];
+    let previous: FigureType | null = previousType;
+
+    for (let index = 0; index < 7; index += 1) {
+      let next = randomPiece(random);
+      if (bagType === "classic") {
+        while (next === previous) {
+          next = randomPiece(random);
+        }
+      }
+      bag.push(next);
+      previous = next;
+    }
+
+    return bag;
+  }
+
+  return shufflePieces(BAG, random);
 }
 
 export function moveFigure(f: Figure, dx: number, dy: number): Figure {

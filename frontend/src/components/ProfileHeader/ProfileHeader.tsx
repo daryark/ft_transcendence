@@ -148,7 +148,9 @@ const ProfileHeader = ({
 
       <div className="profileHeader">
         <div className="profileAvatar" style={getAvatarStyle(user.avatarId)}>
-          {user.isAnonymous ? "?" : ""}
+          {user.isAnonymous ? (
+            <img alt="" aria-hidden="true" src="/avatar_anonymous.png" />
+          ) : null}
         </div>
         <div>
           <h2>{user.username}</h2>

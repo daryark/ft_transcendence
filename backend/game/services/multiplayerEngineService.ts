@@ -64,6 +64,7 @@ function createPlayerEngineRoom(
   const round = (room as Room & { roundNumber?: number }).roundNumber ?? 1;
   const state = initGame(boardHeight, boardWidth, round, startedAt, {
     bagSeed: `${room.id}:round:${round}`,
+    bagType: gameConfig.general.bagType,
   });
 
   return {

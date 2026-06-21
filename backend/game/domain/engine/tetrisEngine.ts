@@ -116,8 +116,18 @@ export default function createEngine(room: Room, roomService: RoomService) {
   }
 
   function ensureNextQueue(state: GameState) {
-    while (state.next.length < 7) {
-      const bag = createBag(state.bagSeed, state.nextBagIndex ?? 0);
+    const visibleNext = room.gameConfig.controls.nextPieces ?? 0;
+    const targetQueueLength = Math.max(1, visibleNext + 1);
+
+    while (state.next.length < targetQueueLength) {
+      const previousType =
+        state.next[state.next.length - 1]?.type ?? state.current?.type ?? null;
+      const bag = createBag(
+        state.bagSeed,
+        state.nextBagIndex ?? 0,
+        room.gameConfig.general.bagType,
+        previousType,
+      );
       state.nextBagIndex = (state.nextBagIndex ?? 0) + 1;
       state.next.push(...bag.map((t) => createFigure(t, state.cols)));
     }

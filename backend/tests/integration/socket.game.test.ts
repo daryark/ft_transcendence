@@ -190,7 +190,7 @@ describe('Socket Game Integration Tests', () => {
         test('should handle all input types', (done) => {
             if (skipIfServerUnavailable(done)) return;
 
-            const inputTypes = ['left', 'right', 'down', 'rotate', 'drop', 'hold'];
+            const inputTypes = ['left', 'right', 'down', 'rotate', 'rotateCCW', 'rotate180', 'drop', 'hold'];
             let inputsSent = 0;
 
             clientSocket.emit('mode:join', {

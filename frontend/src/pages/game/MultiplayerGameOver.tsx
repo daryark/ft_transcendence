@@ -7,6 +7,10 @@ type MultiplayerGameOverProps = {
   reason: GameEndPayload["reason"];
   stats: GameStats;
   winnerId?: GameEndPayload["winnerId"];
+  roundWins?: GameEndPayload["roundWins"];
+  roundsToWin?: GameEndPayload["roundsToWin"];
+  winByRounds?: GameEndPayload["winByRounds"];
+  goldenPoint?: GameEndPayload["goldenPoint"];
   onNext: () => void;
   modeLabel?: string;
 };
@@ -27,9 +31,17 @@ export default function MultiplayerGameOver({
   reason,
   stats,
   winnerId,
+  roundWins,
+  roundsToWin,
+  winByRounds,
+  goldenPoint,
   onNext,
   modeLabel = "MULTIPLAYER",
 }: MultiplayerGameOverProps) {
+  const isRoundMatch =
+    mode === "custom" &&
+    Boolean(roundWins) &&
+    ((roundsToWin ?? 1) > 1 || (winByRounds ?? 0) > 0 || (goldenPoint ?? 0) > 0);
   const winner = winnerId ? players[String(winnerId)] : null;
   const playerList = Object.values(players).sort((a, b) => {
     if (winnerId && String(a.id) === String(winnerId)) return -1;
@@ -38,17 +50,35 @@ export default function MultiplayerGameOver({
     const aStats = a.state?.update;
     const bStats = b.state?.update;
 
+    if (isRoundMatch) {
+      return (
+        (roundWins?.[String(b.id)] ?? 0) -
+        (roundWins?.[String(a.id)] ?? 0)
+      );
+    }
+
     return (bStats?.score ?? 0) - (aStats?.score ?? 0);
   });
   const winnerStats = winner?.state?.update ?? stats;
-  const summaryStats = [
-    ["PLAYERS", Object.keys(players).length],
-    ["LINES", winnerStats.lines],
-    ["SCORE", winnerStats.score],
-    ["PIECES PER SECOND", winnerStats.piecesPerSecond.toFixed(2)],
-    ["PIECES PLACED", winnerStats.piecesPlaced],
-    ["ROUND", winnerStats.round],
-  ] as const;
+  const totalRounds = roundWins
+    ? Object.values(roundWins).reduce((total, wins) => total + wins, 0)
+    : winnerStats.round;
+  const summaryStats = isRoundMatch
+    ? ([
+        ["PLAYERS", Object.keys(players).length],
+        ["ROUNDS PLAYED", totalRounds],
+        ["ROUNDS TO WIN", roundsToWin ?? 1],
+        ["WIN BY", winByRounds ?? 0],
+        ["GOLDEN POINT", goldenPoint || "OFF"],
+      ] as const)
+    : ([
+        ["PLAYERS", Object.keys(players).length],
+        ["LINES", winnerStats.lines],
+        ["SCORE", winnerStats.score],
+        ["PIECES PER SECOND", winnerStats.piecesPerSecond.toFixed(2)],
+        ["PIECES PLACED", winnerStats.piecesPlaced],
+        ["ROUND", winnerStats.round],
+      ] as const);
 
   if (mode === "custom") {
     return (
@@ -77,6 +107,7 @@ export default function MultiplayerGameOver({
             {playerList.map((player, index) => {
               const playerStats = player.state?.update;
               const isWinner = winnerId && String(player.id) === String(winnerId);
+              const playerRoundWins = roundWins?.[String(player.id)] ?? 0;
               const status = isWinner
                 ? "SURVIVOR"
                 : player.gameOver || player.state?.gameOver
@@ -103,10 +134,19 @@ export default function MultiplayerGameOver({
                     </span>
                   </div>
                   <div className="custom-results__player-status">
-                    <strong>{status}</strong>
-                    <span>
-                      {(playerStats?.piecesPlaced ?? 0).toLocaleString()} pieces
-                    </span>
+                    {isRoundMatch ? (
+                      <>
+                        <strong>{playerRoundWins.toLocaleString()}</strong>
+                        <span>POINTS</span>
+                      </>
+                    ) : (
+                      <>
+                        <strong>{status}</strong>
+                        <span>
+                          {(playerStats?.piecesPlaced ?? 0).toLocaleString()} pieces
+                        </span>
+                      </>
+                    )}
                   </div>
                 </li>
               );

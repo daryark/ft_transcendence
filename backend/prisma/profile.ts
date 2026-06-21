@@ -64,6 +64,14 @@ type ProfileModeRow = {
 	} | null;
 };
 
+type RawProfileModeRow = {
+	score: number | null;
+	metric_value: number | null;
+	result: string | null;
+	gamemode: string | null;
+	created_at: Date | string | null;
+};
+
 const modeAliases: Record<string, keyof ProfileResponse["modes"]> = {
 	quickPlay: "quickPlay",
 	fortyLines: "fortyLines",
@@ -273,20 +281,51 @@ async function findUserByField(
 }
 
 async function loadUserProfileRows(userId: number): Promise<ProfileModeRow[]> {
-	return await prisma.match_players.findMany({
-		where: { user_id: userId },
-		select: {
-			score: true,
-			metric_value: true,
-			result: true,
-			matches: {
-				select: {
-					gamemode: true,
-					created_at: true,
+	if (typeof prisma.$queryRaw !== "function") {
+		return await prisma.match_players.findMany({
+			where: { user_id: userId },
+			select: {
+				score: true,
+				metric_value: true,
+				result: true,
+				matches: {
+					select: {
+						gamemode: true,
+						created_at: true,
+					},
 				},
 			},
-		},
-	});
+		});
+	}
+
+	const rows: RawProfileModeRow[] = await prisma.$queryRaw<RawProfileModeRow[]>`
+		SELECT
+			mp.score,
+			mp.metric_value,
+			mp.result::text AS result,
+			m.gamemode::text AS gamemode,
+			m.created_at
+		FROM match_players mp
+		LEFT JOIN matches m ON m.id = mp.match_id
+		WHERE mp.user_id = ${userId}
+	`;
+
+	return rows.map((row) => ({
+		score: row.score,
+		metric_value: row.metric_value,
+		result: row.result,
+		matches: row.gamemode
+			? {
+				gamemode: row.gamemode,
+				created_at:
+					row.created_at instanceof Date
+						? row.created_at
+						: row.created_at
+							? new Date(row.created_at)
+							: null,
+			}
+			: null,
+	}));
 }
 
 export async function getProfileByUsername(username: string): Promise<ProfileResponse> {

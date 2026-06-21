@@ -252,7 +252,10 @@ export default function createMatchService(
       previousState.cols,
       previousState.round,
       Date.now(),
-      { bagSeed: getRoundBagSeed(previousState.round) },
+      {
+        bagSeed: getRoundBagSeed(previousState.round),
+        bagType: room.gameConfig.general.bagType,
+      },
     );
     copyCarryStats(nextState, previousState);
     startRound(nextState, true);
@@ -264,7 +267,10 @@ export default function createMatchService(
       previousState.cols,
       previousState.round + 1,
       Date.now(),
-      { bagSeed: getRoundBagSeed(previousState.round + 1) },
+      {
+        bagSeed: getRoundBagSeed(previousState.round + 1),
+        bagType: room.gameConfig.general.bagType,
+      },
     );
     copyCarryStats(nextState, previousState);
     startRound(nextState, false);
@@ -361,7 +367,10 @@ export default function createMatchService(
       boardWidth,
       1,
       Date.now() + getStartDelayMs(room),
-      { bagSeed: getRoundBagSeed(1) },
+      {
+        bagSeed: getRoundBagSeed(1),
+        bagType: room.gameConfig.general.bagType,
+      },
     );
     initialState.update = buildRoomStats(room, initialState);
 

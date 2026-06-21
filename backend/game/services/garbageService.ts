@@ -9,7 +9,6 @@ type GarbageConfigInput = {
   garbageMult?: number;
   garbageCap?: number;
   garbageMaxCap?: number;
-  garbagePassthrough?: boolean;
   allClearGarbage?: number;
   garbageDelay?: number;
   garbageDelayOnClear?: number;
@@ -58,7 +57,6 @@ function normalizeConfig(config: GarbageConfigInput = {}): GarbageConfig {
     garbageMult: finiteNumber(config.garbageMult, 1),
     garbageCap: finiteNumber(config.garbageCap, 8),
     garbageMaxCap: finiteNumber(config.garbageMaxCap, 40),
-    garbagePassthrough: config.garbagePassthrough !== false,
     allClearGarbage: finiteNumber(config.allClearGarbage, 5),
     garbageDelay: finiteNumber(config.garbageDelay, 500),
     garbageDelayOnClear: finiteNumber(config.garbageDelayOnClear, 100),
@@ -129,7 +127,7 @@ export function createGarbageService(config?: GarbageConfigInput) {
   }
 
   function cancelPending(playerId: string | number, attackLines: number) {
-    if (attackLines <= 0 || !garbageConfig.garbagePassthrough) {
+    if (attackLines <= 0) {
       return attackLines;
     }
 

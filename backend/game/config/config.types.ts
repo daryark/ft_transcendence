@@ -11,6 +11,7 @@ interface RoomConfig {
     maxPlayers: number;
     public: boolean;
     anonymousAllowed: boolean;
+    autoStart?: number;
 }
 
 interface MatchConfig {
