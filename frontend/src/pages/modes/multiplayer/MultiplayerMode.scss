@@ -540,6 +540,77 @@
   line-height: 1.18;
 }
 
+.mp-quick-result-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.8rem;
+  padding: 0.45rem;
+  border: 1px solid rgba(255, 132, 71, 0.62);
+  background: rgba(67, 22, 13, 0.78);
+  color: #ffbd99;
+  font-family: var(--app-font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.mp-quick-result-actions button {
+  min-height: 2.7rem;
+  padding: 0 1rem;
+  border: 1px solid rgba(255, 172, 125, 0.7);
+  background: rgba(136, 52, 26, 0.96);
+  color: #ffd0b3;
+  font-family: var(--app-font-display);
+  font-size: clamp(1rem, 1.6vw, 1.45rem);
+  font-weight: 900;
+}
+
+.mp-quick-result-actions button:disabled {
+  cursor: default;
+  opacity: 0.72;
+  filter: saturate(0.65);
+}
+
+.mp-quick-run-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.15rem;
+  padding: 0.65rem;
+  border: 1px solid rgba(255, 105, 43, 0.52);
+  background: rgba(42, 12, 8, 0.72);
+  box-shadow: 0 0.2rem 0 rgba(0, 0, 0, 0.66);
+  color: #ffd1b9;
+  font-family: var(--app-font-display);
+  text-transform: uppercase;
+}
+
+.mp-quick-run-stats h2 {
+  grid-column: 1 / -1;
+  margin: 0 0 0.25rem;
+  color: #df7f53;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.mp-quick-run-stats div {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.55rem;
+  background: rgba(85, 30, 18, 0.58);
+}
+
+.mp-quick-run-stats span {
+  color: rgba(255, 200, 171, 0.62);
+  font-size: 0.8rem;
+}
+
+.mp-quick-run-stats strong {
+  color: #fff0df;
+  font-size: clamp(1rem, 1.6vw, 1.5rem);
+  line-height: 1;
+}
+
 .mp-card__kicker,
 .mp-help h2,
 .mp-create-card h1,

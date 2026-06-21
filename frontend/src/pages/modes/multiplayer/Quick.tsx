@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { getSocket } from "../../../socket/socketClient";
 import { useToast } from "../../../components/Toast/ToastProvider";
@@ -54,6 +54,50 @@ type QuickLobbyPlayer = {
   quickplayMeters?: number;
 };
 
+type QuickResultState = {
+  reason?: string;
+  quickplay?: {
+    meters: number;
+    floor: number;
+    floorName?: string;
+    previousBestMeters: number | null;
+    isPersonalBest: boolean;
+  };
+  stats?: {
+    elapsedMs?: number;
+    lines?: number;
+    piecesPlaced?: number;
+    score?: number;
+  };
+};
+
+function readQuickResultState(state: unknown): QuickResultState | null {
+  if (!state || typeof state !== "object") return null;
+
+  const quickplayResult = (state as { quickplayResult?: QuickResultState })
+    .quickplayResult;
+  return quickplayResult?.quickplay ? quickplayResult : null;
+}
+
+function formatElapsedTime(elapsedMs?: number) {
+  const totalSeconds = Math.max(0, Math.floor((elapsedMs ?? 0) / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function getQuickResultKey(result: QuickResultState | null) {
+  if (!result?.quickplay) return "";
+
+  return [
+    result.quickplay.meters.toFixed(1),
+    result.quickplay.floor,
+    result.stats?.elapsedMs ?? 0,
+    result.stats?.piecesPlaced ?? 0,
+  ].join(":");
+}
+
 function normalizeQuickChatMessage(
   message: {
     actor?: string;
@@ -86,13 +130,22 @@ function normalizeQuickChatMessage(
 
 export default function Quick() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast } = useToast();
   const [selectedMods, setSelectedMods] = useState<string[]>([]);
   const [chatMessages, setChatMessages] = useState<QuickChatMessage[]>([]);
   const [chatMessage, setChatMessage] = useState("");
   const [climbers, setClimbers] = useState<QuickLobbyPlayer[]>([]);
   const [waitingStatus, setWaitingStatus] = useState("");
+  const [hiddenResultKey, setHiddenResultKey] = useState("");
+  const [sentResultKey, setSentResultKey] = useState("");
   const waitingToastShownRef = useRef("");
+  const routeResult = readQuickResultState(location.state);
+  const routeResultKey = getQuickResultKey(routeResult);
+  const lastResult =
+    routeResult && routeResultKey !== hiddenResultKey ? routeResult : null;
+  const currentResultKey = getQuickResultKey(lastResult);
+  const resultSent = Boolean(currentResultKey && currentResultKey === sentResultKey);
 
   useEffect(() => {
     document.body.classList.add("mp-quick-active");
@@ -171,6 +224,8 @@ export default function Quick() {
     const socket = getSocket();
     if (!socket) return;
 
+    setHiddenResultKey(currentResultKey);
+
     const handleGameStart = (payload: { roomId?: string }) => {
       if (!payload.roomId) return;
 
@@ -202,6 +257,27 @@ export default function Quick() {
 
     getSocket()?.emit("chat:message", { message });
     setChatMessage("");
+  };
+
+  const sendResultToChat = () => {
+    const socket = getSocket();
+    const quickplay = lastResult?.quickplay;
+    if (!socket || !quickplay) return;
+
+    const floor = quickplay.floorName ? ` on ${quickplay.floorName}` : "";
+    const best = quickplay.isPersonalBest ? " New personal best!" : "";
+
+    socket.emit("chat:message", {
+      message: `Quick Play result: ${quickplay.meters.toFixed(1)}m${floor}.${best}`,
+      quickplayResult: {
+        floor: quickplay.floor,
+        floorName: quickplay.floorName,
+        isPersonalBest: quickplay.isPersonalBest,
+        meters: quickplay.meters,
+      },
+    });
+    setSentResultKey(currentResultKey);
+    showToast("Result sent to Quick Play chat.", "success");
   };
 
   const spectateClimber = () => {
@@ -292,21 +368,50 @@ export default function Quick() {
 
         <section className="mp-quick-center">
           <article className="mp-card mp-quick-intro">
-            <span className="mp-card__kicker">SPECTATE</span>
-            <h2>QUICK PLAY</h2>
-            <p>
-              Welcome to the Zenith Tower! Send lines and KO enemies to scale
-              the tower. The further up the tower, the stronger the opponents.
-            </p>
-            <p>Leaderboards reset every week. How far can you get?</p>
-            <div className="mp-best">
-              This week's personal best
-              <strong>0.0 M</strong>
-            </div>
+            {lastResult?.quickplay ? (
+              <>
+                <span className="mp-card__kicker">YOUR FINAL ALTITUDE</span>
+                <h2>{lastResult.quickplay.meters.toFixed(1)}M</h2>
+                <p>
+                  {lastResult.quickplay.floorName ??
+                    `Floor ${lastResult.quickplay.floor}`}
+                </p>
+                <div className="mp-quick-result-actions">
+                  <span>
+                    {lastResult.quickplay.isPersonalBest
+                      ? "NEW PERSONAL BEST"
+                      : lastResult.quickplay.previousBestMeters !== null
+                        ? `PB ${lastResult.quickplay.previousBestMeters.toFixed(1)}M`
+                        : "FIRST SAVED RESULT"}
+                  </span>
+                  <button
+                    disabled={resultSent}
+                    onClick={sendResultToChat}
+                    type="button"
+                  >
+                    {resultSent ? "SENT!" : "SEND TO CHAT"}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <span className="mp-card__kicker">SPECTATE</span>
+                <h2>QUICK PLAY</h2>
+                <p>
+                  Welcome to the Zenith Tower! Send lines and KO enemies to scale
+                  the tower. The further up the tower, the stronger the opponents.
+                </p>
+                <p>Leaderboards reset every week. How far can you get?</p>
+                <div className="mp-best">
+                  This week's personal best
+                  <strong>0.0 M</strong>
+                </div>
+              </>
+            )}
           </article>
 
           <button className="mp-start mp-quick-start" onClick={startQuickplay} type="button">
-            START
+            {lastResult ? "AGAIN" : "START"}
           </button>
 
           <div className="mp-mods" aria-label="Quick Play modifiers">
@@ -339,6 +444,28 @@ export default function Quick() {
               <span>MODIFIERS SELECTED</span>
             </div>
           </div>
+
+          {lastResult ? (
+            <section className="mp-quick-run-stats" aria-label="Last run stats">
+              <h2>LAST RUN</h2>
+              <div>
+                <span>TIME</span>
+                <strong>{formatElapsedTime(lastResult.stats?.elapsedMs)}</strong>
+              </div>
+              <div>
+                <span>LINES</span>
+                <strong>{lastResult.stats?.lines ?? 0}</strong>
+              </div>
+              <div>
+                <span>PIECES</span>
+                <strong>{lastResult.stats?.piecesPlaced ?? 0}</strong>
+              </div>
+              <div>
+                <span>SCORE</span>
+                <strong>{lastResult.stats?.score ?? 0}</strong>
+              </div>
+            </section>
+          ) : null}
         </section>
 
         <aside className="mp-quick-standings" aria-label="Quick Play standings">

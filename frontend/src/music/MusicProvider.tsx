@@ -23,6 +23,7 @@ type MusicContextValue = AudioSettings & {
   setMuted: (muted: boolean) => void;
   setBgmVolume: (volume: number) => void;
   setSfxVolume: (volume: number) => void;
+  setTrack: (src: string | null) => void;
 };
 
 const MusicContext = createContext<MusicContextValue | null>(null);
@@ -58,9 +59,21 @@ function readSettings(): AudioSettings {
 
 export function MusicProvider({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState(readSettings);
+  const [trackSrc, setTrackSrc] = useState<string>(DEFAULT_TRACK);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const currentTrackRef = useRef(DEFAULT_TRACK);
+  const fadeTimerRef = useRef<ReturnType<typeof window.setInterval> | null>(
+    null,
+  );
+  const isFadingRef = useRef(false);
   const effectiveBgmVolume = settings.muted ? 0 : settings.bgmVolume;
   const effectiveSfxVolume = settings.muted ? 0 : settings.sfxVolume;
+
+  const clearFade = useCallback(() => {
+    if (!fadeTimerRef.current) return;
+    window.clearInterval(fadeTimerRef.current);
+    fadeTimerRef.current = null;
+  }, []);
 
   const startMusic = useCallback(() => {
     const audio = audioRef.current;
@@ -83,7 +96,9 @@ export function MusicProvider({ children }: { children: ReactNode }) {
     if (!audio) return undefined;
 
     audio.muted = settings.muted || effectiveBgmVolume === 0;
-    audio.volume = effectiveBgmVolume;
+    if (!isFadingRef.current) {
+      audio.volume = effectiveBgmVolume;
+    }
     if (effectiveBgmVolume === 0) {
       audio.pause();
     } else {
@@ -99,6 +114,66 @@ export function MusicProvider({ children }: { children: ReactNode }) {
       window.removeEventListener("keydown", unlockAudio);
     };
   }, [effectiveBgmVolume, settings.muted, startMusic]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || currentTrackRef.current === trackSrc) return undefined;
+
+    clearFade();
+
+    if (effectiveBgmVolume === 0 || settings.muted) {
+      audio.src = trackSrc;
+      audio.load();
+      currentTrackRef.current = trackSrc;
+      return undefined;
+    }
+
+    isFadingRef.current = true;
+
+    const fadeOutSteps = 12;
+    const fadeInSteps = 18;
+    const fadeOutStartVolume = audio.volume;
+    let step = 0;
+
+    fadeTimerRef.current = window.setInterval(() => {
+      step += 1;
+      audio.volume = Math.max(
+        0,
+        fadeOutStartVolume * (1 - step / fadeOutSteps),
+      );
+
+      if (step < fadeOutSteps) return;
+
+      clearFade();
+      audio.src = trackSrc;
+      audio.load();
+      audio.volume = 0;
+      currentTrackRef.current = trackSrc;
+      void audio.play().catch(() => {
+        // The usual browser autoplay rule can still apply after a track swap.
+      });
+
+      let fadeInStep = 0;
+      fadeTimerRef.current = window.setInterval(() => {
+        fadeInStep += 1;
+        audio.volume = Math.min(
+          effectiveBgmVolume,
+          effectiveBgmVolume * (fadeInStep / fadeInSteps),
+        );
+
+        if (fadeInStep < fadeInSteps) return;
+
+        clearFade();
+        isFadingRef.current = false;
+        audio.volume = effectiveBgmVolume;
+      }, 32);
+    }, 28);
+
+    return () => {
+      clearFade();
+      isFadingRef.current = false;
+    };
+  }, [clearFade, effectiveBgmVolume, settings.muted, trackSrc]);
 
   const value = useMemo<MusicContextValue>(
     () => ({
@@ -120,6 +195,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
           ...current,
           sfxVolume: clampVolume(sfxVolume),
         })),
+      setTrack: (src) => setTrackSrc(src ?? DEFAULT_TRACK),
     }),
     [settings],
   );
@@ -132,7 +208,7 @@ export function MusicProvider({ children }: { children: ReactNode }) {
         muted={settings.muted || effectiveBgmVolume === 0}
         preload="auto"
         ref={audioRef}
-        src={DEFAULT_TRACK}
+        src={trackSrc}
       />
     </MusicContext.Provider>
   );
