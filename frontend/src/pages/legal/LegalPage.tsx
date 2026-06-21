@@ -11,7 +11,9 @@ type LegalPageContent = {
   title: string;
   lastUpdated: string;
   lead: string;
+  highlights: string[];
   sections: LegalSection[];
+  closing: string;
 };
 
 const privacyPolicy: LegalPageContent = {
@@ -19,7 +21,12 @@ const privacyPolicy: LegalPageContent = {
   title: "Privacy Policy",
   lastUpdated: "June 20, 2026",
   lead:
-    "This policy explains what data Tetra uses to run accounts, gameplay, social features, leaderboards, and security for this student project.",
+    "This policy explains how Tetra handles the data required to run accounts, gameplay, social features, leaderboards, notifications, and security inside this student project.",
+  highlights: [
+    "We collect only the data needed to make the product work.",
+    "Gameplay, profile, and social data are used to power visible player features.",
+    "Security data helps protect accounts, sessions, and realtime access.",
+  ],
   sections: [
     {
       heading: "Information we collect",
@@ -32,7 +39,7 @@ const privacyPolicy: LegalPageContent = {
     {
       heading: "How we use information",
       body: [
-        "We use this data to authenticate users, keep sessions active, run multiplayer games, show profiles and leaderboards, deliver notifications, and protect the service from misuse.",
+        "We use this data to authenticate users, keep sessions active, run multiplayer games, display profiles and leaderboards, deliver notifications, sync social features, and protect the service from misuse.",
         "Anonymous sessions can play without a registered account, but gameplay state still needs temporary identifiers while the session is active.",
       ],
     },
@@ -63,6 +70,8 @@ const privacyPolicy: LegalPageContent = {
       ],
     },
   ],
+  closing:
+    "This page is written for clarity, not legal theatrics. The intent is simple: collect what Tetra needs, use it for the feature it supports, and keep the data model understandable.",
 };
 
 const termsOfService: LegalPageContent = {
@@ -70,7 +79,12 @@ const termsOfService: LegalPageContent = {
   title: "Terms of Service",
   lastUpdated: "June 20, 2026",
   lead:
-    "These terms describe the basic rules for using Tetra accounts, gameplay, rooms, chat, profiles, and competitive features.",
+    "These terms define the basic rules for using Tetra accounts, gameplay, rooms, chat, profiles, leaderboards, and competitive features.",
+  highlights: [
+    "Play fairly and respect other players.",
+    "Do not attack, exploit, automate, or disrupt the service.",
+    "Tetra is a student project and may change during development or evaluation.",
+  ],
   sections: [
     {
       heading: "Use of the service",
@@ -114,6 +128,8 @@ const termsOfService: LegalPageContent = {
       ],
     },
   ],
+  closing:
+    "The short version: use Tetra like a real multiplayer space. Compete hard, keep it respectful, and do not make the system worse for other players.",
 };
 
 function LegalPage({ content }: { content: LegalPageContent }) {
@@ -121,24 +137,39 @@ function LegalPage({ content }: { content: LegalPageContent }) {
     <main className="legal-page">
       <BackButton />
       <section className="legal-page__hero">
-        <p className="legal-page__eyebrow">{content.eyebrow}</p>
-        <h1>{content.title}</h1>
-        <p className="legal-page__updated">
-          Last updated: {content.lastUpdated}
-        </p>
+        <div>
+          <p className="legal-page__eyebrow">{content.eyebrow}</p>
+          <h1>{content.title}</h1>
+          <p className="legal-page__updated">
+            Last updated: {content.lastUpdated}
+          </p>
+        </div>
         <p className="legal-page__lead">{content.lead}</p>
+        <ul className="legal-page__highlights" aria-label="Key points">
+          {content.highlights.map((highlight) => (
+            <li key={highlight}>{highlight}</li>
+          ))}
+        </ul>
       </section>
 
       <div className="legal-page__content">
-        {content.sections.map((section) => (
+        {content.sections.map((section, index) => (
           <section className="legal-page__section" key={section.heading}>
-            <h2>{section.heading}</h2>
-            {section.body.map((paragraph) => (
-              <p key={paragraph}>{paragraph}</p>
-            ))}
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <div>
+              <h2>{section.heading}</h2>
+              {section.body.map((paragraph) => (
+                <p key={paragraph}>{paragraph}</p>
+              ))}
+            </div>
           </section>
         ))}
       </div>
+
+      <section className="legal-page__closing">
+        <h2>Plain-language commitment</h2>
+        <p>{content.closing}</p>
+      </section>
     </main>
   );
 }
