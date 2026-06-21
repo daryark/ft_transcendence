@@ -30,7 +30,10 @@ import type {
 } from "../types";
 import { useConfirm } from "../../../components/Confirm/ConfirmProvider";
 import { useToast } from "../../../components/Toast/ToastProvider";
-import { emitXpPopup } from "../../../components/XpPopup/xpPopupEvents";
+import {
+  emitKoPopup,
+  emitXpPopup,
+} from "../../../components/XpPopup/xpPopupEvents";
 import { useNetworkStatus } from "../../../network/NetworkProvider";
 import { useGameControls } from "./useGameControls";
 
@@ -75,6 +78,13 @@ type QuickplayChatMessage = {
 type QuickplayLobbySnapshot = {
   players: QuickplayLobbyPlayer[];
   chatMessages: QuickplayChatMessage[];
+};
+
+type QuickplayKoSnapshot = {
+  id: number;
+  playerId: string | number;
+  username?: string;
+  meters?: number;
 };
 
 function normalizeQuickplayChatMessage(
@@ -163,6 +173,7 @@ export function useGameSession() {
     players: [],
     chatMessages: [],
   });
+  const [quickplayKos, setQuickplayKos] = useState<QuickplayKoSnapshot[]>([]);
   const [roundResult, setRoundResult] = useState<RoundEndPayload | null>(null);
   const [countdownStep, setCountdownStep] = useState<CountdownStep>(() => {
     if (initialPayload.roomId !== gameId) return null;
@@ -437,6 +448,14 @@ export function useGameSession() {
         isPersonalBest?: boolean;
       };
       stats?: GameStats | null;
+      result?: {
+        progression?: Array<{
+          playerId: string;
+          xpDelta: number;
+          level: number;
+          xp: number;
+        }>;
+      };
     }) => {
       if (payload.roomId !== gameId) return;
       if (String(payload.playerId) !== String(playerIdentityId)) return;
@@ -458,6 +477,13 @@ export function useGameSession() {
           serverNow: Date.now(),
           objective: null,
         };
+      const selfProgression = payload.result?.progression?.find(
+        (entry) => String(entry.playerId) === String(playerIdentityId),
+      );
+
+      if (selfProgression?.xpDelta) {
+        emitXpPopup(selfProgression.xpDelta);
+      }
 
       setResult({
         reason: payload.reason ?? "game_over",
@@ -470,6 +496,32 @@ export function useGameSession() {
           isPersonalBest: Boolean(payload.quickplay?.isPersonalBest),
         },
       });
+    };
+    const handleQuickplayKo = (payload: {
+      roomId?: string;
+      playerId?: string | number;
+      username?: string;
+      meters?: number;
+    }) => {
+      if (payload.roomId !== gameId || payload.playerId === undefined) return;
+
+      if (String(payload.playerId) === String(playerIdentityId)) {
+        emitKoPopup();
+      }
+
+      const id = Date.now();
+      setQuickplayKos((current) => [
+        ...current,
+        {
+          id,
+          playerId: payload.playerId!,
+          username: payload.username,
+          meters: payload.meters,
+        },
+      ]);
+      window.setTimeout(() => {
+        setQuickplayKos((current) => current.filter((entry) => entry.id !== id));
+      }, 1800);
     };
     const handleQuickplayWarning = (payload: {
       roomId?: string;
@@ -531,6 +583,7 @@ export function useGameSession() {
     socket.on("game:resume", handleResume);
     socket.on("game:end", handleEnd);
     socket.on("quickplay:result", handleQuickplayResult);
+    socket.on("quickplay:ko", handleQuickplayKo);
     socket.on("quickplay:warning", handleQuickplayWarning);
     socket.on("quickplay:lobby", handleQuickplayLobby);
     socket.on("chat:message", handleChatMessage);
@@ -545,6 +598,7 @@ export function useGameSession() {
       socket.off("game:resume", handleResume);
       socket.off("game:end", handleEnd);
       socket.off("quickplay:result", handleQuickplayResult);
+      socket.off("quickplay:ko", handleQuickplayKo);
       socket.off("quickplay:warning", handleQuickplayWarning);
       socket.off("quickplay:lobby", handleQuickplayLobby);
       socket.off("chat:message", handleChatMessage);
@@ -602,6 +656,7 @@ export function useGameSession() {
     result,
     roundResult,
     quickplayLobby,
+    quickplayKos,
     countdownStep,
     connectionStatus,
     networkStatus,
