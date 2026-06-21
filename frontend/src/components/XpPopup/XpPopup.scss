@@ -15,6 +15,14 @@
   animation: xp-popup-rise 2.6s ease-out forwards;
 }
 
+.xp-popup--ko {
+  color: #ff2f37;
+  text-shadow:
+    0 0 0.35rem rgba(255, 62, 70, 0.95),
+    0 0 1.35rem rgba(255, 20, 38, 0.68),
+    0.08rem 0.08rem 0 rgba(0, 0, 0, 0.86);
+}
+
 @keyframes xp-popup-rise {
   0% {
     opacity: 0;

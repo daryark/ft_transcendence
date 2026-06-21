@@ -6,8 +6,13 @@ type QuickGameOverProps = {
     id: string;
     author: string;
     actor?: string;
+    floor?: number;
+    floorName?: string;
+    isPersonalBest?: boolean;
+    meters?: number;
     system?: boolean;
     text: string;
+    variant?: string;
   }>;
   climbers: Array<{
     id: string | number;
@@ -59,16 +64,30 @@ export default function QuickGameOver({
             <strong>[SYS]</strong>: Welcome to Quick Play chat! Please remember to be civil.
           </p>
           {chatMessages.map((message) => (
-            <p key={message.id}>
-              <strong>[{message.author}]</strong>:{" "}
-              {message.system && message.actor ? (
-                <>
-                  <strong>{message.actor}</strong>: {message.text}
-                </>
-              ) : (
-                message.text
-              )}
-            </p>
+            message.variant === "quickplay-result" ? (
+              <p
+                className={`quick-chat-result quick-chat-result--floor-${message.floor ?? 1}`}
+                key={message.id}
+              >
+                <strong>{message.author}</strong>
+                <span>{message.meters?.toFixed(1) ?? message.text}M</span>
+                <em>
+                  {message.floorName ?? `Floor ${message.floor ?? 1}`}
+                  {message.isPersonalBest ? " / new PB" : ""}
+                </em>
+              </p>
+            ) : (
+              <p key={message.id}>
+                <strong>[{message.author}]</strong>:{" "}
+                {message.system && message.actor ? (
+                  <>
+                    <strong>{message.actor}</strong>: {message.text}
+                  </>
+                ) : (
+                  message.text
+                )}
+              </p>
+            )
           ))}
         </div>
         <form
@@ -107,9 +126,6 @@ export default function QuickGameOver({
         </section>
 
         <div className="quick-results__share">
-          <span>
-            REPLAY ID: R:{Math.round(altitude * 1000).toString(16).toUpperCase()}
-          </span>
           <button onClick={onSendToChat} type="button">
             SEND TO CHAT
           </button>

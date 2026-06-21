@@ -33,6 +33,8 @@ export interface ControlsConfig {
 
 export interface GravityConfig {
   lockDelay: number;
+  lockDelayDecrease: number;
+  minimumLockDelay: number;
   gravity: number;
   useLeveling?: boolean;
   gravityIncrease: number;

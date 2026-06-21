@@ -32,11 +32,13 @@ export const soloBase: Config = {
         },
 
         gravity: {
-            lockDelay: 60,
+            lockDelay: 30,
+            lockDelayDecrease: 1,
+            minimumLockDelay: 16,
             gravity: 0.02, // how fast pieces fall (0-1, where 1 is instant)
             useLeveling: false, //overrides gravity
-            gravityIncrease: 0.0007, // how much gravity increases per second/ per level (if useLeveling = true)
-            gravitMarginTime: 10000 // how long player has to survive before gravity starts increasing
+            gravityIncrease: 0.001, // how much gravity increases per second/ per level (if useLeveling = true)
+            gravitMarginTime: 8000 // how long player has to survive before gravity starts increasing
         },
 
         //instead of matchConfig - objective to win the game

@@ -69,10 +69,8 @@ function CustomGameStartRedirect() {
           !!identityId && !!payload.players?.[String(identityId)];
         if (!isActivePlayer) return;
 
-        if (location.pathname.startsWith("/game/")) {
-          socket.emit("game:stop");
-        }
         navigate(`/game/${payload.roomId}`, {
+          replace: location.pathname.startsWith("/game/"),
           state: {
             ...payload,
             from: `/play/multiplayer/custom/${payload.roomId}`,

@@ -85,6 +85,7 @@ export default function GamePage() {
 
     return (
       <MultiplayerGameOver
+        mode={gameConfig.mode}
         modeLabel={getModeLabel(gameConfig)}
         onNext={session.leaveResults}
         players={session.players}

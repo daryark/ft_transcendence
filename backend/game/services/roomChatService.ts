@@ -10,6 +10,11 @@ export type RoomChatMessage = {
   message: string;
   system?: boolean;
   actor?: string;
+  variant?: string;
+  floor?: number;
+  floorName?: string;
+  meters?: number;
+  isPersonalBest?: boolean;
 };
 
 export function getRoomMessages(room: Room | null | undefined) {

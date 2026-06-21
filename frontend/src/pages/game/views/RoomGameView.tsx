@@ -291,22 +291,34 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
           aria-label={isQuickplay ? "Quickplay standings" : "Opponents"}
         >
           {isQuickplay ? (
-            quickplayPlayers.map((player, index) => {
-              const meters = getQuickplayMeters(player);
-
-              return (
-                <button
-                  className="room-game__quick-card"
-                  key={player.id}
-                  onClick={() => setSelectedTargetId(String(player.id))}
-                  type="button"
+            <>
+              {session.quickplayKos.map((player) => (
+                <div
+                  className="room-game__quick-card room-game__quick-card--ko"
+                  key={`ko-${player.id}`}
                 >
-                  <span>{index + 1}</span>
+                  <span>KO</span>
                   <strong>{formatPlayerName(player.username, "PLAYER")}</strong>
-                  <em>{meters.toLocaleString()}m</em>
-                </button>
-              );
-            })
+                  <em>{(player.meters ?? 0).toLocaleString()}m</em>
+                </div>
+              ))}
+              {quickplayPlayers.map((player, index) => {
+                const meters = getQuickplayMeters(player);
+
+                return (
+                  <button
+                    className="room-game__quick-card"
+                    key={player.id}
+                    onClick={() => setSelectedTargetId(String(player.id))}
+                    type="button"
+                  >
+                    <span>{index + 1}</span>
+                    <strong>{formatPlayerName(player.username, "PLAYER")}</strong>
+                    <em>{meters.toLocaleString()}m</em>
+                  </button>
+                );
+              })}
+            </>
           ) : (
           <>
           {previewPlayers.length > 0 ? (

@@ -43,12 +43,11 @@ export default function createEngine(room: Room, roomService: RoomService) {
   const gravityConfig = room.gameConfig.gravity;
   const gameStartedAt = room.state?.startedAt ?? Date.now();
   const gravityIncreaseInterval = gravityConfig.gravitMarginTime > 0 ? gravityConfig.gravitMarginTime : null;
-  const lockDelayTicks = gravityConfig.lockDelay;
   let gravityValue = gravityConfig.gravity;
+  let lockDelayTicks = gravityConfig.lockDelay;
   let gravityAccumulator = 0;
   let nextGravityIncreaseAt = gravityIncreaseInterval ? gameStartedAt + gravityIncreaseInterval : null;
   let lockTimeoutId: ReturnType<typeof setTimeout> | null = null;
-  let currentPieceWasRotated = false;
   let pendingScoreAdded = 0;
   let pendingLinesCleared = 0;
 
@@ -85,13 +84,14 @@ export default function createEngine(room: Room, roomService: RoomService) {
   function scheduleLock(state: GameState) {
     if (lockTimeoutId !== null || !isTouchingGround(state)) return;
 
-    const lockMultiplier = currentPieceWasRotated ? 1 : 0.5;
-    const lockDelayMs = Math.max(1, Math.round(lockDelayTicks * TICK_MS * lockMultiplier));
+    const lockDelayMs = Math.max(1, Math.round(lockDelayTicks * TICK_MS));
 
     lockTimeoutId = setTimeout(() => {
       lockTimeoutId = null;
 
       if (room.status !== "playing" || room.state !== state) return;
+      if (!isTouchingGround(state)) return;
+
       lockCurrent(state);
     }, lockDelayMs);
   }
@@ -152,7 +152,6 @@ export default function createEngine(room: Room, roomService: RoomService) {
 
     state.current = current;
     state.canHold = true;
-    currentPieceWasRotated = false;
     clearLockTimeout();
     state.gameOver = hasCollision(state, current);
   }
@@ -189,10 +188,6 @@ export default function createEngine(room: Room, roomService: RoomService) {
         y: state.current.y + kick.y,
       }),
     );
-
-    if (rotatedSuccessfully) {
-      currentPieceWasRotated = true;
-    }
 
     return rotatedSuccessfully;
   }
@@ -265,7 +260,6 @@ export default function createEngine(room: Room, roomService: RoomService) {
     spawnPiece(state);
     gravityAccumulator = 0;
     clearLockTimeout();
-    currentPieceWasRotated = false;
   }
 
   function softDrop(state: GameState) {
@@ -301,7 +295,6 @@ export default function createEngine(room: Room, roomService: RoomService) {
 
     state.canHold = false;
     clearLockTimeout();
-    currentPieceWasRotated = false;
     state.gameOver =
       state.gameOver ||
       hasCollision(state, state.current);
@@ -341,6 +334,10 @@ export default function createEngine(room: Room, roomService: RoomService) {
     if (gravityIncreaseInterval && gravityConfig.gravityIncrease > 0 && nextGravityIncreaseAt !== null) {
       while (now >= nextGravityIncreaseAt) {
         gravityValue = Math.min(1, gravityValue + gravityConfig.gravityIncrease);
+        lockDelayTicks = Math.max(
+          gravityConfig.minimumLockDelay ?? 0,
+          lockDelayTicks - (gravityConfig.lockDelayDecrease ?? 0),
+        );
         nextGravityIncreaseAt += gravityIncreaseInterval;
       }
     }
@@ -359,7 +356,10 @@ export default function createEngine(room: Room, roomService: RoomService) {
   }
 
   function handleLockDelay(state: GameState) {
-    if (!isTouchingGround(state)) return;
+    if (!isTouchingGround(state)) {
+      clearLockTimeout();
+      return;
+    }
 
     scheduleLock(state);
   }
