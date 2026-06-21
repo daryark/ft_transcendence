@@ -374,7 +374,7 @@ const EditProfileModal = ({
 export default function Profile() {
   const { username = "" } = useParams<{ username: string }>();
   const decodedUsername = useMemo(
-    () => decodeURIComponent(username || "admin"),
+    () => decodeURIComponent(username),
     [username],
   );
 
@@ -405,6 +405,10 @@ export default function Profile() {
       setProfile(null);
 
       try {
+        if (!decodedUsername.trim()) {
+          throw new Error("Profile username is missing.");
+        }
+
         if (
           currentUser?.isAnonymous &&
           currentUser.username.toLowerCase() === decodedUsername.toLowerCase()
@@ -517,7 +521,7 @@ export default function Profile() {
                 <dt>WINS</dt>
                 <dd>{profile.wins}</dd>
               </dl>
-              <small>User ID: {profile.id || "local-preview"}</small>
+              <small>User ID: {profile.id}</small>
             </section>
             {isOwnProfile && (
               <button

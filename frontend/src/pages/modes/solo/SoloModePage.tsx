@@ -13,24 +13,48 @@ import {
 import NotFound from "../../notFound/NotFound";
 import type { GameStartPayload } from "../../game/types";
 import { MODES_CONFIG } from "./config/modes.config";
+import { authFetch } from "../../../auth/authFetch";
+import { getSessionUser } from "../../../auth/session";
 
 type SoloModeId = "40lines" | "blitz" | "zen";
+type ProfileModeKey = "fortyLines" | "blitz" | "zen";
+
+type ProfileModeStats = {
+  value?: string;
+};
+
+type ProfileResponse = {
+  modes?: Partial<Record<ProfileModeKey, ProfileModeStats | null>>;
+};
+
+type ProfilePayload = ProfileResponse & {
+  profile?: ProfileResponse;
+};
+
+type PersonalBestState = {
+  modeId: SoloModeId;
+  value: string;
+};
 
 const SOLO_PRESET_BY_MODE_ID: Record<SoloModeId, {
   dtoKey: SoloPresetKey;
   backendPreset: SoloBackendPreset;
+  profileMode: ProfileModeKey;
 }> = {
   "40lines": {
     dtoKey: "40lines",
     backendPreset: "40Lines",
+    profileMode: "fortyLines",
   },
   blitz: {
     dtoKey: "blitz",
     backendPreset: "blitz",
+    profileMode: "blitz",
   },
   zen: {
     dtoKey: "zen",
     backendPreset: "zen",
+    profileMode: "zen",
   },
 };
 
@@ -55,6 +79,28 @@ function buildSoloPayload(modeId: SoloModeId) {
   };
 }
 
+async function fetchPersonalBest(
+  modeId: SoloModeId,
+  signal: AbortSignal,
+): Promise<string | null> {
+  const user = getSessionUser();
+
+  if (!user || user.isAnonymous) return null;
+
+  const response = await authFetch(
+    `/api/users/${encodeURIComponent(user.username)}/profile`,
+    { signal },
+  );
+
+  if (!response.ok) return null;
+
+  const payload = (await response.json()) as ProfilePayload;
+  const profile = payload.profile ?? payload;
+  const modeKey = SOLO_PRESET_BY_MODE_ID[modeId].profileMode;
+
+  return profile.modes?.[modeKey]?.value ?? null;
+}
+
 export default function SoloModePage() {
   const { modeId } = useParams<{ modeId: string }>();
   const config = isSoloModeId(modeId) ? MODES_CONFIG[modeId] : undefined;
@@ -63,6 +109,8 @@ export default function SoloModePage() {
   const autoStartAttemptedRef = useRef(false);
   const [isLoading, setIsLoading] = useState(false);
   const [startError, setStartError] = useState("");
+  const [personalBestState, setPersonalBestState] =
+    useState<PersonalBestState | null>(null);
   const [socket, setSocket] = useState(() => getSocket());
   const navigationState = location.state as
     | { autoStart?: boolean; from?: string }
@@ -73,6 +121,31 @@ export default function SoloModePage() {
       setSocket(getSocket());
     });
   }, []);
+
+  useEffect(() => {
+    if (!isSoloModeId(modeId)) return undefined;
+
+    const controller = new AbortController();
+
+    void fetchPersonalBest(modeId, controller.signal)
+      .then((best) => {
+        if (!controller.signal.aborted) {
+          setPersonalBestState({ modeId, value: best ?? "NO RECORD" });
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setPersonalBestState(null);
+        }
+      });
+
+    return () => controller.abort();
+  }, [modeId]);
+
+  const personalBest =
+    isSoloModeId(modeId) && personalBestState?.modeId === modeId
+      ? personalBestState.value
+      : undefined;
 
   const handleStart = useCallback(() => {
     if (!isSoloModeId(modeId)) return;
@@ -151,7 +224,7 @@ export default function SoloModePage() {
       title={config.title}
       description={config.description}
       accentColor={config.accentColor}
-      personalBest={config.personalBest}
+      personalBest={personalBest}
       showMusic={config.showMusic}
       onStart={handleStart}
       isLoading={isLoading}

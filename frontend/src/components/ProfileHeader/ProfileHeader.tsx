@@ -180,13 +180,13 @@ const ProfileHeader = ({
                 <strong>LOADING...</strong>
               ) : fortyLinesStats ? (
                 <>
-                  <strong>{fortyLinesStats.value ?? "0:00.000"}</strong>
-                  <small>{fortyLinesStats.achievedAgo ?? "NO RECORD"}</small>
+                  <strong>{fortyLinesStats.value ?? "NO RECORD"}</strong>
+                  <small>{fortyLinesStats.achievedAgo ?? "PLAY A RUN"}</small>
                 </>
               ) : (
                 <>
-                  <strong>0:00.000</strong>
-                  <small>NO RECORD</small>
+                  <strong>NO RECORD</strong>
+                  <small>PLAY A RUN</small>
                 </>
               )}
             </article>
@@ -196,13 +196,13 @@ const ProfileHeader = ({
                 <strong>LOADING...</strong>
               ) : quickPlayStats ? (
                 <>
-                  <strong>{quickPlayStats.value ?? "0 M"}</strong>
-                  <small>{quickPlayStats.achievedAgo ?? "NO RECORD"}</small>
+                  <strong>{quickPlayStats.value ?? "NO RECORD"}</strong>
+                  <small>{quickPlayStats.achievedAgo ?? "PLAY A RUN"}</small>
                 </>
               ) : (
                 <>
-                  <strong>0 M</strong>
-                  <small>NO RECORD</small>
+                  <strong>NO RECORD</strong>
+                  <small>PLAY A RUN</small>
                 </>
               )}
             </article>
@@ -212,13 +212,13 @@ const ProfileHeader = ({
                 <strong>LOADING...</strong>
               ) : blitzStats ? (
                 <>
-                  <strong>{blitzStats.value ?? "0 PTS"}</strong>
-                  <small>{blitzStats.achievedAgo ?? "NO RECORD"}</small>
+                  <strong>{blitzStats.value ?? "NO RECORD"}</strong>
+                  <small>{blitzStats.achievedAgo ?? "PLAY A RUN"}</small>
                 </>
               ) : (
                 <>
-                  <strong>0 PTS</strong>
-                  <small>NO RECORD</small>
+                  <strong>NO RECORD</strong>
+                  <small>PLAY A RUN</small>
                 </>
               )}
             </article>
