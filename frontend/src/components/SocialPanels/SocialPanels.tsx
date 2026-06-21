@@ -11,6 +11,11 @@ import { useNavigate } from "react-router-dom";
 import { authFetch } from "../../auth/authFetch";
 import { getSessionUser } from "../../auth/session";
 import { getSocket, subscribeToSocket } from "../../socket/socketClient";
+import {
+  isUserOnline,
+  seedPresence,
+  subscribeToPresence,
+} from "../../socket/presence";
 import Dialog from "../Dialog/Dialog";
 import "./SocialPanels.scss";
 
@@ -27,6 +32,7 @@ type SocialPerson = {
   relationshipStatus: RelationshipStatus;
   requestDirection: RequestDirection;
   blockedByCurrentUser?: boolean;
+  online?: boolean;
 };
 
 type Message = {
@@ -182,6 +188,7 @@ const toRelationship = (
         : null,
     blockedByCurrentUser:
       relationshipStatus === "blocked" ? senderId === currentUserId : undefined,
+    online: user.online === true,
   };
 };
 
@@ -200,6 +207,7 @@ const toSearchPerson = (value: unknown): SocialPerson | null => {
     avatarId: toNumber(object.avatarId ?? object.avatar_id) ?? undefined,
     relationshipStatus: "none",
     requestDirection: null,
+    online: object.status === "online" || object.online === true,
   };
 };
 
@@ -288,7 +296,9 @@ const formatModeValue = (value: unknown) => {
 };
 
 const relationshipLabel = (person: SocialPerson) => {
-  if (person.relationshipStatus === "accepted") return "FRIEND";
+  if (person.relationshipStatus === "accepted") {
+    return person.online ? "ONLINE" : "OFFLINE";
+  }
   if (person.relationshipStatus === "blocked") {
     return person.blockedByCurrentUser ? "BLOCKED" : "BLOCKED YOU";
   }
@@ -344,7 +354,9 @@ const PersonRow = ({
       <span className="friendInfo">
         <span className="friendName">{person.username}</span>
         <span
-          className={`friendStatus friendStatus--${person.relationshipStatus}`}
+          className={`friendStatus friendStatus--${person.relationshipStatus} ${
+            person.online ? "friendStatus--online" : "friendStatus--offline"
+          }`}
         >
           {relationshipLabel(person)}
         </span>
@@ -495,12 +507,27 @@ export default function SocialPanels({
   const [isSearching, setIsSearching] = useState(false);
   const [isMessagesLoading, setIsMessagesLoading] = useState(false);
   const [messageRefresh, setMessageRefresh] = useState(0);
+  const [presenceVersion, setPresenceVersion] = useState(0);
   const [isProfileLoading, setIsProfileLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState<{
     personId: number;
     action: FriendAction;
   } | null>(null);
   const trimmedSearch = search.trim();
+
+  const withPresence = useCallback(
+    (person: SocialPerson): SocialPerson => ({
+      ...person,
+      online: isUserOnline(person.id),
+    }),
+    [],
+  );
+
+  useEffect(() => {
+    return subscribeToPresence(() => {
+      setPresenceVersion((version) => version + 1);
+    });
+  }, []);
 
   const loadRelationships = useCallback(
     async (signal?: AbortSignal) => {
@@ -538,6 +565,12 @@ export default function SocialPanels({
           if (pageItems.length === 0) break;
         } while (collected.length < total);
 
+        seedPresence(
+          collected.map((person) => ({
+            userId: person.id,
+            online: person.online === true,
+          })),
+        );
         setRelationships(collected);
       } catch (error) {
         if (!signal?.aborted) {
@@ -597,7 +630,11 @@ export default function SocialPanels({
   useEffect(() => {
     let activeSocket = getSocket();
 
-    const handleSocialUpdate = () => {
+    const handleSocialUpdate = (payload?: unknown) => {
+      const object = asRecord(payload);
+      const action = String(object.action ?? "");
+      if (action === "presence" || action === "presence:snapshot") return;
+
       if (isOpen) {
         void loadRelationships();
       }
@@ -674,6 +711,12 @@ export default function SocialPanels({
         const players = unwrapItems(await response.json())
           .map(toSearchPerson)
           .filter(Boolean) as SocialPerson[];
+        seedPresence(
+          players.map((person) => ({
+            userId: person.id,
+            online: person.online === true,
+          })),
+        );
 
         setSearchResults(
           players
@@ -808,27 +851,30 @@ export default function SocialPanels({
     () =>
       relationships
         .filter((person) => person.relationshipStatus === "accepted")
+        .map(withPresence)
         .sort((a, b) => a.username.localeCompare(b.username)),
-    [relationships],
+    [presenceVersion, relationships, withPresence],
   );
   const requests = useMemo(
     () =>
       relationships
         .filter((person) => person.relationshipStatus === "pending")
+        .map(withPresence)
         .sort((a, b) => {
           if (a.requestDirection !== b.requestDirection) {
             return a.requestDirection === "incoming" ? -1 : 1;
           }
           return a.username.localeCompare(b.username);
         }),
-    [relationships],
+    [presenceVersion, relationships, withPresence],
   );
   const blocked = useMemo(
     () =>
       relationships
         .filter((person) => person.relationshipStatus === "blocked")
+        .map(withPresence)
         .sort((a, b) => a.username.localeCompare(b.username)),
-    [relationships],
+    [presenceVersion, relationships, withPresence],
   );
   const visiblePeople =
     tab === "friends" ? friends : tab === "requests" ? requests : blocked;
@@ -836,6 +882,9 @@ export default function SocialPanels({
   const filteredPeople = visiblePeople.filter((person) =>
     person.username.toLowerCase().includes(searchNeedle),
   );
+  const visibleSearchResults = searchResults.map(withPresence);
+  const activeSelectedFriend = selectedFriend ? withPresence(selectedFriend) : null;
+  const activeProfilePerson = profilePerson ? withPresence(profilePerson) : null;
   const tabCount = (people: SocialPerson[]) =>
     searchNeedle
       ? people.filter((person) =>
@@ -1121,11 +1170,11 @@ export default function SocialPanels({
         aria-label="Social panel"
         aria-modal={isOpen}
         className={`socialPanel ${isOpen ? "open" : ""} ${
-          selectedFriend ? "chatMode" : "peopleMode"
+          activeSelectedFriend ? "chatMode" : "peopleMode"
         }`}
         role="dialog"
       >
-        {!selectedFriend ? (
+        {!activeSelectedFriend ? (
           <>
             <div className="peopleHeader">
               <div>
@@ -1187,10 +1236,10 @@ export default function SocialPanels({
                 <section className="peopleSection">
                   <h3>PLAYER SEARCH</h3>
                   {isSearching && <div className="panelState">SEARCHING...</div>}
-                  {!isSearching && searchResults.length === 0 && (
+                  {!isSearching && visibleSearchResults.length === 0 && (
                     <div className="panelState">NO NEW PLAYERS FOUND</div>
                   )}
-                  {searchResults.map((person) => (
+                  {visibleSearchResults.map((person) => (
                     <PersonRow
                       key={`search-${person.id}`}
                       person={person}
@@ -1245,32 +1294,39 @@ export default function SocialPanels({
               </button>
               <button
                 className="railFriend active"
-                aria-label={selectedFriend.username}
-                onClick={() => setProfilePerson(selectedFriend)}
+                aria-label={activeSelectedFriend.username}
+                onClick={() => setProfilePerson(activeSelectedFriend)}
                 type="button"
               >
                 <span
                   className="friendAvatar"
-                  style={getAvatarStyle(selectedFriend.avatarId)}
+                  style={getAvatarStyle(activeSelectedFriend.avatarId)}
                 />
               </button>
             </nav>
 
             <section
               className="directChat"
-              aria-label={`${selectedFriend.username} chat`}
+              aria-label={`${activeSelectedFriend.username} chat`}
             >
               <header className="directChatHeader">
                 <span
                   className="chatFriendAvatar"
-                  style={getAvatarStyle(selectedFriend.avatarId)}
+                  style={getAvatarStyle(activeSelectedFriend.avatarId)}
                 />
                 <div className="chatFriendTitle">
-                  <h2>{selectedFriend.username}</h2>
+                  <h2>{activeSelectedFriend.username}</h2>
+                  <span
+                    className={`chatPresence ${
+                      activeSelectedFriend.online ? "online" : "offline"
+                    }`}
+                  >
+                    {activeSelectedFriend.online ? "ONLINE" : "OFFLINE"}
+                  </span>
                   <button
                     className="profileAction"
                     type="button"
-                    onClick={() => setProfilePerson(selectedFriend)}
+                    onClick={() => setProfilePerson(activeSelectedFriend)}
                   >
                     PROFILE
                   </button>
@@ -1278,7 +1334,7 @@ export default function SocialPanels({
                     className="profileAction profileAction--danger"
                     type="button"
                     onClick={() =>
-                      void performAction(selectedFriend, "remove")
+                      void performAction(activeSelectedFriend, "remove")
                     }
                   >
                     REMOVE
@@ -1344,17 +1400,17 @@ export default function SocialPanels({
         )}
       </aside>
 
-      {profilePerson && (
+      {activeProfilePerson && (
         <ProfileModal
-          person={profilePerson}
+          person={activeProfilePerson}
           profile={miniProfile}
           isLoading={isProfileLoading}
           error={profileError}
           onClose={() => setProfilePerson(null)}
           onOpenChat={
-            profilePerson.relationshipStatus === "accepted"
+            activeProfilePerson.relationshipStatus === "accepted"
               ? () => {
-                  setSelectedFriend(profilePerson);
+                  setSelectedFriend(activeProfilePerson);
                   setProfilePerson(null);
                 }
               : undefined

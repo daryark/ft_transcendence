@@ -106,10 +106,17 @@ const Header = () => {
       setIsSocialOpen(false);
       setIsNotificationsOpen(true);
     };
+    const openSocial = () => {
+      setSocialInitialTab("friends");
+      setIsNotificationsOpen(false);
+      setIsSocialOpen(true);
+    };
 
     window.addEventListener("tetra:open-notifications", openNotifications);
+    window.addEventListener("tetra:open-social", openSocial);
     return () => {
       window.removeEventListener("tetra:open-notifications", openNotifications);
+      window.removeEventListener("tetra:open-social", openSocial);
     };
   }, []);
 

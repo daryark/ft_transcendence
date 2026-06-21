@@ -9,6 +9,7 @@ import { saveGameConfig, type GameConfigDTO } from "./gameConfigStorage";
 import { connectSocket, disconnectSocket } from "./socketClient";
 import { useToast } from "../components/Toast/ToastProvider";
 import { clearStoredActiveGame } from "../pages/game/gameStorage";
+import { setPresenceSnapshot, setUserPresence } from "./presence";
 
 export default function SocketConfigSync() {
   const { showToast } = useToast();
@@ -74,17 +75,56 @@ export default function SocketConfigSync() {
         });
       }
     };
+    const handleSocialUpdate = (payload: unknown) => {
+      const object =
+        payload && typeof payload === "object"
+          ? (payload as Record<string, unknown>)
+          : {};
+      const action = String(object.action ?? "");
+
+      if (action === "presence:snapshot" && Array.isArray(object.statuses)) {
+        setPresenceSnapshot(
+          object.statuses as Array<{ userId: unknown; online: unknown }>,
+        );
+        return;
+      }
+
+      if (action !== "presence") return;
+
+      const userId = Number(object.userId);
+      const online = object.online === true;
+      if (!Number.isInteger(userId) || userId <= 0) return;
+
+      const changed = setUserPresence({
+        userId,
+        username:
+          typeof object.username === "string" ? object.username : undefined,
+        online,
+      });
+
+      if (changed && online) {
+        const username =
+          typeof object.username === "string" && object.username.trim()
+            ? object.username.trim()
+            : "A friend";
+        showToast(`${username} is online`, "success", () => {
+          window.dispatchEvent(new CustomEvent("tetra:open-social"));
+        });
+      }
+    };
 
     socket.on("game:config", handleGameConfig);
     socket.on("connect_error", handleConnectError);
     socket.on("server:error", handleServerError);
     socket.on("notifications", handleNotifications);
+    socket.on("social:update", handleSocialUpdate);
 
     return () => {
       socket.off("game:config", handleGameConfig);
       socket.off("connect_error", handleConnectError);
       socket.off("server:error", handleServerError);
       socket.off("notifications", handleNotifications);
+      socket.off("social:update", handleSocialUpdate);
     };
   }, [location.pathname, navigate, session, showToast]);
 

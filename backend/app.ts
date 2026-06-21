@@ -6,6 +6,7 @@ import jwt from "jsonwebtoken";
 import { getJwtSecret } from "./auth/jwt";
 import { emitMessageUpdate, emitSocialUpdate } from "./sockets/realtime";
 import { notifyUser } from "./notifications/service";
+import { isUserOnline } from "./sockets/presence";
 
 const app = express();
 export default app;
@@ -237,7 +238,13 @@ api.get("/users/search", async (req: ApiRequest, res: Response) => {
       requesterUserId: requesterUserId ?? undefined,
     });
 
-    res.json(results);
+    res.json({
+      ...results,
+      items: results.items.map((entry: any) => ({
+        ...entry,
+        status: isUserOnline(entry.id) ? "online" : entry.status,
+      })),
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const status = message.includes("required") || message.includes("must") || message.includes("range") ? 400 : 500;
@@ -371,6 +378,7 @@ api.get("/friends", authenticateToken, async (req: ApiRequest, res: Response) =>
           id: otherUser.id,
           username: otherUser.username,
           avatarId: otherUser.avatar_id ?? 0,
+          online: isUserOnline(otherUser.id),
         },
       };
     });
