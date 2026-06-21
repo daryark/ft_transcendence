@@ -1,10 +1,15 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
+import { createPortal } from "react-dom";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { userCapabilities } from "../../../auth/capabilities";
 import { getSessionUser, subscribeToSession } from "../../../auth/session";
-import {
-  getStoredGameConfig,
-} from "../../../socket/gameConfigStorage";
+import { getStoredGameConfig } from "../../../socket/gameConfigStorage";
 import {
   getSocket,
   getSocketIdentityId,
@@ -25,7 +30,12 @@ import {
   DEFAULT_MATCH_CONFIG,
   readCustomEditableConfig,
 } from "./custom/config";
-import { NumberField, ReadOnlyField, TextField, ToggleField } from "./custom/fields";
+import {
+  NumberField,
+  ReadOnlyField,
+  TextField,
+  ToggleField,
+} from "./custom/fields";
 import type {
   CustomChatMessage,
   CustomEditableConfig,
@@ -89,6 +99,7 @@ export default function Custom() {
   const [players, setPlayers] = useState<CustomRoomPlayer[]>([]);
   const [chatMessages, setChatMessages] = useState<CustomChatMessage[]>([]);
   const [chatMessage, setChatMessage] = useState("");
+  const [headerContent, setHeaderContent] = useState<HTMLElement | null>(null);
   const [socketIdentityId, setSocketIdentityId] = useState(() =>
     getSocketIdentityId(),
   );
@@ -115,8 +126,21 @@ export default function Custom() {
 
     return () => {
       document.body.classList.remove("mp-custom-active");
+      document.body.classList.remove("mp-custom-room-active");
+      setHeaderContent(null);
     };
   }, []);
+
+  useEffect(() => {
+    document.body.classList.toggle("mp-custom-room-active", inRoom);
+    setHeaderContent(
+      inRoom ? document.querySelector<HTMLElement>(".header .content") : null,
+    );
+
+    return () => {
+      document.body.classList.remove("mp-custom-room-active");
+    };
+  }, [inRoom]);
 
   useEffect(
     () =>
@@ -424,7 +448,8 @@ export default function Custom() {
 
     leavingRoomRef.current = true;
     if (roomCode || routeRoomCode || roomId) {
-      autoJoinAttemptedCodeRef.current = roomCode || routeRoomCode || roomId || "";
+      autoJoinAttemptedCodeRef.current =
+        roomCode || routeRoomCode || roomId || "";
     }
     if (roomId) {
       getSocket()?.emit("mode:leave");
@@ -438,6 +463,22 @@ export default function Custom() {
     setStatus("");
     window.sessionStorage.removeItem(CUSTOM_ACTIVE_ROOM_KEY);
     navigate("/play/multiplayer/custom", { replace: true });
+  };
+
+  const copyRoomUrl = async () => {
+    if (!copyableRoomCode) {
+      return;
+    }
+
+    const inviteUrl = `${window.location.origin}/play/multiplayer/custom/${copyableRoomCode}`;
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setStatus("ROOM URL COPIED");
+      showToast("Room URL copied.", "success");
+    } catch {
+      setStatus("COULD NOT COPY ROOM URL");
+      showToast("Could not copy the room URL.", "error");
+    }
   };
 
   const spectateActiveGame = () => {
@@ -549,441 +590,458 @@ export default function Custom() {
   }
 
   return (
-    <section className="mp-custom-room">
-      <header className="mp-custom-topbar">
-        <button className="mp-custom-exit" onClick={leaveRoom} type="button">
-          EXIT
-        </button>
-        <button
-          className="mp-custom-code"
-          disabled={!copyableRoomCode}
-          onClick={async () => {
-            if (!copyableRoomCode) {
-              return;
-            }
-
-            const inviteUrl = `${window.location.origin}/play/multiplayer/custom/${copyableRoomCode}`;
-            try {
-              await navigator.clipboard.writeText(inviteUrl);
-              setStatus("ROOM URL COPIED");
-              showToast("Room URL copied.", "success");
-            } catch {
-              setStatus("COULD NOT COPY ROOM URL");
-              showToast("Could not copy the room URL.", "error");
-            }
-          }}
-          type="button"
-        >
-          <small>CLICK TO COPY URL</small>
-          {copyableRoomCode || "WAITING FOR ROOM CODE"}
-        </button>
-      </header>
-
-      <aside className="mp-custom-players">
-        <h2>PLAYERS ({activeRoomPlayers.length})</h2>
-        <div className="mp-custom-player-list">
-          {players.map((player) => (
-            <div
-              className={`mp-custom-player ${
-                player.role === "spectator" ? "mp-custom-player--spectator" : ""
-              }`}
-              key={player.id}
-            >
-              <strong>{player.username}</strong>
-              <span>
-                {player.matchWins ?? 0}/{player.matchTotalGames ?? 0}
-              </span>
-              <div className="mp-custom-player-badges">
-                {player.isHost && <em>HOST</em>}
-                {player.role === "spectator" && <em>SPECTATOR</em>}
-              </div>
-            </div>
-          ))}
-        </div>
-      </aside>
-
-      <main className="mp-custom-main">
-        <h1>{roomName}</h1>
-        <nav className="mp-custom-tabs" aria-label="Custom room settings">
-          {(["welcome", "room", "match", "game"] as CustomTab[]).map((nextTab) => (
+    <>
+      {headerContent &&
+        createPortal(
+          <div className="mp-custom-header-controls">
             <button
-              className={tab === nextTab ? "is-active" : ""}
-              key={nextTab}
-              onClick={() => setTab(nextTab)}
+              className="mp-custom-exit"
+              onClick={leaveRoom}
               type="button"
             >
-              {nextTab}
+              EXIT
             </button>
-          ))}
-        </nav>
+            <button
+              className="mp-custom-code"
+              disabled={!copyableRoomCode}
+              onClick={copyRoomUrl}
+              type="button"
+            >
+              <small>CLICK TO COPY URL</small>
+              {copyableRoomCode || "WAITING FOR ROOM CODE"}
+            </button>
+          </div>,
+          headerContent,
+        )}
 
-        <section className="mp-custom-panel">
-          {tab === "welcome" && (
-            <div className="mp-custom-welcome">
-              <h2>WELCOME TO TETRA.IO!</h2>
-              <p>
-                YOUR CURRENTLY SET KEYBINDS AND PLAYER SETTINGS SHOULD BE
-                REQUESTED FROM THE PROFILE SETTINGS API.
-              </p>
-              <div className="mp-custom-bindings">
-                <span>MOVE FALLING PIECE LEFT</span>
-                <strong>LOAD FROM USER SETTINGS</strong>
-                <span>MOVE FALLING PIECE RIGHT</span>
-                <strong>LOAD FROM USER SETTINGS</strong>
-                <span>SOFT DROP</span>
-                <strong>LOAD FROM USER SETTINGS</strong>
-                <span>HARD DROP</span>
-                <strong>LOAD FROM USER SETTINGS</strong>
-                <span>ROTATE COUNTERCLOCKWISE</span>
-                <strong>LOAD FROM USER SETTINGS</strong>
-                <span>ROTATE CLOCKWISE</span>
-                <strong>LOAD FROM USER SETTINGS</strong>
-                <span>SWAP HOLD PIECE</span>
-                <strong>LOAD FROM USER SETTINGS</strong>
+      <section className="mp-custom-room">
+        <aside className="mp-custom-players">
+          <h2>PLAYERS ({activeRoomPlayers.length})</h2>
+          <div className="mp-custom-player-list">
+            {players.map((player) => (
+              <div
+                className={`mp-custom-player ${
+                  player.role === "spectator"
+                    ? "mp-custom-player--spectator"
+                    : ""
+                }`}
+                key={player.id}
+              >
+                <strong>{player.username}</strong>
+                <span>
+                  {player.matchWins ?? 0}/{player.matchTotalGames ?? 0}
+                </span>
+                <div className="mp-custom-player-badges">
+                  {player.isHost && <em>HOST</em>}
+                  {player.role === "spectator" && <em>SPECTATOR</em>}
+                </div>
               </div>
-              <button onClick={() => setTab("room")} type="button">
-                GOT IT!
-              </button>
-            </div>
-          )}
+            ))}
+          </div>
+        </aside>
 
-          {tab === "room" && (
-            <div className="mp-custom-settings">
-              <h2>GENERAL</h2>
-              <TextField
-                {...settingProps}
-                label="ROOM NAME"
-                onChange={(value) => updateRoom({ roomName: value })}
-                value={config.roomConfig.roomName ?? ""}
-              />
-              <NumberField
-                {...settingProps}
-                label="PLAYER LIMIT"
-                min={0}
-                onChange={(value) =>
-                  updateRoom({ maxPlayers: value > 0 ? value : null })
-                }
-                value={config.roomConfig.maxPlayers ?? 0}
-              />
-              <NumberField
-                {...settingProps}
-                label="AUTO START"
-                min={0}
-                onChange={(value) => updateRoom({ autoStart: value })}
-                value={config.roomConfig.autoStart ?? 0}
-              />
-              <ToggleField
-                {...settingProps}
-                checked={config.roomConfig.public}
-                label="PUBLIC ROOM"
-                onChange={(value) => updateRoom({ public: value })}
-              />
-              <ToggleField
-                {...settingProps}
-                checked={config.roomConfig.anonymousAllowed}
-                label="ALLOW ANONYMOUS USERS TO JOIN"
-                onChange={(value) => updateRoom({ anonymousAllowed: value })}
-              />
-            </div>
-          )}
+        <main className="mp-custom-main">
+          <h1>{roomName}</h1>
+          <nav className="mp-custom-tabs" aria-label="Custom room settings">
+            {(["welcome", "room", "match", "game"] as CustomTab[]).map(
+              (nextTab) => (
+                <button
+                  className={tab === nextTab ? "is-active" : ""}
+                  key={nextTab}
+                  onClick={() => setTab(nextTab)}
+                  type="button"
+                >
+                  {nextTab}
+                </button>
+              ),
+            )}
+          </nav>
 
-          {tab === "match" && (
-            <div className="mp-custom-settings">
-              <h2>MATCH</h2>
-              <NumberField
-                {...settingProps}
-                label="ROUNDS TO WIN"
-                min={1}
-                onChange={(value) => updateMatch({ roundsToWin: value })}
-                value={config.matchConfig?.roundsToWin ?? 1}
-              />
-              <NumberField
-                {...settingProps}
-                label="WIN BY ROUNDS"
-                min={0}
-                onChange={(value) => updateMatch({ winByRounds: value })}
-                value={config.matchConfig?.winByRounds ?? 0}
-              />
-              <NumberField
-                {...settingProps}
-                label="GOLDEN POINT"
-                min={0}
-                onChange={(value) => updateMatch({ goldenPoint: value })}
-                value={config.matchConfig?.goldenPoint ?? 0}
-              />
-              <NumberField
-                {...settingProps}
-                label="STOCK"
-                min={0}
-                onChange={(value) => updateMatch({ stock: value })}
-                value={config.matchConfig?.stock ?? 0}
-              />
-            </div>
-          )}
+          <section className="mp-custom-panel">
+            {tab === "welcome" && (
+              <div className="mp-custom-welcome">
+                <h2>WELCOME TO TETRA.IO!</h2>
+                <p>
+                  YOUR CURRENTLY SET KEYBINDS AND PLAYER SETTINGS SHOULD BE
+                  REQUESTED FROM THE PROFILE SETTINGS API.
+                </p>
+                <div className="mp-custom-bindings">
+                  <span>MOVE FALLING PIECE LEFT</span>
+                  <strong>LOAD FROM USER SETTINGS</strong>
+                  <span>MOVE FALLING PIECE RIGHT</span>
+                  <strong>LOAD FROM USER SETTINGS</strong>
+                  <span>SOFT DROP</span>
+                  <strong>LOAD FROM USER SETTINGS</strong>
+                  <span>HARD DROP</span>
+                  <strong>LOAD FROM USER SETTINGS</strong>
+                  <span>ROTATE COUNTERCLOCKWISE</span>
+                  <strong>LOAD FROM USER SETTINGS</strong>
+                  <span>ROTATE CLOCKWISE</span>
+                  <strong>LOAD FROM USER SETTINGS</strong>
+                  <span>SWAP HOLD PIECE</span>
+                  <strong>LOAD FROM USER SETTINGS</strong>
+                </div>
+                <button onClick={() => setTab("room")} type="button">
+                  GOT IT!
+                </button>
+              </div>
+            )}
 
-          {tab === "game" && (
-            <div className="mp-custom-settings mp-custom-settings--columns">
-              <section>
-                <h2>GAME</h2>
+            {tab === "room" && (
+              <div className="mp-custom-settings">
+                <h2>GENERAL</h2>
                 <TextField
-                {...settingProps}
-                  label="BAG TYPE"
-                  onChange={(value) => updateGeneral({ bagType: value })}
-                  value={config.gameConfig.general.bagType}
+                  {...settingProps}
+                  label="ROOM NAME"
+                  onChange={(value) => updateRoom({ roomName: value })}
+                  value={config.roomConfig.roomName ?? ""}
                 />
                 <NumberField
-                {...settingProps}
-                  label="BOARD WIDTH"
-                  max={20}
-                  min={4}
-                  onChange={(value) => updateGeneral({ boardWidth: value })}
-                  value={config.gameConfig.general.boardWidth}
-                />
-                <NumberField
-                {...settingProps}
-                  label="BOARD HEIGHT"
-                  max={40}
-                  min={4}
-                  onChange={(value) => updateGeneral({ boardHeight: value })}
-                  value={config.gameConfig.general.boardHeight}
-                />
-                <ToggleField
-                {...settingProps}
-                  checked={config.gameConfig.controls.hold}
-                  label="HOLD"
-                  onChange={(value) => updateControls({ hold: value })}
-                />
-                <NumberField
-                {...settingProps}
-                  label="NEXT PIECES"
-                  max={7}
-                  min={0}
-                  onChange={(value) => updateControls({ nextPieces: value })}
-                  value={config.gameConfig.controls.nextPieces}
-                />
-                <ToggleField
-                {...settingProps}
-                  checked={config.gameConfig.controls.showShadowPiece}
-                  label="SHADOW PIECE"
-                  onChange={(value) => updateControls({ showShadowPiece: value })}
-                />
-              </section>
-
-              <section>
-                <h2>GRAVITY</h2>
-                <NumberField
-                {...settingProps}
-                  label="LOCK DELAY"
-                  min={0}
-                  onChange={(value) => updateGravity({ lockDelay: value })}
-                  value={config.gameConfig.gravity.lockDelay}
-                />
-                <NumberField
-                {...settingProps}
-                  label="LOCK DECREASE"
-                  min={0}
-                  onChange={(value) => updateGravity({ lockDelayDecrease: value })}
-                  step={0.1}
-                  value={config.gameConfig.gravity.lockDelayDecrease}
-                />
-                <NumberField
-                {...settingProps}
-                  label="MIN LOCK DELAY"
-                  min={0}
-                  onChange={(value) => updateGravity({ minimumLockDelay: value })}
-                  value={config.gameConfig.gravity.minimumLockDelay}
-                />
-                <NumberField
-                {...settingProps}
-                  label="GRAVITY"
-                  min={0}
-                  onChange={(value) => updateGravity({ gravity: value })}
-                  step={0.01}
-                  value={config.gameConfig.gravity.gravity}
-                />
-                <NumberField
-                {...settingProps}
-                  label="GRAVITY INCREASE"
-                  min={0}
-                  onChange={(value) => updateGravity({ gravityIncrease: value })}
-                  step={0.0001}
-                  value={config.gameConfig.gravity.gravityIncrease}
-                />
-                <NumberField
-                {...settingProps}
-                  label="GRAVITY MARGIN TIME"
-                  min={0}
-                  onChange={(value) => updateGravity({ gravitMarginTime: value })}
-                  value={config.gameConfig.gravity.gravitMarginTime}
-                />
-              </section>
-
-              <section>
-                <h2>GARBAGE</h2>
-                <NumberField
-                {...settingProps}
-                  label="GARBAGE MULT"
-                  min={0}
-                  onChange={(value) => updateGarbage({ garbageMult: value })}
-                  step={0.1}
-                  value={config.gameConfig.garbage.garbageMult}
-                />
-                <NumberField
-                {...settingProps}
-                  label="GARBAGE CAP"
-                  min={0}
-                  onChange={(value) => updateGarbage({ garbageCap: value })}
-                  value={config.gameConfig.garbage.garbageCap}
-                />
-                <NumberField
-                {...settingProps}
-                  label="GARBAGE MAX CAP"
-                  min={0}
-                  onChange={(value) => updateGarbage({ garbageMaxCap: value })}
-                  value={config.gameConfig.garbage.garbageMaxCap}
-                />
-                <ToggleField
-                {...settingProps}
-                  checked={config.gameConfig.garbage.garbagePassthrough}
-                  label="GARBAGE PASSTHROUGH"
-                  onChange={(value) => updateGarbage({ garbagePassthrough: value })}
-                />
-                <NumberField
-                {...settingProps}
-                  label="ALL CLEAR GARBAGE"
-                  min={0}
-                  onChange={(value) => updateGarbage({ allClearGarbage: value })}
-                  value={config.gameConfig.garbage.allClearGarbage}
-                />
-                <NumberField
-                {...settingProps}
-                  label="GARBAGE DELAY"
-                  min={0}
-                  onChange={(value) => updateGarbage({ garbageDelay: value })}
-                  value={config.gameConfig.garbage.garbageDelay}
-                />
-                <NumberField
-                {...settingProps}
-                  label="DELAY ON CLEAR"
+                  {...settingProps}
+                  label="PLAYER LIMIT"
                   min={0}
                   onChange={(value) =>
-                    updateGarbage({ garbageDelayOnClear: value })
+                    updateRoom({ maxPlayers: value > 0 ? value : null })
                   }
-                  value={config.gameConfig.garbage.garbageDelayOnClear}
+                  value={config.roomConfig.maxPlayers ?? 0}
                 />
-                {isCurrentUserHost ? (
-                  <label className="mp-custom-setting">
-                    <span>TARGETING</span>
-                    <select
-                      onChange={(event) =>
-                        updateGarbage({
-                          garbageTargeting: event.target
-                            .value as GarbageConfig["garbageTargeting"],
-                        })
-                      }
-                      value={config.gameConfig.garbage.garbageTargeting}
-                    >
-                      <option value="payback">PAYBACK</option>
-                      <option value="even">EVEN</option>
-                      <option value="random">RANDOM</option>
-                    </select>
-                  </label>
-                ) : (
-                  <ReadOnlyField
-                    label="TARGETING"
-                    value={config.gameConfig.garbage.garbageTargeting.toUpperCase()}
+                <NumberField
+                  {...settingProps}
+                  label="AUTO START"
+                  min={0}
+                  onChange={(value) => updateRoom({ autoStart: value })}
+                  value={config.roomConfig.autoStart ?? 0}
+                />
+                <ToggleField
+                  {...settingProps}
+                  checked={config.roomConfig.public}
+                  label="PUBLIC ROOM"
+                  onChange={(value) => updateRoom({ public: value })}
+                />
+                <ToggleField
+                  {...settingProps}
+                  checked={config.roomConfig.anonymousAllowed}
+                  label="ALLOW ANONYMOUS USERS TO JOIN"
+                  onChange={(value) => updateRoom({ anonymousAllowed: value })}
+                />
+              </div>
+            )}
+
+            {tab === "match" && (
+              <div className="mp-custom-settings">
+                <h2>MATCH</h2>
+                <NumberField
+                  {...settingProps}
+                  label="ROUNDS TO WIN"
+                  min={1}
+                  onChange={(value) => updateMatch({ roundsToWin: value })}
+                  value={config.matchConfig?.roundsToWin ?? 1}
+                />
+                <NumberField
+                  {...settingProps}
+                  label="WIN BY ROUNDS"
+                  min={0}
+                  onChange={(value) => updateMatch({ winByRounds: value })}
+                  value={config.matchConfig?.winByRounds ?? 0}
+                />
+                <NumberField
+                  {...settingProps}
+                  label="GOLDEN POINT"
+                  min={0}
+                  onChange={(value) => updateMatch({ goldenPoint: value })}
+                  value={config.matchConfig?.goldenPoint ?? 0}
+                />
+                <NumberField
+                  {...settingProps}
+                  label="STOCK"
+                  min={0}
+                  onChange={(value) => updateMatch({ stock: value })}
+                  value={config.matchConfig?.stock ?? 0}
+                />
+              </div>
+            )}
+
+            {tab === "game" && (
+              <div className="mp-custom-settings mp-custom-settings--columns">
+                <section>
+                  <h2>GAME</h2>
+                  <TextField
+                    {...settingProps}
+                    label="BAG TYPE"
+                    onChange={(value) => updateGeneral({ bagType: value })}
+                    value={config.gameConfig.general.bagType}
                   />
-                )}
-                <NumberField
-                {...settingProps}
-                  label="HOLE CHANGE CHANCE"
-                  max={1}
-                  min={0}
-                  onChange={(value) =>
-                    updateGarbage({ garbageColumnChangeChance: value })
-                  }
-                  step={0.05}
-                  value={config.gameConfig.garbage.garbageColumnChangeChance}
-                />
-              </section>
-            </div>
-          )}
-        </section>
+                  <NumberField
+                    {...settingProps}
+                    label="BOARD WIDTH"
+                    max={20}
+                    min={4}
+                    onChange={(value) => updateGeneral({ boardWidth: value })}
+                    value={config.gameConfig.general.boardWidth}
+                  />
+                  <NumberField
+                    {...settingProps}
+                    label="BOARD HEIGHT"
+                    max={40}
+                    min={4}
+                    onChange={(value) => updateGeneral({ boardHeight: value })}
+                    value={config.gameConfig.general.boardHeight}
+                  />
+                  <ToggleField
+                    {...settingProps}
+                    checked={config.gameConfig.controls.hold}
+                    label="HOLD"
+                    onChange={(value) => updateControls({ hold: value })}
+                  />
+                  <NumberField
+                    {...settingProps}
+                    label="NEXT PIECES"
+                    max={7}
+                    min={0}
+                    onChange={(value) => updateControls({ nextPieces: value })}
+                    value={config.gameConfig.controls.nextPieces}
+                  />
+                  <ToggleField
+                    {...settingProps}
+                    checked={config.gameConfig.controls.showShadowPiece}
+                    label="SHADOW PIECE"
+                    onChange={(value) =>
+                      updateControls({ showShadowPiece: value })
+                    }
+                  />
+                </section>
 
-        {isCurrentUserHost && (
+                <section>
+                  <h2>GRAVITY</h2>
+                  <NumberField
+                    {...settingProps}
+                    label="LOCK DELAY"
+                    min={0}
+                    onChange={(value) => updateGravity({ lockDelay: value })}
+                    value={config.gameConfig.gravity.lockDelay}
+                  />
+                  <NumberField
+                    {...settingProps}
+                    label="LOCK DECREASE"
+                    min={0}
+                    onChange={(value) =>
+                      updateGravity({ lockDelayDecrease: value })
+                    }
+                    step={0.1}
+                    value={config.gameConfig.gravity.lockDelayDecrease}
+                  />
+                  <NumberField
+                    {...settingProps}
+                    label="MIN LOCK DELAY"
+                    min={0}
+                    onChange={(value) =>
+                      updateGravity({ minimumLockDelay: value })
+                    }
+                    value={config.gameConfig.gravity.minimumLockDelay}
+                  />
+                  <NumberField
+                    {...settingProps}
+                    label="GRAVITY"
+                    min={0}
+                    onChange={(value) => updateGravity({ gravity: value })}
+                    step={0.01}
+                    value={config.gameConfig.gravity.gravity}
+                  />
+                  <NumberField
+                    {...settingProps}
+                    label="GRAVITY INCREASE"
+                    min={0}
+                    onChange={(value) =>
+                      updateGravity({ gravityIncrease: value })
+                    }
+                    step={0.0001}
+                    value={config.gameConfig.gravity.gravityIncrease}
+                  />
+                  <NumberField
+                    {...settingProps}
+                    label="GRAVITY MARGIN TIME"
+                    min={0}
+                    onChange={(value) =>
+                      updateGravity({ gravitMarginTime: value })
+                    }
+                    value={config.gameConfig.gravity.gravitMarginTime}
+                  />
+                </section>
+
+                <section>
+                  <h2>GARBAGE</h2>
+                  <NumberField
+                    {...settingProps}
+                    label="GARBAGE MULT"
+                    min={0}
+                    onChange={(value) => updateGarbage({ garbageMult: value })}
+                    step={0.1}
+                    value={config.gameConfig.garbage.garbageMult}
+                  />
+                  <NumberField
+                    {...settingProps}
+                    label="GARBAGE CAP"
+                    min={0}
+                    onChange={(value) => updateGarbage({ garbageCap: value })}
+                    value={config.gameConfig.garbage.garbageCap}
+                  />
+                  <NumberField
+                    {...settingProps}
+                    label="GARBAGE MAX CAP"
+                    min={0}
+                    onChange={(value) =>
+                      updateGarbage({ garbageMaxCap: value })
+                    }
+                    value={config.gameConfig.garbage.garbageMaxCap}
+                  />
+                  <ToggleField
+                    {...settingProps}
+                    checked={config.gameConfig.garbage.garbagePassthrough}
+                    label="GARBAGE PASSTHROUGH"
+                    onChange={(value) =>
+                      updateGarbage({ garbagePassthrough: value })
+                    }
+                  />
+                  <NumberField
+                    {...settingProps}
+                    label="ALL CLEAR GARBAGE"
+                    min={0}
+                    onChange={(value) =>
+                      updateGarbage({ allClearGarbage: value })
+                    }
+                    value={config.gameConfig.garbage.allClearGarbage}
+                  />
+                  <NumberField
+                    {...settingProps}
+                    label="GARBAGE DELAY"
+                    min={0}
+                    onChange={(value) => updateGarbage({ garbageDelay: value })}
+                    value={config.gameConfig.garbage.garbageDelay}
+                  />
+                  <NumberField
+                    {...settingProps}
+                    label="DELAY ON CLEAR"
+                    min={0}
+                    onChange={(value) =>
+                      updateGarbage({ garbageDelayOnClear: value })
+                    }
+                    value={config.gameConfig.garbage.garbageDelayOnClear}
+                  />
+                  {isCurrentUserHost ? (
+                    <label className="mp-custom-setting">
+                      <span>TARGETING</span>
+                      <select
+                        onChange={(event) =>
+                          updateGarbage({
+                            garbageTargeting: event.target
+                              .value as GarbageConfig["garbageTargeting"],
+                          })
+                        }
+                        value={config.gameConfig.garbage.garbageTargeting}
+                      >
+                        <option value="payback">PAYBACK</option>
+                        <option value="even">EVEN</option>
+                        <option value="random">RANDOM</option>
+                      </select>
+                    </label>
+                  ) : (
+                    <ReadOnlyField
+                      label="TARGETING"
+                      value={config.gameConfig.garbage.garbageTargeting.toUpperCase()}
+                    />
+                  )}
+                  <NumberField
+                    {...settingProps}
+                    label="HOLE CHANGE CHANCE"
+                    max={1}
+                    min={0}
+                    onChange={(value) =>
+                      updateGarbage({ garbageColumnChangeChance: value })
+                    }
+                    step={0.05}
+                    value={config.gameConfig.garbage.garbageColumnChangeChance}
+                  />
+                </section>
+              </div>
+            )}
+          </section>
+
+          {isCurrentUserHost && (
+            <button
+              className="mp-custom-save"
+              onClick={saveConfig}
+              type="button"
+            >
+              SAVE
+            </button>
+          )}
+        </main>
+
+        <aside className="mp-custom-chat">
+          <h2>CHAT</h2>
+          <div className="mp-custom-chat-log">
+            <p>
+              <strong>[SYS]</strong>: Welcome to chat! Please remember to be
+              civil to your opponents.
+            </p>
+            {chatMessages.map((message) => (
+              <p key={message.id}>
+                <strong>[{message.author}]</strong>:{" "}
+                {message.system && message.actor ? (
+                  <>
+                    <strong>{message.actor}</strong>: {message.text}
+                  </>
+                ) : (
+                  message.text
+                )}
+              </p>
+            ))}
+          </div>
+          <form
+            onSubmit={(event) => {
+              event.preventDefault();
+              sendChatMessage();
+            }}
+          >
+            <input
+              onChange={(event) => setChatMessage(event.target.value)}
+              placeholder="message..."
+              value={chatMessage}
+            />
+          </form>
+        </aside>
+
+        <footer className="mp-custom-footer">
           <button
-            className="mp-custom-save"
-            onClick={saveConfig}
+            className={`mp-custom-role-toggle mp-custom-role-toggle--${currentRoomRole}`}
+            onClick={switchRoomRole}
             type="button"
           >
-            SAVE
+            {currentRoomRole === "spectator" ? "SPECTATING" : "PLAYING"}
+            <small>
+              {currentRoomRole === "spectator"
+                ? "switch to player mode"
+                : "switch to spectating mode"}
+            </small>
           </button>
-        )}
-      </main>
-
-      <aside className="mp-custom-chat">
-        <h2>CHAT</h2>
-        <div className="mp-custom-chat-log">
-          <p>
-            <strong>[SYS]</strong>: Welcome to chat! Please remember to be civil to your opponents.
-          </p>
-          {chatMessages.map((message) => (
-            <p key={message.id}>
-              <strong>[{message.author}]</strong>:{" "}
-              {message.system && message.actor ? (
-                <>
-                  <strong>{message.actor}</strong>: {message.text}
-                </>
-              ) : (
-                message.text
-              )}
-            </p>
-          ))}
-        </div>
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            sendChatMessage();
-          }}
-        >
-          <input
-            onChange={(event) => setChatMessage(event.target.value)}
-            placeholder="message..."
-            value={chatMessage}
-          />
-        </form>
-      </aside>
-
-      <footer className="mp-custom-footer">
-        <button
-          className={`mp-custom-role-toggle mp-custom-role-toggle--${currentRoomRole}`}
-          onClick={switchRoomRole}
-          type="button"
-        >
-          {currentRoomRole === "spectator" ? "SPECTATING" : "PLAYING"}
-          <small>
-            {currentRoomRole === "spectator"
-              ? "switch to player mode"
-              : "switch to spectating mode"}
-          </small>
-        </button>
-        {roomStatus === "playing" ? (
-          <>
-            <button onClick={spectateActiveGame} type="button">
-              SPECTATE
+          {roomStatus === "playing" ? (
+            <>
+              <button onClick={spectateActiveGame} type="button">
+                SPECTATE
+              </button>
+              <button onClick={playZenWhileWaiting} type="button">
+                ZEN
+              </button>
+            </>
+          ) : isCurrentUserHost ? (
+            <button onClick={startGame} type="button">
+              START
+              <small>{activeRoomPlayers.length} PLAYER</small>
             </button>
-            <button onClick={playZenWhileWaiting} type="button">
-              ZEN
-            </button>
-          </>
-        ) : isCurrentUserHost ? (
-          <button onClick={startGame} type="button">
-            START
-            <small>{activeRoomPlayers.length} PLAYER</small>
-          </button>
-        ) : null}
-        <span>VERSUS KNOCKOUT</span>
-      </footer>
-    </section>
+          ) : null}
+          <span>VERSUS KNOCKOUT</span>
+        </footer>
+      </section>
+    </>
   );
 }
