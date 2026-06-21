@@ -190,6 +190,7 @@ export function useGameSession() {
   const gameStateRef = useRef(gameState);
   const gameConfigRef = useRef(gameConfig);
   const countdownRef = useRef(countdownStep);
+  const resultRef = useRef(result);
   const returnPath = getReturnPath(location.state, gameId);
   const multiplayerExitPath = getMultiplayerExitPath(gameConfig);
   const controls = useGameControls({
@@ -207,7 +208,8 @@ export function useGameSession() {
     gameStateRef.current = gameState;
     gameConfigRef.current = gameConfig;
     countdownRef.current = countdownStep;
-  }, [countdownStep, gameConfig, gameState]);
+    resultRef.current = result;
+  }, [countdownStep, gameConfig, gameState, result]);
 
   useEffect(() => {
     const leaveQuickplayOnHistoryNavigation = () => {
@@ -370,6 +372,7 @@ export function useGameSession() {
       setGameState(state);
       setGameConfig(payload.config ?? null);
       setPlayers(payload.players ?? {});
+      resultRef.current = null;
       setResult(null);
       setCountdownStep(getActiveCountdownStep(payload.config ?? null, state));
       saveActiveGame({
@@ -381,6 +384,9 @@ export function useGameSession() {
     };
     const handleEnd = (payload: GameEndPayload) => {
       if (payload.roomId !== gameId) return;
+      if (gameConfigRef.current?.mode === "quickplay" && resultRef.current?.quickplay) {
+        return;
+      }
 
       const state = selectState(payload) ?? gameStateRef.current;
       const stats = payload.result?.stats ?? state?.update;
@@ -436,6 +442,7 @@ export function useGameSession() {
             : undefined,
       };
 
+      resultRef.current = nextResult;
       setResult(nextResult);
       if (gameConfigRef.current?.mode === "quickplay") {
         navigate("/play/multiplayer/quick", {
@@ -500,11 +507,17 @@ export function useGameSession() {
           meters: payload.quickplay?.meters ?? 0,
           floor: payload.quickplay?.floor ?? 1,
           floorName: payload.quickplay?.floorName,
-          previousBestMeters: payload.quickplay?.previousBestMeters ?? null,
-          isPersonalBest: Boolean(payload.quickplay?.isPersonalBest),
+          previousBestMeters:
+            payload.quickplay?.previousBestMeters ??
+            resultRef.current?.quickplay?.previousBestMeters ??
+            null,
+          isPersonalBest:
+            Boolean(payload.quickplay?.isPersonalBest) ||
+            Boolean(resultRef.current?.quickplay?.isPersonalBest),
         },
       };
 
+      resultRef.current = nextResult;
       setResult(nextResult);
       navigate("/play/multiplayer/quick", {
         replace: true,
@@ -697,6 +710,7 @@ export function useGameSession() {
     restartQuickplay: () => {
       const config = gameConfigRef.current;
       if (!socket || config?.mode !== "quickplay") return;
+      const modifiers = (config as { modifiers?: string[] }).modifiers ?? [];
 
       const handleStart = (payload: GameStartPayload) => {
         if (!payload.roomId) return;
@@ -712,13 +726,14 @@ export function useGameSession() {
       };
 
       socket.once("game:start", handleStart);
+      resultRef.current = null;
       setResult(null);
       socket.emit("mode:join", {
         mode: "quickplay",
         payload: {
           gameConfig: {
             mode: "quickplay",
-            modifiers: config.modifiers ?? [],
+            modifiers,
           },
         },
       });
