@@ -413,7 +413,7 @@ export function useGameSession() {
         emitXpPopup(selfProgression.xpDelta);
       }
 
-      setResult({
+      const nextResult: GameResult = {
         reason: payload.reason,
         stats: finalStats,
         winnerId: payload.winnerId,
@@ -434,7 +434,15 @@ export function useGameSession() {
                 isPersonalBest: false,
               }
             : undefined,
-      });
+      };
+
+      setResult(nextResult);
+      if (gameConfigRef.current?.mode === "quickplay") {
+        navigate("/play/multiplayer/quick", {
+          replace: true,
+          state: { quickplayResult: nextResult },
+        });
+      }
     };
     const handleQuickplayResult = (payload: {
       roomId?: string;
@@ -485,7 +493,7 @@ export function useGameSession() {
         emitXpPopup(selfProgression.xpDelta);
       }
 
-      setResult({
+      const nextResult: GameResult = {
         reason: payload.reason ?? "game_over",
         stats: finalStats,
         quickplay: {
@@ -495,6 +503,12 @@ export function useGameSession() {
           previousBestMeters: payload.quickplay?.previousBestMeters ?? null,
           isPersonalBest: Boolean(payload.quickplay?.isPersonalBest),
         },
+      };
+
+      setResult(nextResult);
+      navigate("/play/multiplayer/quick", {
+        replace: true,
+        state: { quickplayResult: nextResult },
       });
     };
     const handleQuickplayKo = (payload: {

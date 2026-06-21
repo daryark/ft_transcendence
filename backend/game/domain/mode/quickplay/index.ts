@@ -38,8 +38,10 @@ type QuickplayAltitude = {
     lastPiecesPlaced: number;
 };
 
-const CLIMB_METERS_PER_10_SECONDS = 3.35;
+const CLIMB_METERS_PER_10_SECONDS = 6.7;
 const CLIMB_METERS_PER_SECOND = CLIMB_METERS_PER_10_SECONDS / 10;
+const LINE_CLEAR_ALTITUDE_SECONDS = 1.4;
+const ATTACK_ALTITUDE_SECONDS = 1;
 const LAST_PLAYER_END_DELAY_MS = 60_000;
 
 function moveQuickplayPlayerToLobby(room: Room, playerId: string) {
@@ -130,8 +132,11 @@ function updateQuickplayAltitude(room: Room, playerId: string, state: Room["stat
     const piecesPlaced = state.piecesPlaced ?? 0;
 
     if (piecesPlaced > altitude.lastPiecesPlaced) {
-        const sentLines = getAttackLines(state.update?.linesCleared ?? 0);
-        altitude.bonusMeters += sentLines * CLIMB_METERS_PER_SECOND;
+        const linesCleared = Math.max(0, state.update?.linesCleared ?? 0);
+        const sentLines = getAttackLines(linesCleared);
+        altitude.bonusMeters +=
+            (linesCleared * LINE_CLEAR_ALTITUDE_SECONDS + sentLines * ATTACK_ALTITUDE_SECONDS) *
+            CLIMB_METERS_PER_SECOND;
         altitude.lastPiecesPlaced = piecesPlaced;
     }
 }

@@ -6,6 +6,7 @@ import GameAbortOverlay from "../components/GameAbortOverlay";
 import GameFocusOverlay from "../components/GameFocusOverlay";
 import GameGarbageQueue from "../components/GameGarbageQueue";
 import GamePreviewPanel from "../components/GamePreviewPanel";
+import { useMusic } from "../../../music/MusicProvider";
 
 type RoomGameViewProps = {
   session: GameSession;
@@ -41,16 +42,54 @@ function StockCrystals({
 }
 
 const QUICKPLAY_FLOORS = [
-  { name: "HALL OF BEGINNINGS", min: 0, className: "floor-1" },
-  { name: "THE HOTEL", min: 50, className: "floor-2" },
-  { name: "THE CASINO", min: 150, className: "floor-3" },
-  { name: "THE ARENA", min: 300, className: "floor-4" },
-  { name: "THE MUSEUM", min: 450, className: "floor-5" },
-  { name: "ABANDONED OFFICES", min: 650, className: "floor-6" },
-  { name: "THE LABORATORY", min: 850, className: "floor-7" },
-  { name: "THE CORE", min: 1100, className: "floor-8" },
-  { name: "CORRUPTION", min: 1350, className: "floor-9" },
-  { name: "PLATFORM OF THE GODS", min: 1650, className: "floor-10" },
+  {
+    name: "HALL OF BEGINNINGS",
+    min: 0,
+    max: 50,
+    className: "floor-1",
+    background: "/quickplay/floor-backgrounds/tetris_floor_backgrounds_pack/1floro_hall_of_befinnings.png",
+    soundtrack: "/quickplay/floor-soundtracks/tetris_floor_soundtracks_pack/01_hall_of_the_beginners_v2.mp3",
+  },
+  {
+    name: "THE HOTEL",
+    min: 50,
+    max: 150,
+    className: "floor-2",
+    background: "/quickplay/floor-backgrounds/tetris_floor_backgrounds_pack/2floor_hotel.png",
+    soundtrack: "/quickplay/floor-soundtracks/tetris_floor_soundtracks_pack/02_the_hotel_v2.mp3",
+  },
+  {
+    name: "THE CASINO",
+    min: 150,
+    max: 300,
+    className: "floor-3",
+    background: "/quickplay/floor-backgrounds/tetris_floor_backgrounds_pack/3floor_casino.png",
+    soundtrack: "/quickplay/floor-soundtracks/tetris_floor_soundtracks_pack/03_casino_v2.mp3",
+  },
+  {
+    name: "THE ARENA",
+    min: 300,
+    max: 450,
+    className: "floor-4",
+    background: "/quickplay/floor-backgrounds/tetris_floor_backgrounds_pack/4floor_arena.png",
+    soundtrack: "/quickplay/floor-soundtracks/tetris_floor_soundtracks_pack/04_arena_v2.mp3",
+  },
+  {
+    name: "THE MUSEUM",
+    min: 450,
+    max: 650,
+    className: "floor-5",
+    background: "/quickplay/floor-backgrounds/tetris_floor_backgrounds_pack/5floor_museum.png",
+    soundtrack: "/quickplay/floor-soundtracks/tetris_floor_soundtracks_pack/05_museum_v2.mp3",
+  },
+  {
+    name: "PLATFORM OF THE GODS",
+    min: 650,
+    max: Number.POSITIVE_INFINITY,
+    className: "floor-6",
+    background: "/quickplay/floor-backgrounds/tetris_floor_backgrounds_pack/6floor_platform_of_the_gods_space_blinking.gif",
+    soundtrack: "/quickplay/floor-soundtracks/tetris_floor_soundtracks_pack/06_platform_of_the_gods_v2.mp3",
+  },
 ];
 
 function getQuickplayMeters(player: { quickplayMeters?: number }) {
@@ -62,6 +101,27 @@ function getQuickplayFloor(meters: number) {
     (current, floor) => (meters >= floor.min ? floor : current),
     QUICKPLAY_FLOORS[0],
   );
+}
+
+function getQuickplayFloorProgress(meters: number, floor: typeof QUICKPLAY_FLOORS[number]) {
+  if (!Number.isFinite(floor.max)) {
+    return ((Math.max(0, meters - floor.min) % 100) / 100);
+  }
+
+  return Math.max(0, Math.min(1, (meters - floor.min) / (floor.max - floor.min)));
+}
+
+function getQuickplayNextFloor(floor: typeof QUICKPLAY_FLOORS[number]) {
+  const index = QUICKPLAY_FLOORS.indexOf(floor);
+  return QUICKPLAY_FLOORS[Math.min(index + 1, QUICKPLAY_FLOORS.length - 1)];
+}
+
+function formatElapsedTime(elapsedMs?: number) {
+  const totalSeconds = Math.max(0, Math.floor((elapsedMs ?? 0) / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function getRoomPackageScale() {
@@ -86,6 +146,7 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
     isSpectating,
     selfPlayer,
   } = session;
+  const { setTrack } = useMusic();
   const [selectedTargetId, setSelectedTargetId] = useState<string | null>(
     null,
   );
@@ -98,6 +159,26 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
     window.addEventListener("resize", updateScale);
     return () => window.removeEventListener("resize", updateScale);
   }, []);
+
+  const selectedTrackTarget = alivePlayers.find(
+    (player) => String(player.id) === selectedTargetId,
+  );
+  const activeQuickplayFloor = getQuickplayFloor(
+    gameConfig?.mode === "quickplay"
+      ? getQuickplayMeters(
+          (isSpectating ? selectedTrackTarget ?? alivePlayers[0] : selfPlayer) ??
+            alivePlayers[0] ??
+            {},
+        )
+      : 0,
+  );
+
+  useEffect(() => {
+    if (gameConfig?.mode !== "quickplay" || !gameState) return undefined;
+
+    setTrack(activeQuickplayFloor.soundtrack);
+    return () => setTrack(null);
+  }, [activeQuickplayFloor.soundtrack, gameConfig?.mode, gameState, setTrack]);
 
   if (!gameState || !gameConfig || gameConfig.mode === "solo") return null;
 
@@ -123,10 +204,28 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
   const isQuickplay = gameConfig.mode === "quickplay";
   const targetMeters = targetPlayer ? getQuickplayMeters(targetPlayer) : 0;
   const quickplayFloor = getQuickplayFloor(targetMeters);
+  const quickplayFloorProgress = getQuickplayFloorProgress(
+    targetMeters,
+    quickplayFloor,
+  );
+  const quickplayNextFloor = getQuickplayNextFloor(quickplayFloor);
+  const quickplayBlend =
+    quickplayFloor === quickplayNextFloor
+      ? 0
+      : quickplayFloorProgress > 0.86
+        ? Math.min(1, (quickplayFloorProgress - 0.86) / 0.14)
+        : quickplayFloorProgress < 0.08
+          ? Math.max(0, 1 - quickplayFloorProgress / 0.08) * 0.28
+          : 0;
   const quickplayPlayers = [...alivePlayers]
     .sort((a, b) => getQuickplayMeters(b) - getQuickplayMeters(a));
   const style = {
     "--room-package-scale": String(packageScale),
+    "--quickplay-bg-image": `url("${quickplayFloor.background}")`,
+    "--quickplay-bg-next-image": `url("${quickplayNextFloor.background}")`,
+    "--quickplay-bg-position-y": `${Math.round(quickplayFloorProgress * 100)}%`,
+    "--quickplay-bg-shift-y": `${(quickplayFloorProgress * -18).toFixed(2)}vh`,
+    "--quickplay-bg-blend-opacity": quickplayBlend.toFixed(3),
   } as CSSProperties;
 
   return (
@@ -179,6 +278,15 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
             <div className="room-game__stats" aria-label="Player stats">
               {quickplayStats ? (
                 <>
+                  <div>
+                    <span>TIME</span>
+                    <strong
+                      className="game-stat-pop"
+                      key={`time-${Math.floor((targetState.update.elapsedMs ?? 0) / 1000)}`}
+                    >
+                      {formatElapsedTime(targetState.update.elapsedMs)}
+                    </strong>
+                  </div>
                   <div>
                     <span>ALTITUDE</span>
                     <strong
