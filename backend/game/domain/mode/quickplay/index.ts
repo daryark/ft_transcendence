@@ -13,6 +13,10 @@ import {
     emitRoomSystemMessage,
     getRoomMessages,
 } from "../../../services/roomChatService";
+import {
+    applyXpToLevel,
+    calculateXpDelta,
+} from "../../../services/playerProgression";
 
 import type Config from "../../../config/config.types";
 import type Room from "../../room";
@@ -37,6 +41,16 @@ type QuickplayAltitude = {
 const CLIMB_METERS_PER_10_SECONDS = 3.35;
 const CLIMB_METERS_PER_SECOND = CLIMB_METERS_PER_10_SECONDS / 10;
 const LAST_PLAYER_END_DELAY_MS = 60_000;
+
+function moveQuickplayPlayerToLobby(room: Room, playerId: string) {
+    const player = room.players.get(playerId as never);
+    if (!player) return;
+
+    room.players.delete(playerId as never);
+    player.role = "spectator";
+    player.roomId = room.id;
+    room.spectators?.set(player.id, player);
+}
 
 function getPlayerName(player: Player) {
     return player.profile?.nickname ?? String(player.id);
@@ -224,7 +238,7 @@ function serializeQuickplayGame(room: Room, engine: MultiplayerEngine) {
 }
 
 function serializeQuickplayLobby(room: Room, engine?: MultiplayerEngine | null) {
-    const players = engine
+    const players = engine && room.status === "playing"
         ? Object.values(serializeQuickplayGame(room, engine).players)
         : Array.from(room.players.values()).map((player) => ({
             id: player.id,
@@ -349,6 +363,12 @@ function emitQuickplayPlayerResult(
     const immediatePayload = buildQuickplayPlayerResult(room, engine, playerId, reason);
 
     roomService.broadcast(room.id, "quickplay:result", immediatePayload);
+    roomService.broadcast(room.id, "quickplay:ko", {
+        roomId: room.id,
+        playerId,
+        username: player ? getPlayerName(player) : playerId,
+        meters: immediatePayload.quickplay.meters,
+    });
     broadcastQuickplayLobby(roomService, room);
 
     if (!userId) return;
@@ -373,6 +393,7 @@ function emitQuickplayPlayerResult(
 
 function persistQuickplayPlayerResult(
     room: Room,
+    roomService: RoomService,
     engine: MultiplayerEngine,
     playerId: string,
     result: "win" | "lose",
@@ -384,13 +405,48 @@ function persistQuickplayPlayerResult(
 
     const player = room.players.get(playerId as never);
     const userId = getRegisteredUserId(player);
-    if (!userId) return;
+    if (!player || !userId) return;
 
     const playerState = engine.playerEngines.get(playerId)?.room?.state;
     const metricValue = getQuickplayMeters(room, playerId, playerState ?? null);
     const elapsedMs =
         playerState?.update?.elapsedMs ??
         (playerState ? Math.max(0, Date.now() - playerState.startedAt) : 0);
+    const xpDelta = calculateXpDelta({
+        userId,
+        mode: "quickPlay",
+        result,
+        score: playerState?.score ?? 0,
+        metricValue,
+        elapsedMs,
+        lines: playerState?.lines ?? 0,
+        piecesPlaced: playerState?.piecesPlaced ?? 0,
+        roundsPlayed: 1,
+    });
+    const levelResult = applyXpToLevel(
+        player.profile?.level ?? 1,
+        player.profile?.xp ?? 0,
+        xpDelta,
+    );
+
+    if (player.profile) {
+        player.profile.level = levelResult.level;
+        player.profile.xp = levelResult.xp;
+    }
+
+    roomService.broadcast(room.id, "quickplay:result", {
+        ...buildQuickplayPlayerResult(room, engine, playerId, reason),
+        result: {
+            progression: [
+                {
+                    playerId,
+                    xpDelta,
+                    level: levelResult.level,
+                    xp: levelResult.xp,
+                },
+            ],
+        },
+    });
 
     void import("../../../../prisma/playerStats.js")
         .then(async ({ persistGameResult }) => {
@@ -412,6 +468,11 @@ function persistQuickplayPlayerResult(
                 tetrises: playerState?.tetrises ?? 0,
                 clearedAfterHalfHeight: playerState?.clearedAfterHalfHeight ?? false,
                 roundsPlayed: 1,
+                progression: {
+                    level: levelResult.level,
+                    xp: levelResult.xp,
+                    won: result === "win",
+                },
                 stats: {
                     lines: playerState?.lines ?? 0,
                     piecesPlaced: playerState?.piecesPlaced ?? 0,
@@ -554,11 +615,13 @@ function maybeEndQuickplay(room: Room, roomService: RoomService, engine: Multipl
                     );
                     persistQuickplayPlayerResult(
                         room,
+                        roomService,
                         currentEngine,
                         playerId,
                         "lose",
                         "game_over",
                     );
+                    moveQuickplayPlayerToLobby(room, playerId);
                     currentEngine.eliminatedPlayerIds.add(playerId);
                     maybeEndQuickplay(room, roomService, currentEngine, "game_over");
                 }
@@ -613,7 +676,9 @@ function startQuickplay(room: Room, roomService: RoomService) {
         onPlayerUpdate: (playerId, state) => updateQuickplayAltitude(room, playerId, state),
         onPlayerOut: (playerId, _state, nextEngine, reason) => {
             emitQuickplayPlayerResult(room, roomService, nextEngine, playerId, reason);
-            persistQuickplayPlayerResult(room, nextEngine, playerId, "lose", reason ?? "game_over");
+            persistQuickplayPlayerResult(room, roomService, nextEngine, playerId, "lose", reason ?? "game_over");
+            moveQuickplayPlayerToLobby(room, playerId);
+            broadcastQuickplayLobby(roomService, room);
         },
         getPlayerGameConfig: (player) =>
             getRoomPlayerConfigs(room).get(String(player.id)) ?? room.gameConfig,
@@ -721,6 +786,7 @@ export function join(
         activeQuickplayRoom.status === "playing" &&
         activeQuickplayRoom.engine
     ) {
+        activeQuickplayRoom.spectators?.delete(player.id);
         roomService.addPlayer(activeQuickplayRoom.id, player);
         getRoomPlayerConfigs(activeQuickplayRoom).set(
             String(player.id),

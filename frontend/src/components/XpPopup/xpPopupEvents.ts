@@ -2,14 +2,24 @@ const XP_POPUP_EVENT = "tetra:xp-popup";
 
 export type XpPopupDetail = {
   amount: number;
+  label?: string;
+  variant?: "xp" | "ko";
 };
 
-export function emitXpPopup(amount: number) {
+export function emitXpPopup(amount: number, options: Omit<XpPopupDetail, "amount"> = {}) {
   if (!Number.isFinite(amount) || amount <= 0) return;
 
   window.dispatchEvent(
     new CustomEvent<XpPopupDetail>(XP_POPUP_EVENT, {
-      detail: { amount: Math.round(amount) },
+      detail: { amount: Math.round(amount), ...options },
+    }),
+  );
+}
+
+export function emitKoPopup() {
+  window.dispatchEvent(
+    new CustomEvent<XpPopupDetail>(XP_POPUP_EVENT, {
+      detail: { amount: 1, label: "KO", variant: "ko" },
     }),
   );
 }

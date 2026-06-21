@@ -6,9 +6,9 @@ import "./XpPopup.scss";
 const POPUP_LIFETIME_MS = 2600;
 
 export default function XpPopup() {
-  const [popup, setPopup] = useState<{ id: number; amount: number } | null>(
-    null,
-  );
+  const [popup, setPopup] = useState<
+    { id: number; amount: number; label?: string; variant?: "xp" | "ko" } | null
+  >(null);
 
   useEffect(() => {
     const handlePopup = (event: Event) => {
@@ -16,7 +16,12 @@ export default function XpPopup() {
       if (!detail?.amount) return;
 
       const id = Date.now();
-      setPopup({ id, amount: detail.amount });
+      setPopup({
+        id,
+        amount: detail.amount,
+        label: detail.label,
+        variant: detail.variant ?? "xp",
+      });
       window.setTimeout(() => {
         setPopup((current) => (current?.id === id ? null : current));
       }, POPUP_LIFETIME_MS);
@@ -28,8 +33,12 @@ export default function XpPopup() {
   if (!popup) return null;
 
   return (
-    <div key={popup.id} className="xp-popup" aria-live="polite">
-      +{popup.amount.toLocaleString()} XP
+    <div
+      key={popup.id}
+      className={`xp-popup xp-popup--${popup.variant ?? "xp"}`}
+      aria-live="polite"
+    >
+      {popup.label ?? `+${popup.amount.toLocaleString()} XP`}
     </div>
   );
 }

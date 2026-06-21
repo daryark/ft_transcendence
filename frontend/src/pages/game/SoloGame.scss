@@ -1744,6 +1744,40 @@ body.game-session-active {
   font-style: normal;
 }
 
+.room-game__quick-card--ko {
+  border-color: rgba(255, 41, 55, 0.86);
+  background: linear-gradient(90deg, rgba(160, 11, 25, 0.92), rgba(58, 5, 16, 0.82));
+  box-shadow: 0 0 0.8rem rgba(255, 26, 45, 0.35);
+  animation: room-game-ko-card 1.8s ease-out forwards;
+}
+
+.room-game__quick-card--ko span,
+.room-game__quick-card--ko em {
+  color: #ffb5ba;
+}
+
+@keyframes room-game-ko-card {
+  0% {
+    opacity: 0;
+    transform: translateX(0.7rem) scale(0.96);
+  }
+
+  18% {
+    opacity: 1;
+    transform: translateX(0) scale(1.04);
+  }
+
+  52% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-0.45rem) scale(0.98);
+  }
+}
+
 .room-game__opponents--1,
 .room-game__opponents--2,
 .room-game__opponents--3 {

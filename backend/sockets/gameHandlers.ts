@@ -33,6 +33,7 @@ export type ServerToClientEvents =
     | "round:start"
     | "round:end"
     | "quickplay:result"
+    | "quickplay:ko"
     | "quickplay:warning"
     | "quickplay:lobby"
     | "room:update"

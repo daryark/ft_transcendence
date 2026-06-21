@@ -76,13 +76,11 @@ export default function SoloResultsView({
 
   useEffect(() => {
     if (!shouldShowFortyLinesComplete) {
-      setIsFortyLinesPersonalBest(false);
       return;
     }
 
     const user = getSessionUser();
     if (!user || user.isAnonymous) {
-      setIsFortyLinesPersonalBest(false);
       return;
     }
 

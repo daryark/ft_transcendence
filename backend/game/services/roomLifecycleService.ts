@@ -2,6 +2,7 @@ import type { RoomId } from "../domain/room";
 import type Player from "../domain/player";
 import { removeCustomRoomParticipant } from "../domain/mode/custom/index.js";
 import type RoomService from "./roomService";
+import type { MultiplayerEngine } from "./multiplayerEngineService";
 
 type ParticipantRole = "player" | "spectator";
 
@@ -106,6 +107,37 @@ function endMultiplayerRoomAfterPlayerExit(
         });
 }
 
+function removeQuickplayParticipant(
+    roomService: RoomService,
+    roomId: RoomId,
+    playerId: Player["id"],
+) {
+    const room = roomService.getRoom(roomId);
+    if (!room) return false;
+
+    const id = String(playerId);
+    const engine = room.engine as MultiplayerEngine | null;
+    const playerEngine = engine?.playerEngines.get(id);
+
+    playerEngine?.engine?.stop?.();
+    if (playerEngine?.room) {
+        playerEngine.room.status = "ended";
+    }
+    engine?.eliminatedPlayerIds.add(id);
+    roomService.removePlayer(roomId, playerId);
+    roomService.removeSpectator(roomId, playerId);
+
+    if (room.players.size === 0) {
+        room.engine?.stop?.();
+        room.status = "lobby";
+        room.engine = null;
+        room.match = null;
+        room.state = null;
+    }
+
+    return true;
+}
+
 export function leaveRoomParticipant(
     roomService: RoomService,
     roomId: RoomId,
@@ -119,12 +151,12 @@ export function leaveRoomParticipant(
         return removeCustomRoomParticipant(roomService, roomId, playerId, role);
     }
 
+    if (room.gameConfig.mode === "quickplay") {
+        return removeQuickplayParticipant(roomService, roomId, playerId);
+    }
+
     if (role === "spectator") {
         roomService.removeSpectator(roomId, playerId);
-        if (room.gameConfig.mode === "quickplay") {
-            roomService.isEmpty(roomId);
-            return true;
-        }
         if (roomService.isEmpty(roomId)) {
             roomService.deleteRoom(roomId);
         }
@@ -136,13 +168,6 @@ export function leaveRoomParticipant(
     roomService.removePlayer(roomId, playerId);
 
     if (roomService.isEmpty(roomId)) {
-        if (room.gameConfig.mode === "quickplay") {
-            room.status = "lobby";
-            room.engine = null;
-            room.match = null;
-            room.state = null;
-            return true;
-        }
         roomService.deleteRoom(roomId);
         return true;
     }
