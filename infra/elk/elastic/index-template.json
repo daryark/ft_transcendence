@@ -1,0 +1,9 @@
+{
+  "index_patterns": ["nginx-logs-*"],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "index.lifecycle.name": "nginx-logs-policy"
+    }
+  }
+}
