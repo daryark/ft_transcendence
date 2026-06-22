@@ -202,12 +202,19 @@ describe('gameHandlers', () => {
       },
     });
     const modeService = { join: jest.fn() };
+    const room = {
+      gameConfig: { mode: 'quickplay' },
+      status: 'lobby',
+      players: new Map([['user-1', { id: 'user-1' }]]),
+      engine: null,
+      match: null,
+      state: null,
+    };
     const roomService = {
-      getRoom: jest.fn(() => ({
-        gameConfig: { mode: 'quickplay' },
-        status: 'lobby',
-      })),
-      removePlayer: jest.fn(),
+      getRoom: jest.fn(() => room),
+      removePlayer: jest.fn((roomId: string, playerId: string) => {
+        room.players.delete(playerId);
+      }),
       removeSpectator: jest.fn(),
       isEmpty: jest.fn(() => false),
       deleteRoom: jest.fn(),
@@ -220,12 +227,13 @@ describe('gameHandlers', () => {
     handler();
 
     expect(roomService.removePlayer).toHaveBeenCalledWith('ROOM1', 'user-1');
-    expect(roomService.removeSpectator).not.toHaveBeenCalled();
-    expect(roomService.isEmpty).toHaveBeenCalledWith('ROOM1');
+    expect(roomService.removeSpectator).toHaveBeenCalledWith('ROOM1', 'user-1');
+    expect(roomService.isEmpty).not.toHaveBeenCalled();
     expect(roomService.deleteRoom).not.toHaveBeenCalled();
+    expect(room.status).toBe('lobby');
   });
 
-  test('mode:leave removes spectator from room when socket role is spectator', () => {
+  test('mode:leave removes quickplay spectator from both participant maps', () => {
     const socket = createSocket({
       data: {
         identity: { id: 'user-1', type: 'anonymous' },
@@ -234,11 +242,16 @@ describe('gameHandlers', () => {
       },
     });
     const modeService = { join: jest.fn() };
+    const room = {
+      gameConfig: { mode: 'quickplay' },
+      status: 'lobby',
+      players: new Map(),
+      engine: null,
+      match: null,
+      state: null,
+    };
     const roomService = {
-      getRoom: jest.fn(() => ({
-        gameConfig: { mode: 'quickplay' },
-        status: 'lobby',
-      })),
+      getRoom: jest.fn(() => room),
       removePlayer: jest.fn(),
       removeSpectator: jest.fn(),
       isEmpty: jest.fn(() => false),
@@ -252,8 +265,8 @@ describe('gameHandlers', () => {
     handler();
 
     expect(roomService.removeSpectator).toHaveBeenCalledWith('ROOM1', 'user-1');
-    expect(roomService.removePlayer).not.toHaveBeenCalled();
-    expect(roomService.isEmpty).toHaveBeenCalledWith('ROOM1');
+    expect(roomService.removePlayer).toHaveBeenCalledWith('ROOM1', 'user-1');
+    expect(roomService.isEmpty).not.toHaveBeenCalled();
     expect(roomService.deleteRoom).not.toHaveBeenCalled();
   });
 
@@ -266,12 +279,19 @@ describe('gameHandlers', () => {
       },
     });
     const modeService = { join: jest.fn() };
+    const room = {
+      gameConfig: { mode: 'quickplay' },
+      status: 'playing',
+      players: new Map([['user-1', { id: 'user-1' }]]),
+      engine: { stop: jest.fn() },
+      match: { stop: jest.fn() },
+      state: { score: 0 },
+    };
     const roomService = {
-      getRoom: jest.fn(() => ({
-        gameConfig: { mode: 'quickplay' },
-        status: 'lobby',
-      })),
-      removePlayer: jest.fn(),
+      getRoom: jest.fn(() => room),
+      removePlayer: jest.fn((roomId: string, playerId: string) => {
+        room.players.delete(playerId);
+      }),
       removeSpectator: jest.fn(),
       isEmpty: jest.fn(() => true),
       deleteRoom: jest.fn(),
@@ -285,6 +305,10 @@ describe('gameHandlers', () => {
 
     expect(roomService.removePlayer).toHaveBeenCalledWith('ROOM1', 'user-1');
     expect(roomService.deleteRoom).not.toHaveBeenCalled();
+    expect(room.status).toBe('lobby');
+    expect(room.engine).toBeNull();
+    expect(room.match).toBeNull();
+    expect(room.state).toBeNull();
   });
 
   test('player:move pushes input to room engine when socket has roomId', () => {
@@ -461,9 +485,10 @@ describe('gameHandlers', () => {
     expect(stopEngine).not.toHaveBeenCalled();
   });
 
-  test('game:stop removes player and ends any non-custom multiplayer room', async () => {
+  test('game:stop removes quickplay participant without ending room while players remain', async () => {
     const stopMatch = jest.fn();
     const stopEngine = jest.fn();
+    const stopPlayerEngine = jest.fn();
     const remainingPlayer = {
       id: 'user-2',
       profile: { nickname: 'Dasha' },
@@ -480,13 +505,30 @@ describe('gameHandlers', () => {
       gameConfig: { mode: 'quickplay' },
       status: 'playing',
       state: { score: 100 },
-      players: new Map([['user-2', remainingPlayer]]),
+      players: new Map([
+        ['user-1', { id: 'user-1' }],
+        ['user-2', remainingPlayer],
+      ]),
       match: { stop: stopMatch },
-      engine: { stop: stopEngine },
+      engine: {
+        stop: stopEngine,
+        playerEngines: new Map([
+          [
+            'user-1',
+            {
+              room: { status: 'playing' },
+              engine: { stop: stopPlayerEngine },
+            },
+          ],
+        ]),
+        eliminatedPlayerIds: new Set(),
+      },
     };
     const roomService = {
       getRoom: jest.fn(() => room),
-      removePlayer: jest.fn(),
+      removePlayer: jest.fn((roomId: string, playerId: string) => {
+        room.players.delete(playerId);
+      }),
       removeSpectator: jest.fn(),
       isEmpty: jest.fn(() => false),
       deleteRoom: jest.fn(),
@@ -501,17 +543,13 @@ describe('gameHandlers', () => {
     expect(socket.data.roomId).toBeUndefined();
     expect(socket.data.role).toBeUndefined();
     expect(roomService.removePlayer).toHaveBeenCalledWith('ROOM1', 'user-1');
-    expect(stopMatch).toHaveBeenCalled();
-    expect(stopEngine).toHaveBeenCalled();
-    expect(room.status).toBe('ended');
-    expect(roomService.broadcast).toHaveBeenCalledWith(
-      'ROOM1',
-      'game:end',
-      expect.objectContaining({
-        reason: 'player_left',
-        winnerId: 'user-2',
-      }),
-    );
+    expect(roomService.removeSpectator).toHaveBeenCalledWith('ROOM1', 'user-1');
+    expect(stopPlayerEngine).toHaveBeenCalled();
+    expect(room.engine.eliminatedPlayerIds.has('user-1')).toBe(true);
+    expect(stopMatch).not.toHaveBeenCalled();
+    expect(stopEngine).not.toHaveBeenCalled();
+    expect(room.status).toBe('playing');
+    expect(roomService.broadcast).not.toHaveBeenCalled();
     expect(roomService.deleteRoom).not.toHaveBeenCalled();
   });
 });

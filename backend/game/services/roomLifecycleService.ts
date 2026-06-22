@@ -117,17 +117,17 @@ function removeQuickplayParticipant(
 
     const id = String(playerId);
     const engine = room.engine as MultiplayerEngine | null;
-    const playerEngine = engine?.playerEngines.get(id);
+    const playerEngine = engine?.playerEngines?.get(id);
 
     playerEngine?.engine?.stop?.();
     if (playerEngine?.room) {
         playerEngine.room.status = "ended";
     }
-    engine?.eliminatedPlayerIds.add(id);
+    engine?.eliminatedPlayerIds?.add(id);
     roomService.removePlayer(roomId, playerId);
     roomService.removeSpectator(roomId, playerId);
 
-    if (room.players.size === 0) {
+    if ((room.players?.size ?? 0) === 0) {
         room.engine?.stop?.();
         room.status = "lobby";
         room.engine = null;

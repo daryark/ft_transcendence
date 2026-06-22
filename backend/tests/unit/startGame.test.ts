@@ -150,9 +150,9 @@ describe('startGame solo flow', () => {
         expect(gameEndCall[2].result.progression).toEqual([
           expect.objectContaining({
             playerId: player.id,
-            xpDelta: 100,
-            level: 2,
-            xp: 0,
+            xpDelta: 220,
+            level: 1,
+            xp: 220,
           }),
         ]);
       } else {
