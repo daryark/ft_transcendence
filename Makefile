@@ -1,8 +1,14 @@
+ifneq (,$(wildcard .env))
+include .env
+export
+endif
+
 COMPOSE := $(shell docker compose version >/dev/null 2>&1 && echo "docker compose" || (command -v docker-compose >/dev/null 2>&1 && echo docker-compose || echo "docker compose"))
 NGINX_HTTP_PORT ?= 8080
 NGINX_HTTPS_PORT ?= 443
 HOST_IP ?=
-ES_AUTH="elastic:${ELASTIC_PASSWORD}"
+ES_AUTH := elastic:$(ELASTIC_PASSWORD)
+ES_CURL = docker exec elasticsearch curl -s -u '$(ES_AUTH)'
 
 define PRINT_HTTPS_URL
 	@host_ip="$${HOST_IP:-$$(ip route get 1.1.1.1 2>/dev/null | awk '{for (i=1; i<=NF; i++) if ($$i == "src") {print $$(i+1); exit}}')}"; \
@@ -62,29 +68,29 @@ check:
 	curl http://localhost:5432/
 
 ilm-check:
-	curl -X PUT "http://localhost:9200/_ilm/policy/test-delete-policy" -H "Content-Type: application/json" -d '{"policy": {"phases": {"hot": { "min_age": "0ms", "actions": {} }, "delete": { "min_age": "1m", "actions": { "delete": {} }}}}}'
-	curl -X PUT "http://localhost:9200/test-logs-001" -H "Content-Type: application/json" -d '{"settings": {"index.lifecycle.name": "test-delete-policy"}}'
-	curl -s "http://localhost:9200/_cat/indices/test-logs-*?v"
-	curl -s "http://localhost:9200/test-logs-001/_ilm/explain?pretty"
+	$(ES_CURL) -X PUT "http://localhost:9200/_ilm/policy/test-delete-policy" -H "Content-Type: application/json" -d '{"policy": {"phases": {"hot": { "min_age": "0ms", "actions": {} }, "delete": { "min_age": "1m", "actions": { "delete": {} }}}}}'
+	$(ES_CURL) -X PUT "http://localhost:9200/test-logs-001" -H "Content-Type: application/json" -d '{"settings": {"index.lifecycle.name": "test-delete-policy"}}'
+	$(ES_CURL) -s "http://localhost:9200/_cat/indices/test-logs-*?v"
+	$(ES_CURL) -s "http://localhost:9200/test-logs-001/_ilm/explain?pretty"
 	echo "Now wait for 10 mins and check again..."
 
 slm-check:
 	curl -k https://localhost
 	curl -k https://localhost
-	curl -sS -X POST "http://localhost:9200/_slm/policy/daily-nginx-logs/_execute"
-	curl -sS -X POST "http://localhost:9200/_slm/policy/daily-nginx-logs/_execute"
-	curl -sS -X POST "http://localhost:9200/_slm/policy/daily-nginx-logs/_execute"
-	curl -sS -X POST "http://localhost:9200/_slm/policy/daily-nginx-logs/_execute"
+	$(ES_CURL) -sS -X POST "http://localhost:9200/_slm/policy/daily-nginx-logs/_execute"
+	$(ES_CURL) -sS -X POST "http://localhost:9200/_slm/policy/daily-nginx-logs/_execute"
+	$(ES_CURL) -sS -X POST "http://localhost:9200/_slm/policy/daily-nginx-logs/_execute"
+	$(ES_CURL) -sS -X POST "http://localhost:9200/_slm/policy/daily-nginx-logs/_execute"
 	sleep 120
-	curl -s "http://localhost:9200/_cat/snapshots/trans_archive?v"
-	curl -s "http://localhost:9200/_slm/stats?pretty"
+	$(ES_CURL) -s "http://localhost:9200/_cat/snapshots/trans_archive?v"
+	$(ES_CURL) -s "http://localhost:9200/_slm/stats?pretty"
 
 show-policies:
-	docker exec elasticsearch bash -c 'curl -s -u "$(ES_AUTH)" "http://localhost:9200/_slm/policy/daily-nginx-logs?pretty"'
-	docker exec elasticsearch bash -c 'curl -s -u "$(ES_AUTH)" "http://localhost:9200/_snapshot/trans_archive?pretty"'
-	docker exec elasticsearch bash -c 'curl -s -u "$(ES_AUTH)" "http://localhost:9200/_cat/snapshots/trans_archive?v"'
-	docker exec elasticsearch bash -c 'curl -s -u "$(ES_AUTH)" "http://localhost:9200/_ilm/policy/nginx-logs-policy?pretty" '
-	docker exec elasticsearch bash -c 'curl -s -u "$(ES_AUTH)" "http://localhost:9200/_cat/indices/nginx-logs-*?v"'
+	$(ES_CURL) 'http://localhost:9200/_slm/policy/daily-nginx-logs?pretty'
+	$(ES_CURL) 'http://localhost:9200/_snapshot/trans_archive?pretty'
+	$(ES_CURL) 'http://localhost:9200/_cat/snapshots/trans_archive?v'
+	$(ES_CURL) 'http://localhost:9200/_ilm/policy/nginx-logs-policy?pretty'
+	$(ES_CURL) 'http://localhost:9200/_cat/indices/nginx-logs-*?v'
 
 cert:
 	curl -s https://api.github.com/repos/FiloSottile/mkcert/releases/latest | grep browser_download_url  | grep linux-amd64 | cut -d '"' -f 4 | wget -qi -
