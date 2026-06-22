@@ -1,0 +1,15 @@
+{
+  "schedule": "0 30 2 * * ?",
+  "name": "<nginx-logs-snap-{now/d}>",
+  "repository": "trans_archive",
+  "config": {
+    "indices": ["nginx-logs-*"],
+    "ignore_unavailable": true,
+    "include_global_state": false
+  },
+  "retention": {
+    "expire_after": "90d",
+    "min_count": 1,
+    "max_count": 3
+  }
+}
