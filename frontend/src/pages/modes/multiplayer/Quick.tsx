@@ -2,6 +2,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useRef, useState } from "react";
 import { getSocket } from "../../../socket/socketClient";
 import { useToast } from "../../../components/Toast/ToastProvider";
+import { authFetch } from "../../../auth/authFetch";
+import { getSessionUser } from "../../../auth/session";
 import "./MultiplayerMode.scss";
 
 const QUICKPLAY_MODIFIERS_STORAGE_KEY = "tetra.quickplay.selectedModifiers";
@@ -73,6 +75,21 @@ type QuickResultState = {
   };
 };
 
+type QuickPlayProfilePayload = {
+  modes?: {
+    quickPlay?: {
+      value?: string;
+    } | null;
+  };
+  profile?: {
+    modes?: {
+      quickPlay?: {
+        value?: string;
+      } | null;
+    };
+  };
+};
+
 function readQuickResultState(state: unknown): QuickResultState | null {
   if (!state || typeof state !== "object") return null;
 
@@ -130,6 +147,24 @@ function normalizeQuickChatMessage(
   };
 }
 
+async function fetchQuickplayBest(signal: AbortSignal) {
+  const user = getSessionUser();
+
+  if (!user || user.isAnonymous) return null;
+
+  const response = await authFetch(
+    `/api/users/${encodeURIComponent(user.username)}/profile`,
+    { signal },
+  );
+
+  if (!response.ok) return null;
+
+  const payload = (await response.json()) as QuickPlayProfilePayload;
+  const profile = payload.profile ?? payload;
+
+  return profile.modes?.quickPlay?.value ?? null;
+}
+
 export default function Quick() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -139,7 +174,7 @@ export default function Quick() {
       const saved = window.localStorage.getItem(QUICKPLAY_MODIFIERS_STORAGE_KEY);
       const parsed = saved ? JSON.parse(saved) : [];
       if (!Array.isArray(parsed)) return [];
-      const allowed = new Set(quickMods.map((modifier) => modifier.id));
+      const allowed = new Set<string>(quickMods.map((modifier) => modifier.id));
       return parsed.filter((modifier): modifier is string =>
         typeof modifier === "string" && allowed.has(modifier),
       );
@@ -153,6 +188,7 @@ export default function Quick() {
   const [waitingStatus, setWaitingStatus] = useState("");
   const [hiddenResultKey, setHiddenResultKey] = useState("");
   const [sentResultKey, setSentResultKey] = useState("");
+  const [quickplayBest, setQuickplayBest] = useState<string | null>(null);
   const waitingToastShownRef = useRef("");
   const pendingGameStartHandlerRef = useRef<((payload: { roomId?: string }) => void) | null>(
     null,
@@ -170,6 +206,24 @@ export default function Quick() {
     return () => {
       document.body.classList.remove("mp-quick-active");
     };
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    void fetchQuickplayBest(controller.signal)
+      .then((best) => {
+        if (!controller.signal.aborted) {
+          setQuickplayBest(best);
+        }
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setQuickplayBest(null);
+        }
+      });
+
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
@@ -438,8 +492,8 @@ export default function Quick() {
                 </p>
                 <p>Leaderboards reset every week. How far can you get?</p>
                 <div className="mp-best">
-                  This week's personal best
-                  <strong>0.0 M</strong>
+                  Personal best
+                  <strong>{quickplayBest ?? "NO RECORD"}</strong>
                 </div>
               </>
             )}

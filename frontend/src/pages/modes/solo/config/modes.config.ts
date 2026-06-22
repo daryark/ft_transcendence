@@ -9,7 +9,6 @@ export interface ModeConfig {
   title: string;
   description: string[];
   accentColor: string;
-  personalBest?: string;
   showMusic?: boolean;
   showAdvanced?: boolean;
   showOptions?: boolean;
@@ -52,7 +51,6 @@ export const MODES_CONFIG: Record<string, ModeConfig> = {
       "SCORE DOESN'T MATTER HERE, JUST GO FOR THE WORLD RECORD!",
     ],
     accentColor: "#8B5E3C",
-    personalBest: "2:24.162",
     showAdvanced: true,
     showOptions: true,
     options: DEFAULT_OPTIONS,

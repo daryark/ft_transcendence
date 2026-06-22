@@ -11,42 +11,43 @@ function getHandshakeUsername(socket: Socket) {
 }
 
 async function getRegisteredSocketProfile(userId: string) {
-    const fallback = {
-        nickname: `User${userId.slice(0, 5)}`,
-        level: 1,
-        xp: 0,
-    };
     const numericUserId = Number(userId);
 
     if (!Number.isInteger(numericUserId) || numericUserId <= 0) {
-        return fallback;
+        return null;
     }
 
-    try {
-        const { prisma } = await import("../prisma/prisma.js");
-        const user = await prisma.users.findUnique({
-            where: { id: numericUserId },
-            select: {
-                username: true,
-                level: true,
-                xp: true,
-            },
-        });
+    const { prisma } = await import("../prisma/prisma.js");
+    const user = await prisma.users.findUnique({
+        where: { id: numericUserId },
+        select: {
+            username: true,
+            level: true,
+            xp: true,
+        },
+    });
 
-        return {
-            nickname: user?.username ?? fallback.nickname,
-            level: user?.level ?? fallback.level,
-            xp: user?.xp ?? fallback.xp,
-        };
-    } catch {
-        return fallback;
-    }
+    if (!user) return null;
+
+    return {
+        nickname: user.username,
+        level: user.level ?? 1,
+        xp: user.xp ?? 0,
+    };
 }
 
 export function socketAuth(playerService: PlayerService) {
     return async (socket: Socket, next: (err?: Error) => void) => {
         try {
             const identity = resolveIdentity(socket.handshake.auth);
+            const registeredProfile = identity.type === "registered"
+                ? await getRegisteredSocketProfile(identity.id)
+                : null;
+
+            if (identity.type === "registered" && !registeredProfile) {
+                throw new Error("User no longer exists");
+            }
+
             let player = playerService.get(identity.id);
 
             if (!player) {
@@ -59,10 +60,7 @@ export function socketAuth(playerService: PlayerService) {
                 });
 
                 if (identity.type === "registered") {
-                    playerService.addProfile(
-                        identity.id,
-                        await getRegisteredSocketProfile(identity.id),
-                    );
+                    playerService.addProfile(identity.id, registeredProfile!);
                 } else {
                     playerService.addProfile(identity.id, {
                         nickname: getHandshakeUsername(socket) ?? `Guest${identity.id.slice(0, 5)}`,

@@ -163,7 +163,8 @@ api.post("/auth/login", async (req: ApiRequest, res: Response) => {
     const auth = await loginUser(req.body);
 
     if (!auth) {
-      return res.status(401).json({ message: "Invalid email or password" });
+      // return res.status(401).json({ message: "Invalid email or password" });
+      return res.status(400).json({ message: "Invalid email or password" });
     }
 
     res.status(200).json({ message: "User is logged in!", ...auth });

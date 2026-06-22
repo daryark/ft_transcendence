@@ -70,6 +70,7 @@ const Header = () => {
   const [playerMeta, setPlayerMeta] = useState({
     level: 1,
   });
+  const canUseAccountPanels = Boolean(user && !user.isAnonymous);
 
   const isActive = (path: string) => location.pathname === path;
   const pageTitle = getPageTitle(location.pathname);
@@ -202,29 +203,33 @@ const Header = () => {
             <div className="right">
               {user ? (
                 <>
-                  <NotificationsPanel
-                    isOpen={isNotificationsOpen}
-                    onClose={() => setIsNotificationsOpen(false)}
-                    onUnreadCountChange={setNotificationCount}
-                    onOpenSocialTab={(tab, conversationUserId) => {
-                      setSocialInitialTab(tab);
-                      setSocialConversationUserId(conversationUserId ?? null);
-                      setIsSocialOpen(true);
-                    }}
-                  />
-                  <SocialPanels
-                    isOpen={isSocialOpen}
-                    onClose={() => {
-                      setIsSocialOpen(false);
-                      setSocialConversationUserId(null);
-                    }}
-                    initialTab={socialInitialTab}
-                    initialConversationUserId={socialConversationUserId}
-                    onInitialConversationOpened={() =>
-                      setSocialConversationUserId(null)
-                    }
-                  />
-                  {!user.isAnonymous && (
+                  {canUseAccountPanels && (
+                    <>
+                      <NotificationsPanel
+                        isOpen={isNotificationsOpen}
+                        onClose={() => setIsNotificationsOpen(false)}
+                        onUnreadCountChange={setNotificationCount}
+                        onOpenSocialTab={(tab, conversationUserId) => {
+                          setSocialInitialTab(tab);
+                          setSocialConversationUserId(conversationUserId ?? null);
+                          setIsSocialOpen(true);
+                        }}
+                      />
+                      <SocialPanels
+                        isOpen={isSocialOpen}
+                        onClose={() => {
+                          setIsSocialOpen(false);
+                          setSocialConversationUserId(null);
+                        }}
+                        initialTab={socialInitialTab}
+                        initialConversationUserId={socialConversationUserId}
+                        onInitialConversationOpened={() =>
+                          setSocialConversationUserId(null)
+                        }
+                      />
+                    </>
+                  )}
+                  {canUseAccountPanels && (
                     <button
                       className="notificationsButton"
                       type="button"
@@ -239,7 +244,7 @@ const Header = () => {
                       )}
                     </button>
                   )}
-                  {!user.isAnonymous && (
+                  {canUseAccountPanels && (
                     <button
                       className="socialButton"
                       type="button"
