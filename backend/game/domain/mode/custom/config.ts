@@ -50,6 +50,7 @@ export const customMultiBase: Config = {
             garbageDelayOnClear: 100, //delay in ms on each clear(per clear, not per line)
             garbageTargeting: "even",
             garbageColumnChangeChance: 0.35,
+            garbageHoles: 1,
         }
     }
 };

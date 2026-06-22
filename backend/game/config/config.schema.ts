@@ -103,6 +103,7 @@ const gameGarbagePatchSchema = z
         garbageDelayOnClear: nonNegativeIntSchema,
         garbageTargeting: garbageTargetingSchema,
         garbageColumnChangeChance: z.number().min(0).max(1),
+        garbageHoles: z.number().int().min(1).max(4),
     })
     .partial()
     .strict()

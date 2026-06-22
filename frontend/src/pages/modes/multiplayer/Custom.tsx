@@ -675,7 +675,7 @@ export default function Custom() {
       const response = await authFetch(`/api/friends/${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ friendId: targetId }),
+        body: JSON.stringify({ targetUserId: targetId }),
       });
 
       if (!response.ok) {

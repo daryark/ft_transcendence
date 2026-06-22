@@ -14,7 +14,12 @@ type GarbageConfigInput = {
   garbageDelayOnClear?: number;
   garbageTargeting?: string;
   garbageColumnChangeChance?: number;
+  garbageHoles?: number;
 };
+
+type GarbageConfigResolver = (
+  playerId: string | number,
+) => GarbageConfigInput | undefined;
 
 type GarbageConfig = Required<Omit<GarbageConfigInput, "garbageTargeting">> & {
   garbageTargeting: GarbageTargetingMode;
@@ -69,16 +74,30 @@ function normalizeConfig(config: GarbageConfigInput = {}): GarbageConfig {
       Number.isFinite(config.garbageColumnChangeChance)
       ? Math.min(1, Math.max(0, config.garbageColumnChangeChance))
       : 0.35,
+    garbageHoles: Math.max(1, Math.floor(finiteNumber(config.garbageHoles, 1))),
   };
 }
 
-export function createGarbageService(config?: GarbageConfigInput) {
-  const garbageConfig = normalizeConfig(config);
+export function createGarbageService(
+  config?: GarbageConfigInput,
+  resolveConfig?: GarbageConfigResolver,
+) {
+  const baseConfigInput = config ?? {};
+  const garbageConfig = normalizeConfig(baseConfigInput);
   const queues = new Map<string, GarbageQueueEntry[]>();
   const lastAttackers = new Map<string, Set<string>>();
   const holeColumns = new Map<string, number>();
   let sequence = 0;
   let evenIndex = 0;
+
+  function getConfig(playerId: string | number): GarbageConfig {
+    if (!resolveConfig) return garbageConfig;
+
+    return normalizeConfig({
+      ...baseConfigInput,
+      ...(resolveConfig(playerId) ?? {}),
+    });
+  }
 
   function getQueue(playerId: string | number): GarbageQueueEntry[] {
     const id = String(playerId);
@@ -113,16 +132,21 @@ export function createGarbageService(config?: GarbageConfigInput) {
     state.garbageQueue = serializeQueue(playerId, now);
   }
 
-  function attackFromClears(linesCleared: number, state?: GameState) {
+  function attackFromClears(
+    playerId: string | number,
+    linesCleared: number,
+    state?: GameState,
+  ) {
+    const config = getConfig(playerId);
     if (linesCleared <= 1) return 0;
 
     const lineAttack = linesCleared === 2 ? 1 : linesCleared === 3 ? 2 : 4;
     const boardEmpty = state?.board?.every((row) => row.every((cell) => !cell));
-    const allClearBonus = boardEmpty ? garbageConfig.allClearGarbage : 0;
+    const allClearBonus = boardEmpty ? config.allClearGarbage : 0;
 
     return Math.max(
       0,
-      Math.floor((lineAttack + allClearBonus) * garbageConfig.garbageMult),
+      Math.floor((lineAttack + allClearBonus) * config.garbageMult),
     );
   }
 
@@ -153,6 +177,7 @@ export function createGarbageService(config?: GarbageConfigInput) {
     activePlayerIds: Array<string | number>,
     attackLines: number,
   ): GarbageTarget[] {
+    const config = getConfig(attackerId);
     const attacker = String(attackerId);
     const opponents = activePlayerIds
       .map(String)
@@ -160,7 +185,7 @@ export function createGarbageService(config?: GarbageConfigInput) {
 
     if (opponents.length === 0 || attackLines <= 0) return [];
 
-    if (garbageConfig.garbageTargeting === "even") {
+    if (config.garbageTargeting === "even") {
       return Array.from({ length: attackLines }, () => {
         const targetId = opponents[evenIndex % opponents.length];
         evenIndex += 1;
@@ -168,7 +193,7 @@ export function createGarbageService(config?: GarbageConfigInput) {
       });
     }
 
-    if (garbageConfig.garbageTargeting === "payback") {
+    if (config.garbageTargeting === "payback") {
       const attackers = Array.from(lastAttackers.get(attacker) ?? []).filter(
         (playerId) => opponents.includes(playerId),
       );
@@ -194,12 +219,13 @@ export function createGarbageService(config?: GarbageConfigInput) {
   }
 
   function nextHoleColumn(playerId: string | number, cols: number) {
+    const config = getConfig(playerId);
     const id = String(playerId);
     const previous = holeColumns.get(id);
 
     if (
       previous === undefined ||
-      Math.random() < garbageConfig.garbageColumnChangeChance
+      Math.random() < config.garbageColumnChangeChance
     ) {
       let next = Math.floor(Math.random() * cols);
       if (cols > 1 && next === previous) {
@@ -212,6 +238,31 @@ export function createGarbageService(config?: GarbageConfigInput) {
     return previous;
   }
 
+  function createGarbageRow(
+    playerId: string | number,
+    primaryHole: number,
+    cols: number,
+  ) {
+    const holeCount = Math.min(cols, getConfig(playerId).garbageHoles);
+    const holes = new Set<number>([
+      Math.max(0, Math.min(cols - 1, primaryHole)),
+    ]);
+
+    let attempts = 0;
+    while (holes.size < holeCount && attempts < cols * 3) {
+      holes.add(Math.floor(Math.random() * cols));
+      attempts += 1;
+    }
+
+    for (let col = 0; holes.size < holeCount && col < cols; col += 1) {
+      holes.add(col);
+    }
+
+    return Array.from({ length: cols }, (_, col) =>
+      holes.has(col) ? 0 : GARBAGE_CELL,
+    );
+  }
+
   function receiveGarbage(
     targetId: string,
     attackerId: string | number,
@@ -220,12 +271,13 @@ export function createGarbageService(config?: GarbageConfigInput) {
     now: number,
   ) {
     const queue = getQueue(targetId);
+    const targetConfig = getConfig(targetId);
     const state = stateMap.get(String(targetId));
     const cols = state?.cols ?? 10;
     const queuedLines = queue.reduce((sum, entry) => sum + entry.lines, 0);
     let remainingCapacity = Math.max(
       0,
-      garbageConfig.garbageMaxCap - queuedLines,
+      targetConfig.garbageMaxCap - queuedLines,
     );
     const acceptedLines = Math.min(lines, remainingCapacity);
 
@@ -236,7 +288,7 @@ export function createGarbageService(config?: GarbageConfigInput) {
       lines: acceptedLines,
       column: nextHoleColumn(targetId, cols),
       receivedAt: now,
-      entersAt: now + garbageConfig.garbageDelay,
+      entersAt: now + targetConfig.garbageDelay,
     });
 
     const targetKey = String(targetId);
@@ -266,6 +318,7 @@ export function createGarbageService(config?: GarbageConfigInput) {
     now: number,
   ) {
     const queue = getQueue(playerId);
+    const config = getConfig(playerId);
     if (!state || queue.length === 0) return false;
 
     let linesToApply = 0;
@@ -275,7 +328,7 @@ export function createGarbageService(config?: GarbageConfigInput) {
       const entry = queue.shift();
       if (!entry) break;
 
-      const allowed = Math.max(0, garbageConfig.garbageCap - linesToApply);
+      const allowed = Math.max(0, config.garbageCap - linesToApply);
       if (allowed <= 0) break;
 
       const lines = Math.min(entry.lines, allowed);
@@ -298,10 +351,7 @@ export function createGarbageService(config?: GarbageConfigInput) {
     const garbageRows: number[][] = [];
     for (const entry of entries) {
       for (let line = 0; line < entry.lines; line += 1) {
-        const row = Array.from({ length: state.cols }, (_, col) =>
-          col === entry.column ? 0 : GARBAGE_CELL,
-        );
-        garbageRows.push(row);
+        garbageRows.push(createGarbageRow(playerId, entry.column, state.cols));
       }
     }
 
@@ -318,9 +368,10 @@ export function createGarbageService(config?: GarbageConfigInput) {
     linesCleared: number,
     now: number,
   ) {
-    if (linesCleared <= 0 || garbageConfig.garbageDelayOnClear <= 0) return;
+    const config = getConfig(playerId);
+    if (linesCleared <= 0 || config.garbageDelayOnClear <= 0) return;
 
-    const delay = garbageConfig.garbageDelayOnClear * linesCleared;
+    const delay = config.garbageDelayOnClear * linesCleared;
     for (const entry of getQueue(playerId)) {
       if (entry.entersAt > now) {
         entry.entersAt += delay;
@@ -340,7 +391,7 @@ export function createGarbageService(config?: GarbageConfigInput) {
     const cleared = Number(linesCleared) || 0;
 
     if (cleared > 0) {
-      const attack = attackFromClears(cleared, state);
+      const attack = attackFromClears(id, cleared, state);
       const outgoing = cancelPending(id, attack);
       addClearDelay(id, cleared, now);
       sendGarbage(id, outgoing, activePlayerIds, stateMap, now);

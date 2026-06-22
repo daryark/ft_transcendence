@@ -44,6 +44,7 @@ function copyCarryStats(nextState: GameState, previousState: GameState) {
   nextState.holds = previousState.holds;
   nextState.currentCombo = previousState.currentCombo;
   nextState.maxCombo = previousState.maxCombo;
+  nextState.backToBack = previousState.backToBack;
   nextState.maxLinesCleared = previousState.maxLinesCleared;
   nextState.clearedTwoAtOnce = previousState.clearedTwoAtOnce;
   nextState.clearedThreeAtOnce = previousState.clearedThreeAtOnce;

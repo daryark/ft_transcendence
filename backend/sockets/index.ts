@@ -17,6 +17,7 @@ import type { Identity } from "../auth/identity";
 import { Roles } from "../game/domain/player";
 import { setSocketServer, userSocketRoom } from "./realtime";
 import { setNotificationSocketServer } from "../notifications/hub";
+import { markUserSocketOnline } from "./presence";
 
 
 export type SocketData = {
@@ -53,6 +54,7 @@ export default function socketSetup(io: Server) {
         }
         if (socket.data.identity?.type === "registered") {
             socket.join(userSocketRoom(socket.data.identity.id));
+            markUserSocketOnline(socket.data.identity.id, socket.id);
         }
         socket.emit('game:config', configDTO);
 

@@ -174,22 +174,20 @@ function applyQuickplayModifiers(
     }
 
     if (modifiers.includes("faster-gravity")) {
-        config.gravity.gravity = Math.min(1, config.gravity.gravity * 1.65);
-        config.gravity.gravityIncrease *= 1.45;
+        config.gravity.gravity = Math.min(1, config.gravity.gravity * 1.8);
+        config.gravity.gravityIncrease *= 3;
         config.gravity.gravitMarginTime = Math.max(
-            2000,
-            Math.floor(config.gravity.gravitMarginTime * 0.6),
+            1500,
+            Math.floor(config.gravity.gravitMarginTime * 0.45),
         );
     }
 
     if (modifiers.includes("messier-garbage")) {
-        config.garbage.garbageColumnChangeChance = Math.max(
-            config.garbage.garbageColumnChangeChance,
-            0.82,
-        );
+        config.garbage.garbageColumnChangeChance = 0.82;
     }
 
     if (modifiers.includes("double-hole")) {
+        config.garbage.garbageHoles = 2;
         config.garbage.garbageCap = Math.min(
             config.garbage.garbageMaxCap,
             config.garbage.garbageCap + 2,
@@ -433,6 +431,7 @@ function persistQuickplayPlayerResult(
         player.profile?.xp ?? 0,
         xpDelta,
     );
+    const leveledUp = levelResult.level > (player.profile?.level ?? 1);
 
     if (player.profile) {
         player.profile.level = levelResult.level;
@@ -448,6 +447,8 @@ function persistQuickplayPlayerResult(
                     xpDelta,
                     level: levelResult.level,
                     xp: levelResult.xp,
+                    nextLevelXp: levelResult.nextLevelXp,
+                    leveledUp,
                 },
             ],
         },
@@ -476,6 +477,7 @@ function persistQuickplayPlayerResult(
                 progression: {
                     level: levelResult.level,
                     xp: levelResult.xp,
+                    nextLevelXp: levelResult.nextLevelXp,
                     won: result === "win",
                 },
                 stats: {
@@ -791,6 +793,25 @@ export function join(
         activeQuickplayRoom.status === "playing" &&
         activeQuickplayRoom.engine
     ) {
+        const activeEngine = activeQuickplayRoom.engine as unknown as MultiplayerEngine;
+        if (
+            activeQuickplayRoom.players.has(player.id) &&
+            activeEngine.playerEngines.has(String(player.id))
+        ) {
+            socket.join(activeQuickplayRoom.id);
+            socket.data.roomId = activeQuickplayRoom.id;
+            socket.data.role = "player";
+            socket.emit(
+                "game:start" as never,
+                serializeQuickplayGame(activeQuickplayRoom, activeEngine),
+            );
+            socket.emit("quickplay:lobby" as never, serializeQuickplayLobby(
+                activeQuickplayRoom,
+                activeEngine,
+            ));
+            return roomService.getRoomState(activeQuickplayRoom.id);
+        }
+
         activeQuickplayRoom.spectators?.delete(player.id);
         roomService.addPlayer(activeQuickplayRoom.id, player);
         getRoomPlayerConfigs(activeQuickplayRoom).set(
@@ -799,21 +820,21 @@ export function join(
         );
         resetQuickplayAltitude(activeQuickplayRoom, String(player.id));
         clearLastPlayerTimer(activeQuickplayRoom);
-        (activeQuickplayRoom.engine as unknown as MultiplayerEngine).addPlayer(player, {
+        activeEngine.addPlayer(player, {
             startedAt: Date.now(),
         });
         socket.join(activeQuickplayRoom.id);
         socket.data.roomId = activeQuickplayRoom.id;
         socket.data.role = "player";
         activeQuickplayRoom.state = getFirstMultiplayerState(
-            activeQuickplayRoom.engine as unknown as MultiplayerEngine,
+            activeEngine,
         );
         roomService.broadcast(
             activeQuickplayRoom.id,
             "game:start",
             serializeQuickplayGame(
                 activeQuickplayRoom,
-                activeQuickplayRoom.engine as unknown as MultiplayerEngine,
+                activeEngine,
             ),
         );
         broadcastQuickplayLobby(roomService, activeQuickplayRoom);
@@ -832,18 +853,25 @@ export function join(
         );
     }) ?? getOrCreateQuickplayRoom(roomService);
 
+    const wasPlayerInRoom = room.players.has(player.id);
     room.spectators?.delete(player.id);
-    roomService.addPlayer(room.id, player);
+    if (!wasPlayerInRoom) {
+        roomService.addPlayer(room.id, player);
+    }
     getRoomPlayerConfigs(room).set(
         String(player.id),
         applyQuickplayModifiers(room.gameConfig, modifiers),
     );
-    resetQuickplayAltitude(room, String(player.id));
+    if (!wasPlayerInRoom) {
+        resetQuickplayAltitude(room, String(player.id));
+    }
     socket.join(room.id);
     socket.data.roomId = room.id;
     socket.data.role = "player";
 
-    emitRoomSystemMessage(roomService, room, "joined quickplay", getPlayerName(player));
+    if (!wasPlayerInRoom) {
+        emitRoomSystemMessage(roomService, room, "joined quickplay", getPlayerName(player));
+    }
 
     if (room.players.size >= 2) {
         startQuickplay(room, roomService);

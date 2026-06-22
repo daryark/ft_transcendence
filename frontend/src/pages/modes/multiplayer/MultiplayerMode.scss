@@ -1625,7 +1625,14 @@ body.mp-custom-active .mp-custom-status {
 }
 
 .mp-custom-profile-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2800;
+  width: auto;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.45);
   display: grid;
+  align-content: center;
   place-items: center;
   gap: 0.45rem;
 }

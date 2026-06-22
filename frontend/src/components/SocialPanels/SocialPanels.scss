@@ -365,16 +365,16 @@
   text-transform: capitalize;
 }
 
-.friendStatus.online {
+.friendStatus--online {
   color: #4af579;
+}
+
+.friendStatus--offline {
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .friendStatus--blocked {
   color: #ff667d;
-}
-
-.friendStatus--accepted {
-  color: #4af579;
 }
 
 .friendStatus--pending {
@@ -503,7 +503,7 @@
 .chatFriendTitle {
   min-width: 0;
   display: grid;
-  grid-template-columns: auto auto;
+  grid-template-columns: auto auto auto;
   align-items: center;
   justify-content: start;
   gap: 0.45rem;
@@ -523,6 +523,29 @@
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
+}
+
+.chatPresence {
+  min-height: 2.2rem;
+  display: inline-grid;
+  align-items: center;
+  padding: 0 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.42);
+  font-family: var(--app-font-display);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.chatPresence.online {
+  border-color: rgba(74, 245, 121, 0.28);
+  background: rgba(74, 245, 121, 0.08);
+  color: #8dffa8;
+}
+
+.chatPresence.offline {
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .profileAction {

@@ -175,7 +175,15 @@ export function createMultiplayerEngine({
   const eliminatedPlayerIds = new Set<string>();
   const lastPiecesPlaced = new Map<string, number>();
   const stockLeft = new Map<string, number>();
-  const garbageService = createGarbageService(room.gameConfig.garbage);
+  const garbageService = createGarbageService(
+    room.gameConfig.garbage,
+    (playerId) => {
+      const player = room.players.get(playerId as never);
+      return player
+        ? getPlayerGameConfig?.(player, room)?.garbage ?? room.gameConfig.garbage
+        : room.gameConfig.garbage;
+    },
+  );
 
   function getStateMap() {
     const states = new Map();

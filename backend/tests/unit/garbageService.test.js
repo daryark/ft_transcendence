@@ -124,4 +124,100 @@ describe("garbageService", () => {
 
     Math.random.mockRestore();
   });
+
+  test("double-hole garbage creates two empty cells per garbage row", () => {
+    const service = createService({
+      garbageHoles: 2,
+    });
+    const attacker = createState();
+    const defender = createState();
+    const states = new Map([
+      ["attacker", attacker],
+      ["defender", defender],
+    ]);
+
+    jest.spyOn(Math, "random").mockReturnValue(0);
+
+    service.handlePieceLocked({
+      playerId: "attacker",
+      state: attacker,
+      linesCleared: 4,
+      activePlayerIds: ["attacker", "defender"],
+      stateMap: states,
+      now: 0,
+    });
+
+    service.handlePieceLocked({
+      playerId: "defender",
+      state: defender,
+      linesCleared: 0,
+      activePlayerIds: ["attacker", "defender"],
+      stateMap: states,
+      now: 1000,
+    });
+
+    for (const row of defender.board.slice(-4)) {
+      expect(row.filter((cell) => cell === 0)).toHaveLength(2);
+    }
+
+    Math.random.mockRestore();
+  });
+
+  test("garbage config can differ per target player", () => {
+    const service = createGarbageService(
+      {
+        garbageMult: 1,
+        garbageCap: 8,
+        garbageMaxCap: 40,
+        allClearGarbage: 0,
+        garbageDelay: 1000,
+        garbageDelayOnClear: 100,
+        garbageTargeting: "even",
+        garbageColumnChangeChance: 0,
+        garbageHoles: 1,
+      },
+      (playerId) => (playerId === "defender-a" ? { garbageHoles: 2 } : undefined),
+    );
+    const attacker = createState();
+    const defenderA = createState();
+    const defenderB = createState();
+    const states = new Map([
+      ["attacker", attacker],
+      ["defender-a", defenderA],
+      ["defender-b", defenderB],
+    ]);
+
+    jest.spyOn(Math, "random").mockReturnValue(0);
+
+    service.handlePieceLocked({
+      playerId: "attacker",
+      state: attacker,
+      linesCleared: 4,
+      activePlayerIds: ["attacker", "defender-a", "defender-b"],
+      stateMap: states,
+      now: 0,
+    });
+
+    service.handlePieceLocked({
+      playerId: "defender-a",
+      state: defenderA,
+      linesCleared: 0,
+      activePlayerIds: ["attacker", "defender-a", "defender-b"],
+      stateMap: states,
+      now: 1000,
+    });
+    service.handlePieceLocked({
+      playerId: "defender-b",
+      state: defenderB,
+      linesCleared: 0,
+      activePlayerIds: ["attacker", "defender-a", "defender-b"],
+      stateMap: states,
+      now: 1000,
+    });
+
+    expect(defenderA.board.at(-1).filter((cell) => cell === 0)).toHaveLength(2);
+    expect(defenderB.board.at(-1).filter((cell) => cell === 0)).toHaveLength(1);
+
+    Math.random.mockRestore();
+  });
 });

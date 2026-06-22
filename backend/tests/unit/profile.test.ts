@@ -67,6 +67,24 @@ describe("profile service", () => {
 				},
 			},
 			{
+				score: 38000,
+				metric_value: null,
+				result: "win",
+				matches: {
+					gamemode: "fortyLines",
+					created_at: new Date("2026-05-27T12:00:00.000Z"),
+				},
+			},
+			{
+				score: 41000,
+				metric_value: null,
+				result: "win",
+				matches: {
+					gamemode: "fortyLines",
+					created_at: new Date("2026-05-26T12:00:00.000Z"),
+				},
+			},
+			{
 				score: 60,
 				metric_value: null,
 				result: "win",
@@ -75,6 +93,15 @@ describe("profile service", () => {
 					created_at: new Date("2026-06-01T12:00:00.000Z"),
 				},
 			},
+			...Array.from({ length: 12 }, (_, index) => ({
+				score: 100 + index,
+				metric_value: null,
+				result: "lose",
+				matches: {
+					gamemode: "blitz",
+					created_at: new Date(`2026-05-${String(index + 1).padStart(2, "0")}T12:00:00.000Z`),
+				},
+			})),
 			{
 				score: 1200,
 				metric_value: null,
@@ -110,11 +137,43 @@ describe("profile service", () => {
 			wins: 2,
 			modes: {
 				quickPlay: { value: "34.25 m", achievedAgo: "3 days ago" },
-				fortyLines: null,
-				blitz: { value: "60 pts", achievedAgo: "1 days ago" },
+				fortyLines: { value: "0:38.000", achievedAgo: "6 days ago" },
+				blitz: { value: "111 pts", achievedAgo: "21 days ago" },
 				zen: null,
 			},
 		});
+
+		expect(mockedPrisma.match_players.findMany).toHaveBeenCalledWith(
+			expect.objectContaining({
+				where: {
+					user_id: 12,
+					matches: {
+						status: "finished",
+					},
+				},
+			}),
+		);
+		expect(profile.topGames.quickPlay.map((game) => game.value)).toEqual([
+			"34.25 m",
+			"18.5 m",
+		]);
+		expect(profile.topGames.fortyLines.map((game) => game.value)).toEqual([
+			"0:38.000",
+			"0:41.000",
+		]);
+		expect(profile.topGames.blitz).toHaveLength(10);
+		expect(profile.topGames.blitz.map((game) => game.value)).toEqual([
+			"111 pts",
+			"110 pts",
+			"109 pts",
+			"108 pts",
+			"107 pts",
+			"106 pts",
+			"105 pts",
+			"104 pts",
+			"103 pts",
+			"102 pts",
+		]);
 	});
 
 	test("updateMyProfile writes profile fields and returns refreshed data", async () => {

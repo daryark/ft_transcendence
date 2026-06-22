@@ -54,6 +54,7 @@ export const DEFAULT_CUSTOM_CONFIG: CustomEditableConfig = {
       garbageDelayOnClear: 100,
       garbageTargeting: "even",
       garbageColumnChangeChance: 0.35,
+      garbageHoles: 1,
     },
   },
 };
@@ -146,6 +147,7 @@ export function readCustomEditableConfig(
           sourceGarbage.garbageColumnChangeChance,
           0.35,
         ),
+        garbageHoles: toNumber(sourceGarbage.garbageHoles, 1),
       },
     },
   };

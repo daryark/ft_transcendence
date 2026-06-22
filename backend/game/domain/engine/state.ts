@@ -25,6 +25,7 @@ export interface GameState {
   holds: number;
   currentCombo: number;
   maxCombo: number;
+  backToBack: number;
   maxLinesCleared: number;
   clearedTwoAtOnce: boolean;
   clearedThreeAtOnce: boolean;
@@ -77,6 +78,15 @@ export interface GameStats {
 export interface GameUpdateStats extends GameStats {
   scoreAdded?: number;
   linesCleared?: number;
+  clearEvent?: LineClearEvent;
+}
+
+export interface LineClearEvent {
+  id: number;
+  lines: number;
+  label: "SINGLE" | "DOUBLE" | "TRIPLE" | "QUAD";
+  combo: number;
+  backToBack: number;
 }
 
 export function buildGameStats(
@@ -183,6 +193,7 @@ export function initGame(
     holds: 0,
     currentCombo: 0,
     maxCombo: 0,
+    backToBack: 0,
     maxLinesCleared: 0,
     clearedTwoAtOnce: false,
     clearedThreeAtOnce: false,

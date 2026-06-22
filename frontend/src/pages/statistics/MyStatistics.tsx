@@ -13,8 +13,13 @@ type ModeStats = {
   achievedAgo?: string;
 };
 
+type TopGame = ModeStats & {
+  achievedAt?: string | null;
+};
+
 type ProfileResponse = {
   modes?: Partial<Record<StatisticMode, ModeStats | null>>;
+  topGames?: Partial<Record<StatisticMode, TopGame[]>>;
 };
 
 const modeLabels: Record<StatisticMode, string> = {
@@ -70,6 +75,7 @@ export default function MyStatistics() {
   }, [user]);
 
   const stats = profile?.modes?.[mode] ?? null;
+  const topGames = profile?.topGames?.[mode] ?? (stats ? [stats] : []);
 
   return (
     <main className="my-statistics">
@@ -97,27 +103,31 @@ export default function MyStatistics() {
       {error && (
         <EmptyState title="STATISTICS UNAVAILABLE" message={error} />
       )}
-      {profile && !stats && (
+      {profile && topGames.length === 0 && (
         <EmptyState
           title="NO RECORD YET"
           message={`Play ${modeLabels[mode]} to set your first record.`}
         />
       )}
-      {stats && (
-        <article className="my-statistics__record">
-          <span className="my-statistics__rank">
-            <small>No.</small>1
-          </span>
-          <div>
-            <strong>{modeLabels[mode]}</strong>
-            <small>
-              {stats.achievedAgo
-                ? `Achieved ${stats.achievedAgo}`
-                : "Record date unavailable"}
-            </small>
-          </div>
-          <strong className="my-statistics__value">{stats.value}</strong>
-        </article>
+      {topGames.length > 0 && (
+        <section className="my-statistics__records" aria-label={`${modeLabels[mode]} top games`}>
+          {topGames.slice(0, 10).map((game, index) => (
+            <article className="my-statistics__record" key={`${mode}-${index}-${game.value}`}>
+              <span className="my-statistics__rank">
+                <small>No.</small>{index + 1}
+              </span>
+              <div>
+                <strong>{modeLabels[mode]}</strong>
+                <small>
+                  {game.achievedAgo
+                    ? `Achieved ${game.achievedAgo}`
+                    : "Record date unavailable"}
+                </small>
+              </div>
+              <strong className="my-statistics__value">{game.value}</strong>
+            </article>
+          ))}
+        </section>
       )}
     </main>
   );

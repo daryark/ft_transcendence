@@ -3,6 +3,7 @@ import RoomService from "../game/services/roomService";
 import { SocketData } from ".";
 import PlayerService from "../game/services/playerService";
 import { leaveRoomParticipant } from "../game/services/roomLifecycleService";
+import { markUserSocketOffline } from "./presence";
 
 
 //!what else need to be cleaned up on disconnect?
@@ -14,6 +15,9 @@ export default function disconnectHandlers(
     socket.on("disconnect", () => {
         const { identity } = socket.data as SocketData;
         if (!identity) return;
+        if (identity.type === "registered") {
+            markUserSocketOffline(identity.id, socket.id);
+        }
         const currentPlayer = playerService.get(identity.id);
         if (currentPlayer && currentPlayer.socketId !== socket.id) {
             return;

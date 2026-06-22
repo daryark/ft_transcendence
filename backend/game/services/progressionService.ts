@@ -26,6 +26,8 @@ export interface PlayerProgressionSnapshot {
     xpDelta: number;
     level: number;
     xp: number;
+    nextLevelXp: number;
+    leveledUp: boolean;
 }
 
 function getRegisteredUserId(playerId: string, identityType?: string) {
@@ -154,6 +156,7 @@ async function persistRegisteredResult(
                     ? {
                         level: playerProgression.level,
                         xp: playerProgression.xp,
+                        nextLevelXp: playerProgression.nextLevelXp,
                         won: playerProgression.outcome === "win",
                     }
                     : undefined,
@@ -204,6 +207,7 @@ export default function createProgressionService(room: Room) {
                     roundsPlayed: Math.max(1, input.completedRounds),
                 });
                 const levelResult = applyXpToLevel(profile.level ?? 1, profile.xp ?? 0, xpDelta);
+                const previousLevel = profile.level ?? 1;
 
                 profile.level = levelResult.level;
                 profile.xp = levelResult.xp;
@@ -218,6 +222,8 @@ export default function createProgressionService(room: Room) {
                     xpDelta,
                     level: profile.level,
                     xp: profile.xp,
+                    nextLevelXp: levelResult.nextLevelXp,
+                    leveledUp: levelResult.level > previousLevel,
                 };
             });
     }

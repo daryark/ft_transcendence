@@ -19,6 +19,14 @@ export type ProfileModeStats = {
 	achievedAgo?: string;
 } | null;
 
+export type ProfileTopGame = {
+	value: string;
+	achievedAgo?: string;
+	achievedAt: Date | null;
+	score: number;
+	metricValue: number | null;
+};
+
 export type ProfileResponse = {
 	id: number;
 	username: string;
@@ -36,6 +44,11 @@ export type ProfileResponse = {
 		fortyLines: ProfileModeStats;
 		blitz: ProfileModeStats;
 		zen: ProfileModeStats;
+	};
+	topGames: {
+		quickPlay: ProfileTopGame[];
+		fortyLines: ProfileTopGame[];
+		blitz: ProfileTopGame[];
 	};
 };
 
@@ -60,16 +73,9 @@ type ProfileModeRow = {
 	result: string | null;
 	matches: {
 		gamemode: string | null;
+		status?: string | null;
 		created_at: Date | null;
 	} | null;
-};
-
-type RawProfileModeRow = {
-	score: number | null;
-	metric_value: number | null;
-	result: string | null;
-	gamemode: string | null;
-	created_at: Date | string | null;
 };
 
 const modeAliases: Record<string, keyof ProfileResponse["modes"]> = {
@@ -157,6 +163,24 @@ function toFortyLinesStats(score: number | null, achievedAt: Date | null): Profi
 	};
 }
 
+function formatModeValue(
+	mode: keyof ProfileResponse["modes"],
+	score: number,
+	metricValue: number | null,
+): string {
+	if (mode === "quickPlay") {
+		return `${(metricValue ?? score).toLocaleString("en-US", {
+			maximumFractionDigits: 2,
+		})} m`;
+	}
+
+	if (mode === "fortyLines") {
+		return formatDuration(score);
+	}
+
+	return `${score.toLocaleString("en-US")} pts`;
+}
+
 function isBetterModeScore(
 	mode: keyof ProfileResponse["modes"],
 	score: number,
@@ -171,11 +195,52 @@ function isBetterModeScore(
 	return score > current.score;
 }
 
+function compareModeGames(
+	mode: keyof ProfileResponse["modes"],
+	a: { score: number; metricValue?: number | null; achievedAt: Date | null },
+	b: { score: number; metricValue?: number | null; achievedAt: Date | null },
+) {
+	if (mode === "fortyLines") {
+		return a.score - b.score || compareDatesDesc(a.achievedAt, b.achievedAt);
+	}
+
+	if (mode === "quickPlay") {
+		return (b.metricValue ?? b.score) - (a.metricValue ?? a.score)
+			|| compareDatesDesc(a.achievedAt, b.achievedAt);
+	}
+
+	return b.score - a.score || compareDatesDesc(a.achievedAt, b.achievedAt);
+}
+
+function compareDatesDesc(a: Date | null, b: Date | null) {
+	return (b?.getTime() ?? 0) - (a?.getTime() ?? 0);
+}
+
+function createTopGame(
+	mode: keyof ProfileResponse["modes"],
+	score: number,
+	metricValue: number | null,
+	achievedAt: Date | null,
+): ProfileTopGame {
+	return {
+		value: formatModeValue(mode, score, metricValue),
+		achievedAgo: formatAchievedAgo(achievedAt),
+		achievedAt,
+		score,
+		metricValue,
+	};
+}
+
 function buildProfileResponse(
 	user: ProfileUserRecord,
 	matchRows: ProfileModeRow[],
 ): ProfileResponse {
 	const bestModeStats: Partial<Record<keyof ProfileResponse["modes"], { score: number; achievedAt: Date | null; metricValue?: number | null }>> = {};
+	const gamesByMode: Record<keyof ProfileResponse["topGames"], ProfileTopGame[]> = {
+		quickPlay: [],
+		fortyLines: [],
+		blitz: [],
+	};
 	let onlineGames = 0;
 	let onlineWins = 0;
 
@@ -194,9 +259,10 @@ function buildProfileResponse(
 
 		const key = modeAliases[mode as keyof typeof modeAliases];
 		const score = row.score ?? 0;
+		const metricValue = row.metric_value ?? null;
 		const current = bestModeStats[key];
 		const next = {
-			metricValue: row.metric_value ?? null,
+			metricValue,
 		};
 
 		if (isBetterModeScore(key, score, current, next)) {
@@ -206,6 +272,15 @@ function buildProfileResponse(
 				achievedAt: row.matches?.created_at ?? null,
 			};
 		}
+
+		if (key === "quickPlay" || key === "fortyLines" || key === "blitz") {
+			gamesByMode[key].push(createTopGame(key, score, metricValue, row.matches?.created_at ?? null));
+		}
+	}
+
+	for (const key of Object.keys(gamesByMode) as Array<keyof ProfileResponse["topGames"]>) {
+		gamesByMode[key].sort((a, b) => compareModeGames(key, a, b));
+		gamesByMode[key] = gamesByMode[key].slice(0, 10);
 	}
 
 	return {
@@ -226,6 +301,7 @@ function buildProfileResponse(
 			blitz: toScoreStats(bestModeStats.blitz?.score ?? null, bestModeStats.blitz?.achievedAt ?? null),
 			zen: toScoreStats(bestModeStats.zen?.score ?? null, bestModeStats.zen?.achievedAt ?? null),
 		},
+		topGames: gamesByMode,
 	};
 }
 
@@ -281,51 +357,26 @@ async function findUserByField(
 }
 
 async function loadUserProfileRows(userId: number): Promise<ProfileModeRow[]> {
-	if (typeof prisma.$queryRaw !== "function") {
-		return await prisma.match_players.findMany({
-			where: { user_id: userId },
-			select: {
-				score: true,
-				metric_value: true,
-				result: true,
-				matches: {
-					select: {
-						gamemode: true,
-						created_at: true,
-					},
+	return await prisma.match_players.findMany({
+		where: {
+			user_id: userId,
+			matches: {
+				status: "finished",
+			},
+		},
+		select: {
+			score: true,
+			metric_value: true,
+			result: true,
+			matches: {
+				select: {
+					gamemode: true,
+					status: true,
+					created_at: true,
 				},
 			},
-		});
-	}
-
-	const rows: RawProfileModeRow[] = await prisma.$queryRaw<RawProfileModeRow[]>`
-		SELECT
-			mp.score,
-			mp.metric_value,
-			mp.result::text AS result,
-			m.gamemode::text AS gamemode,
-			m.created_at
-		FROM match_players mp
-		LEFT JOIN matches m ON m.id = mp.match_id
-		WHERE mp.user_id = ${userId}
-	`;
-
-	return rows.map((row) => ({
-		score: row.score,
-		metric_value: row.metric_value,
-		result: row.result,
-		matches: row.gamemode
-			? {
-				gamemode: row.gamemode,
-				created_at:
-					row.created_at instanceof Date
-						? row.created_at
-						: row.created_at
-							? new Date(row.created_at)
-							: null,
-			}
-			: null,
-	}));
+		},
+	});
 }
 
 export async function getProfileByUsername(username: string): Promise<ProfileResponse> {

@@ -6,6 +6,7 @@ import GameAbortOverlay from "../components/GameAbortOverlay";
 import GameFocusOverlay from "../components/GameFocusOverlay";
 import GameGarbageQueue from "../components/GameGarbageQueue";
 import GamePreviewPanel from "../components/GamePreviewPanel";
+import LineClearToast from "../components/LineClearToast";
 
 type QuickGameViewProps = {
   session: GameSession;
@@ -111,6 +112,10 @@ export default function QuickGameView({ session }: QuickGameViewProps) {
 
           <div className="quick-game__board-wrap">
             <div className="quick-game__board-stack">
+              <LineClearToast
+                event={gameState.update.clearEvent}
+                eventKey={gameState.piecesPlaced}
+              />
               <GameGarbageQueue
                 alwaysVisible
                 cellSize={cellSize}

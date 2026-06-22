@@ -60,7 +60,16 @@ export interface GameStats {
 export interface GameUpdateStats extends GameStats {
   scoreAdded?: number;
   linesCleared?: number;
+  clearEvent?: LineClearEvent;
   quickplay?: QuickplayStats;
+}
+
+export interface LineClearEvent {
+  id: number;
+  lines: number;
+  label: "SINGLE" | "DOUBLE" | "TRIPLE" | "QUAD";
+  combo: number;
+  backToBack: number;
 }
 
 export interface QuickplayStats {
@@ -100,6 +109,8 @@ export interface GameEndPayload {
       xpDelta: number;
       level: number;
       xp: number;
+      nextLevelXp?: number;
+      leveledUp?: boolean;
     }>;
   };
 }

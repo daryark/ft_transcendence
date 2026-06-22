@@ -4,7 +4,7 @@ import { buildGameStats } from "./state";
 import type { Input, InputType } from "./input";
 import Room from "../room";
 import type { RoomId } from "../room";
-import type { GameState, GameUpdateStats } from "./state";
+import type { GameState, GameUpdateStats, LineClearEvent } from "./state";
 import type { Figure } from "./figures";
 import { figureCellValues } from "./figures";
 import type { ServerToClientEvents } from "../../../sockets/gameHandlers";
@@ -50,6 +50,17 @@ export default function createEngine(room: Room, roomService: RoomService) {
   let lockTimeoutId: ReturnType<typeof setTimeout> | null = null;
   let pendingScoreAdded = 0;
   let pendingLinesCleared = 0;
+  let activeClearEvent: LineClearEvent | null = null;
+  let activeClearEventExpiresAt = 0;
+  let clearEventId = 0;
+
+  function getClearLabel(lines: number): LineClearEvent["label"] | null {
+    if (lines === 1) return "SINGLE";
+    if (lines === 2) return "DOUBLE";
+    if (lines === 3) return "TRIPLE";
+    if (lines >= 4) return "QUAD";
+    return null;
+  }
 
   function clearLockTimeout() {
     if (lockTimeoutId !== null) {
@@ -69,6 +80,12 @@ export default function createEngine(room: Room, roomService: RoomService) {
 
     if (pendingLinesCleared > 0) {
       update.linesCleared = pendingLinesCleared;
+    }
+
+    if (activeClearEvent && Date.now() <= activeClearEventExpiresAt) {
+      update.clearEvent = activeClearEvent;
+    } else {
+      activeClearEvent = null;
     }
 
     pendingScoreAdded = 0;
@@ -256,11 +273,24 @@ export default function createEngine(room: Room, roomService: RoomService) {
       state.clearedThreeAtOnce = state.clearedThreeAtOnce || cleared === 3;
       state.currentCombo += 1;
       state.maxCombo = Math.max(state.maxCombo, state.currentCombo);
+      state.backToBack = cleared === 4 ? state.backToBack + 1 : 0;
       state.tetrises += cleared === 4 ? 1 : 0;
       state.clearedAfterHalfHeight =
         state.clearedAfterHalfHeight || state.reachedHalfHeight;
+      const label = getClearLabel(cleared);
+      if (label) {
+        activeClearEvent = {
+          id: ++clearEventId,
+          lines: cleared,
+          label,
+          combo: state.currentCombo,
+          backToBack: state.backToBack,
+        };
+        activeClearEventExpiresAt = Date.now() + 1250;
+      }
     } else {
       state.currentCombo = 0;
+      state.backToBack = 0;
     }
 
     if (scoreAdd > 0) {

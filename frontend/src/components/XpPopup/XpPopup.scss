@@ -3,6 +3,7 @@
   top: calc(var(--app-header-height, 4.5rem) + 0.4rem);
   right: 1.2rem;
   z-index: 2600;
+  min-width: min(15rem, calc(100vw - 2rem));
   color: #ffe45f;
   font-size: clamp(1.65rem, 2.4vw, 2.75rem);
   font-weight: 1000;
@@ -15,12 +16,60 @@
   animation: xp-popup-rise 2.6s ease-out forwards;
 }
 
+.xp-popup strong {
+  display: block;
+  line-height: 0.95;
+  text-align: right;
+}
+
+.xp-popup__level {
+  margin-top: 0.28rem;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.xp-popup__level span {
+  color: #fff36c;
+  font-size: clamp(0.9rem, 1.2vw, 1.25rem);
+  text-align: right;
+}
+
+.xp-popup__bar {
+  height: 0.55rem;
+  border: 1px solid rgba(255, 232, 82, 0.95);
+  background: rgba(19, 18, 7, 0.82);
+  box-shadow:
+    0 0 0.35rem rgba(255, 232, 82, 0.4),
+    inset 0 0 0.35rem rgba(255, 232, 82, 0.25);
+  overflow: hidden;
+}
+
+.xp-popup__bar i {
+  display: block;
+  width: var(--xp-progress, 0%);
+  height: 100%;
+  background: linear-gradient(90deg, #fff36c, #ffd52f 55%, #fff9a3);
+  box-shadow: 0 0 0.75rem rgba(255, 230, 70, 0.9);
+  animation: xp-popup-fill 2s cubic-bezier(0.2, 0.85, 0.2, 1) both;
+  transform-origin: left center;
+}
+
 .xp-popup--ko {
   color: #ff2f37;
   text-shadow:
     0 0 0.35rem rgba(255, 62, 70, 0.95),
     0 0 1.35rem rgba(255, 20, 38, 0.68),
     0.08rem 0.08rem 0 rgba(0, 0, 0, 0.86);
+}
+
+@keyframes xp-popup-fill {
+  0% {
+    transform: scaleX(0);
+  }
+
+  100% {
+    transform: scaleX(1);
+  }
 }
 
 @keyframes xp-popup-rise {

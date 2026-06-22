@@ -6,6 +6,7 @@ import SocialPanels from "../SocialPanels/SocialPanels";
 import NotificationsPanel from "../Notifications/NotificationsPanel";
 import Dialog from "../Dialog/Dialog";
 import { apiJson } from "../../api/client";
+import { addXpPopupListener } from "../XpPopup/xpPopupEvents";
 
 import {
   clearSession,
@@ -106,10 +107,17 @@ const Header = () => {
       setIsSocialOpen(false);
       setIsNotificationsOpen(true);
     };
+    const openSocial = () => {
+      setSocialInitialTab("friends");
+      setIsNotificationsOpen(false);
+      setIsSocialOpen(true);
+    };
 
     window.addEventListener("tetra:open-notifications", openNotifications);
+    window.addEventListener("tetra:open-social", openSocial);
     return () => {
       window.removeEventListener("tetra:open-notifications", openNotifications);
+      window.removeEventListener("tetra:open-social", openSocial);
     };
   }, []);
 
@@ -144,6 +152,20 @@ const Header = () => {
 
     return () => controller.abort();
   }, [user]);
+
+  useEffect(() => {
+    return addXpPopupListener((event) => {
+      if (!(event instanceof CustomEvent)) return;
+
+      const level = Number(event.detail?.level);
+      if (!Number.isFinite(level) || level < 1) return;
+
+      setPlayerMeta((current) => ({
+        ...current,
+        level: Math.floor(level),
+      }));
+    });
+  }, []);
 
   return (
     <>

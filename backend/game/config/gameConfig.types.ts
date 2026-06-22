@@ -85,6 +85,7 @@ interface GameGarbageConfig {
     garbageDelayOnClear: number; //delay in ms on each clear(per clear, not per line)
     garbageTargeting: GarbageTargetingMode;
     garbageColumnChangeChance: number; //0-1, chance that the next garbage line changes hole column
+    garbageHoles?: number; // amount of empty cells in each garbage row
 }
 
 interface GameSurvivalConfig {

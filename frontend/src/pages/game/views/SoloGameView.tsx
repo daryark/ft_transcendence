@@ -10,6 +10,7 @@ import GameAbortOverlay from "../components/GameAbortOverlay";
 import GameCountdownOverlay from "../components/GameCountdownOverlay";
 import GameFocusOverlay from "../components/GameFocusOverlay";
 import GamePreviewPanel from "../components/GamePreviewPanel";
+import LineClearToast from "../components/LineClearToast";
 
 type SoloGameViewProps = {
   session: GameSession;
@@ -113,11 +114,17 @@ export default function SoloGameView({ session }: SoloGameViewProps) {
           </aside>
         )}
 
-        <GameBoard
-          cellSize={cellSize}
-          gameState={gameState}
-          showGhost={gameConfig.controls.showShadowPiece}
-        />
+        <div className="solo-game__board-wrap">
+          <LineClearToast
+            event={stats.clearEvent}
+            eventKey={gameState.piecesPlaced}
+          />
+          <GameBoard
+            cellSize={cellSize}
+            gameState={gameState}
+            showGhost={gameConfig.controls.showShadowPiece}
+          />
+        </div>
 
         {gameConfig.controls.nextPieces > 0 && (
           <GamePreviewPanel

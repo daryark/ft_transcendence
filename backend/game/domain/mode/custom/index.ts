@@ -13,43 +13,13 @@ import {
   isActiveMultiplayerPlayer,
   serializeMultiplayerGame,
 } from "../../../services/multiplayerEngineService";
+import { applyXpToLevel } from "../../../services/playerProgression";
 
 const JOIN_PREFIX = "JOIN:";
 const customRoomHosts = new Map();
 const customEngines = new Map();
 const customRoomScores = new Map();
 const customAutoStartTimers = new Map();
-const CONFIG_FIELD_NAMES = {
-  roomName: "ROOM NAME",
-  maxPlayers: "PLAYER LIMIT",
-  public: "PUBLIC ROOM",
-  anonymousAllowed: "ALLOW ANONYMOUS USERS",
-  autoStart: "AUTO START",
-  roundsToWin: "ROUNDS TO WIN",
-  winByRounds: "WIN BY ROUNDS",
-  goldenPoint: "GOLDEN POINT",
-  stock: "STOCK",
-  bagType: "BAG TYPE",
-  boardWidth: "BOARD WIDTH",
-  boardHeight: "BOARD HEIGHT",
-  hold: "HOLD",
-  nextPieces: "NEXT PIECES",
-  showShadowPiece: "SHADOW PIECE",
-  lockDelay: "LOCK DELAY",
-  lockDelayDecrease: "LOCK DECREASE",
-  minimumLockDelay: "MIN LOCK DELAY",
-  gravity: "GRAVITY",
-  gravityIncrease: "GRAVITY INCREASE",
-  gravitMarginTime: "GRAVITY MARGIN TIME",
-  garbageMult: "GARBAGE MULT",
-  garbageCap: "GARBAGE CAP",
-  garbageMaxCap: "GARBAGE MAX CAP",
-  allClearGarbage: "ALL CLEAR GARBAGE",
-  garbageDelay: "GARBAGE DELAY",
-  garbageDelayOnClear: "DELAY ON CLEAR",
-  garbageTargeting: "TARGETING",
-  garbageColumnChangeChance: "HOLE CHANGE CHANCE",
-};
 
 function emitError(socket, reason) {
   socket.emit("server:error", { reason });
@@ -59,7 +29,10 @@ function formatConfigError(error) {
   return error.issues
     ?.map((issue) => {
       const field = issue.path?.at(-1) || "config";
-      return CONFIG_FIELD_NAMES[field] ?? String(field).toUpperCase();
+      return String(field)
+        .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+        .replace(/[\s.-]+/g, "_")
+        .toUpperCase();
     })
     .filter((field, index, fields) => fields.indexOf(field) === index)
     .join("\n") || "INVALID_CONFIG";
@@ -380,12 +353,25 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
     const playerState = engine.playerEngines.get(playerId)?.room?.state;
     const isWinner = playerId === String(winnerId);
     const xpDelta = calculateCustomXpDelta(sharedElapsedMs, isWinner);
+    const previousLevel = player.profile?.level ?? 1;
+    const levelResult = applyXpToLevel(
+      previousLevel,
+      player.profile?.xp ?? 0,
+      xpDelta,
+    );
+
+    if (player.profile) {
+      player.profile.level = levelResult.level;
+      player.profile.xp = levelResult.xp;
+    }
 
     payload.result.progression.push({
       playerId,
       xpDelta,
-      level: player.profile?.level ?? 1,
-      xp: player.profile?.xp ?? 0,
+      level: levelResult.level,
+      xp: levelResult.xp,
+      nextLevelXp: levelResult.nextLevelXp,
+      leveledUp: levelResult.level > previousLevel,
     });
 
     void import("../../../../prisma/playerStats.js")
@@ -407,6 +393,12 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
           tetrises: playerState?.tetrises ?? 0,
           clearedAfterHalfHeight: playerState?.clearedAfterHalfHeight ?? false,
           roundsPlayed: round,
+          progression: {
+            level: levelResult.level,
+            xp: levelResult.xp,
+            nextLevelXp: levelResult.nextLevelXp,
+            won: isWinner,
+          },
           stats: {
             lines: playerState?.lines ?? 0,
             piecesPlaced: playerState?.piecesPlaced ?? 0,
