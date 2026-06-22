@@ -1,4 +1,4 @@
-import { createFigure, Figure } from "./figures";
+import { createFigure, Figure, type FigureType } from "./figures";
 import { createBag } from "./logic";
 import {
   createBoardHeight,
@@ -25,6 +25,7 @@ export interface GameState {
   holds: number;
   currentCombo: number;
   maxCombo: number;
+  backToBack: number;
   maxLinesCleared: number;
   clearedTwoAtOnce: boolean;
   clearedThreeAtOnce: boolean;
@@ -77,6 +78,15 @@ export interface GameStats {
 export interface GameUpdateStats extends GameStats {
   scoreAdded?: number;
   linesCleared?: number;
+  clearEvent?: LineClearEvent;
+}
+
+export interface LineClearEvent {
+  id: number;
+  lines: number;
+  label: "SINGLE" | "DOUBLE" | "TRIPLE" | "QUAD";
+  combo: number;
+  backToBack: number;
 }
 
 export function buildGameStats(
@@ -149,16 +159,21 @@ export function initGame(
   cols: number,
   round = 1,
   startedAt = Date.now(),
-  sequence: { bagSeed?: string | null; nextBagIndex?: number } = {},
+  sequence: { bagSeed?: string | null; nextBagIndex?: number; bagType?: string } = {},
 ): GameState {
   const board = createEmptyBoard(createBoardHeight(rows), createBoardWidth(cols));
   const buffer = createEmptyBuffer(createBoardWidth(cols));
   const bagSeed = sequence.bagSeed ?? null;
+  const bagType = sequence.bagType ?? "7-bag";
   let nextBagIndex = Math.max(0, Math.floor(sequence.nextBagIndex ?? 0));
-  const nextTypes = [
-    ...createBag(bagSeed, nextBagIndex),
-    ...createBag(bagSeed, nextBagIndex + 1),
-  ];
+  const firstBag = createBag(bagSeed, nextBagIndex, bagType);
+  const secondBag = createBag(
+    bagSeed,
+    nextBagIndex + 1,
+    bagType,
+    firstBag[firstBag.length - 1] as FigureType | null,
+  );
+  const nextTypes = [...firstBag, ...secondBag];
   nextBagIndex += 2;
   const next = nextTypes.map((t) => createFigure(t, cols));
   const state: GameState = {
@@ -178,6 +193,7 @@ export function initGame(
     holds: 0,
     currentCombo: 0,
     maxCombo: 0,
+    backToBack: 0,
     maxLinesCleared: 0,
     clearedTwoAtOnce: false,
     clearedThreeAtOnce: false,

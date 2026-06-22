@@ -202,7 +202,16 @@
 
 .anonymousCard .playerAvatar,
 .anonymousProfile .profileAvatar {
-  background: #d6cc1e;
+  overflow: hidden;
+  background: #f6f6f2;
+}
+
+.playerAvatar img,
+.profileAvatar img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 
 .profileOverlay {

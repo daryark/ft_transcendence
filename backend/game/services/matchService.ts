@@ -44,6 +44,7 @@ function copyCarryStats(nextState: GameState, previousState: GameState) {
   nextState.holds = previousState.holds;
   nextState.currentCombo = previousState.currentCombo;
   nextState.maxCombo = previousState.maxCombo;
+  nextState.backToBack = previousState.backToBack;
   nextState.maxLinesCleared = previousState.maxLinesCleared;
   nextState.clearedTwoAtOnce = previousState.clearedTwoAtOnce;
   nextState.clearedThreeAtOnce = previousState.clearedThreeAtOnce;
@@ -252,7 +253,10 @@ export default function createMatchService(
       previousState.cols,
       previousState.round,
       Date.now(),
-      { bagSeed: getRoundBagSeed(previousState.round) },
+      {
+        bagSeed: getRoundBagSeed(previousState.round),
+        bagType: room.gameConfig.general.bagType,
+      },
     );
     copyCarryStats(nextState, previousState);
     startRound(nextState, true);
@@ -264,7 +268,10 @@ export default function createMatchService(
       previousState.cols,
       previousState.round + 1,
       Date.now(),
-      { bagSeed: getRoundBagSeed(previousState.round + 1) },
+      {
+        bagSeed: getRoundBagSeed(previousState.round + 1),
+        bagType: room.gameConfig.general.bagType,
+      },
     );
     copyCarryStats(nextState, previousState);
     startRound(nextState, false);
@@ -361,7 +368,10 @@ export default function createMatchService(
       boardWidth,
       1,
       Date.now() + getStartDelayMs(room),
-      { bagSeed: getRoundBagSeed(1) },
+      {
+        bagSeed: getRoundBagSeed(1),
+        bagType: room.gameConfig.general.bagType,
+      },
     );
     initialState.update = buildRoomStats(room, initialState);
 

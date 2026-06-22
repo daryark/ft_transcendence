@@ -3,6 +3,11 @@ import { emitSocialUpdate } from "./realtime";
 
 const onlineSocketsByUserId = new Map<number, Set<string>>();
 
+type FriendshipPresenceRow = {
+	user_id: number;
+	friend_id: number;
+};
+
 function normalizeUserId(userId: number | string): number | null {
 	const parsed = Number(userId);
 	return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
@@ -37,7 +42,7 @@ async function loadPresencePayload(userId: number, online: boolean) {
 		}),
 	]);
 
-	const friendIds = friendships.map((friendship) =>
+	const friendIds = (friendships as FriendshipPresenceRow[]).map((friendship) =>
 		friendship.user_id === userId ? friendship.friend_id : friendship.user_id,
 	);
 

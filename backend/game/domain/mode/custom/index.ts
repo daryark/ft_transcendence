@@ -13,14 +13,33 @@ import {
   isActiveMultiplayerPlayer,
   serializeMultiplayerGame,
 } from "../../../services/multiplayerEngineService";
+import { applyXpToLevel } from "../../../services/playerProgression";
 
 const JOIN_PREFIX = "JOIN:";
 const customRoomHosts = new Map();
 const customEngines = new Map();
 const customRoomScores = new Map();
+const customAutoStartTimers = new Map();
 
 function emitError(socket, reason) {
   socket.emit("server:error", { reason });
+}
+
+function formatConfigError(error) {
+  return error.issues
+    ?.map((issue) => {
+      const field = issue.path?.at(-1) || "config";
+      return String(field)
+        .replace(/([a-z0-9])([A-Z])/g, "$1_$2")
+        .replace(/[\s.-]+/g, "_")
+        .toUpperCase();
+    })
+    .filter((field, index, fields) => fields.indexOf(field) === index)
+    .join("\n") || "INVALID_CONFIG";
+}
+
+function normalizeRoomName(roomName) {
+  return String(roomName ?? "CUSTOM ROOM").trim().toUpperCase();
 }
 
 function getPlayerName(player) {
@@ -95,6 +114,7 @@ function serializePlayer(player, hostId, room) {
 
 function serializeRoom(room) {
   const hostId = customRoomHosts.get(room.id);
+  const autoStartTimer = customAutoStartTimers.get(room.id);
 
   return {
     roomId: room.id,
@@ -102,6 +122,7 @@ function serializeRoom(room) {
     roomName: room.roomConfig.roomName,
     visibility: room.roomConfig.public ? "public" : "private",
     status: room.status,
+    autoStartEndsAt: autoStartTimer?.endsAt ?? null,
     players: getVisibleRoomPlayers(room).map((player) =>
       serializePlayer(player, hostId, room),
     ),
@@ -179,6 +200,39 @@ function calculateCustomXpDelta(elapsedMs, isWinner) {
   return Math.round(isWinner ? winnerXp : Math.max(0, winnerXp - 100));
 }
 
+function getRoundLeaders(roundWins) {
+  const entries = Array.from(roundWins.entries()).sort((a, b) => b[1] - a[1]);
+
+  return {
+    leaderWins: entries[0]?.[1] ?? 0,
+    secondWins: entries[1]?.[1] ?? 0,
+  };
+}
+
+function shouldFinishMatch(room, winnerId, round) {
+  if (!winnerId) return true;
+
+  const roundWins = room.roundWins ?? new Map();
+  const roundsToWin = room.matchConfig?.roundsToWin ?? 1;
+  const winByRounds = room.matchConfig?.winByRounds ?? 0;
+  const goldenPoint = room.matchConfig?.goldenPoint ?? 0;
+  const winnerWins = roundWins.get(String(winnerId)) ?? 0;
+  const { leaderWins, secondWins } = getRoundLeaders(roundWins);
+
+  if (goldenPoint > 0 && round >= goldenPoint) return true;
+  if (winnerWins < roundsToWin) return false;
+  if (winByRounds > 0 && leaderWins - secondWins < winByRounds) return false;
+  return true;
+}
+
+function clearAutoStartTimer(room) {
+  const timer = customAutoStartTimers.get(room.id);
+  if (!timer) return;
+
+  clearTimeout(timer.timeout);
+  customAutoStartTimers.delete(room.id);
+}
+
 function notifyAchievementUnlocks(userId, achievements) {
   if (!achievements?.length) return;
 
@@ -216,6 +270,8 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
   if (activePlayerIds.length > 1) return false;
   const winnerId = activePlayerIds[0] ?? null;
   const roundsToWin = room.matchConfig?.roundsToWin ?? 1;
+  const winByRounds = room.matchConfig?.winByRounds ?? 0;
+  const goldenPoint = room.matchConfig?.goldenPoint ?? 0;
   const roundWins = room.roundWins ?? new Map();
   const round = room.roundNumber ?? 1;
 
@@ -231,11 +287,7 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
 
   const serializedRoundWins = Object.fromEntries(roundWins.entries());
 
-  if (
-    winnerId &&
-    room.players.size > 1 &&
-    (roundWins.get(String(winnerId)) ?? 0) < roundsToWin
-  ) {
+  if (winnerId && room.players.size > 1 && !shouldFinishMatch(room, winnerId, round)) {
     const payload = {
       ...serializeCustomGame(room, engine),
       reason,
@@ -279,6 +331,11 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
     ...serializeCustomGame(room, engine),
     reason,
     winnerId,
+    round,
+    roundWins: serializedRoundWins,
+    roundsToWin,
+    winByRounds,
+    goldenPoint,
     result: {
       outcome: winnerId ? "win" : "defeat",
       stats: room.state?.update,
@@ -296,12 +353,25 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
     const playerState = engine.playerEngines.get(playerId)?.room?.state;
     const isWinner = playerId === String(winnerId);
     const xpDelta = calculateCustomXpDelta(sharedElapsedMs, isWinner);
+    const previousLevel = player.profile?.level ?? 1;
+    const levelResult = applyXpToLevel(
+      previousLevel,
+      player.profile?.xp ?? 0,
+      xpDelta,
+    );
+
+    if (player.profile) {
+      player.profile.level = levelResult.level;
+      player.profile.xp = levelResult.xp;
+    }
 
     payload.result.progression.push({
       playerId,
       xpDelta,
-      level: player.profile?.level ?? 1,
-      xp: player.profile?.xp ?? 0,
+      level: levelResult.level,
+      xp: levelResult.xp,
+      nextLevelXp: levelResult.nextLevelXp,
+      leveledUp: levelResult.level > previousLevel,
     });
 
     void import("../../../../prisma/playerStats.js")
@@ -323,6 +393,12 @@ function maybeEndVersus(room, roomService, engine, reason = "game_over") {
           tetrises: playerState?.tetrises ?? 0,
           clearedAfterHalfHeight: playerState?.clearedAfterHalfHeight ?? false,
           roundsPlayed: round,
+          progression: {
+            level: levelResult.level,
+            xp: levelResult.xp,
+            nextLevelXp: levelResult.nextLevelXp,
+            won: isWinner,
+          },
           stats: {
             lines: playerState?.lines ?? 0,
             piecesPlaced: playerState?.piecesPlaced ?? 0,
@@ -413,6 +489,7 @@ export function removeCustomRoomParticipant(
 
       customRoomHosts.delete(room.id);
       customRoomScores.delete(room.id);
+      clearAutoStartTimer(room);
       clearRoomMessages(room.id);
       stopCustomEngine(room.id);
       roomService.deleteRoom(room.id);
@@ -422,6 +499,7 @@ export function removeCustomRoomParticipant(
 
     ensureRoomHost(room);
     emitSystemMessage(roomService, room, "left the room", leavingPlayerName);
+    maybeAutoStart(roomService, room);
 
     if (engine && maybeEndVersus(room, roomService, engine, "game_over")) {
       return true;
@@ -444,6 +522,7 @@ export function removeCustomRoomParticipant(
 
 function startCustomVersus(room, roomService) {
   if (room.status === "playing") return;
+  clearAutoStartTimer(room);
   promoteWaitingPlayers(room);
   if (room.players.size < 2) {
     roomService.broadcast(room.id, "server:error", {
@@ -529,6 +608,17 @@ function joinExistingRoom(socket, roomService, player, roomCode) {
   const waitingPlayers = getWaitingPlayers(room);
   const wasAlreadyWaiting = waitingPlayers.has(player.id);
   const wasAlreadySpectator = room.spectators?.has(player.id) ?? false;
+  const isExistingParticipant =
+    wasAlreadyPlayer || wasAlreadyWaiting || wasAlreadySpectator;
+
+  if (
+    !isExistingParticipant &&
+    player.identityType === "anonymous" &&
+    room.roomConfig.anonymousAllowed === false
+  ) {
+    emitError(socket, "ANONYMOUS_NOT_ALLOWED");
+    return null;
+  }
 
   if (wasAlreadySpectator) {
     socket.join(room.id);
@@ -583,6 +673,7 @@ function joinExistingRoom(socket, roomService, player, roomCode) {
 
 function createCustomRoom(socket, roomService, player, payload) {
   const config = applyConfigPatch(createConfig("custom"), payload);
+  config.roomConfig.roomName = normalizeRoomName(config.roomConfig.roomName);
   const room = roomService.createRoom(config);
   room.spectators ??= new Map();
 
@@ -629,6 +720,10 @@ export function switchCustomRoomRole(roomService, roomId, playerId, nextRole) {
   }
 
   if (nextRole === "player") {
+    if (player.identityType === "anonymous" && room.roomConfig.anonymousAllowed === false) {
+      return { ok: false, reason: "ANONYMOUS_NOT_ALLOWED" };
+    }
+
     if (!canJoinAsPlayer(room, player)) {
       return { ok: false, reason: "ROOM_FULL" };
     }
@@ -654,12 +749,30 @@ function maybeAutoStart(roomService, room) {
   const autoStart = room.roomConfig.autoStart;
 
   if (
-    room.status === "lobby" &&
-    typeof autoStart === "number" &&
-    autoStart > 0 &&
-    room.players.size >= autoStart
+    room.status !== "lobby" ||
+    typeof autoStart !== "number" ||
+    autoStart <= 0 ||
+    room.players.size < 2
   ) {
-    startCustomVersus(room, roomService);
+    clearAutoStartTimer(room);
+    return;
+  }
+
+  if (!customAutoStartTimers.has(room.id)) {
+    const endsAt = Date.now() + autoStart * 1000;
+    customAutoStartTimers.set(room.id, {
+      endsAt,
+      timeout: setTimeout(() => {
+        customAutoStartTimers.delete(room.id);
+        if (room.status === "lobby" && room.players.size >= 2) {
+          startCustomVersus(room, roomService);
+        } else {
+          broadcastRoomUpdate(roomService, room);
+        }
+      }, autoStart * 1000),
+    });
+    emitSystemMessage(roomService, room, `autostart in ${autoStart} seconds`);
+    broadcastRoomUpdate(roomService, room);
   }
 }
 
@@ -670,7 +783,7 @@ function registerCustomRoomEvents(socket, roomService) {
   socket.on("room:updateConfig", (payload = {}) => {
     const parsedPayload = ConfigPatchSchema.safeParse(payload);
     if (!parsedPayload.success) {
-      emitError(socket, "INVALID_CONFIG");
+      emitError(socket, `INVALID_CONFIG:\n${formatConfigError(parsedPayload.error)}`);
       return;
     }
 
@@ -695,9 +808,13 @@ function registerCustomRoomEvents(socket, roomService) {
       parsedPayload.data,
     );
 
-    room.roomConfig = nextConfig.roomConfig;
+    room.roomConfig = {
+      ...nextConfig.roomConfig,
+      roomName: normalizeRoomName(nextConfig.roomConfig.roomName),
+    };
     room.matchConfig = nextConfig.matchConfig;
     room.gameConfig = nextConfig.gameConfig;
+    clearAutoStartTimer(room);
     broadcastRoomUpdate(roomService, room);
     maybeAutoStart(roomService, room);
   });

@@ -27,6 +27,7 @@ type PersistGameResultInput = {
 	progression?: {
 		level: number;
 		xp: number;
+		nextLevelXp?: number;
 		won: boolean;
 	};
 };
@@ -67,6 +68,9 @@ export async function persistGameResult(input: PersistGameResultInput) {
 				data: {
 					level: Math.max(1, Math.floor(input.progression.level)),
 					xp: Math.max(0, Math.floor(input.progression.xp)),
+					...(input.progression.nextLevelXp
+						? { next_level_xp: Math.max(1, Math.floor(input.progression.nextLevelXp)) }
+						: {}),
 					...(input.progression.won ? { wins: { increment: 1 } } : {}),
 				},
 			});

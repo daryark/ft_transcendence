@@ -90,6 +90,10 @@ export default function GamePage() {
         onNext={session.leaveResults}
         players={session.players}
         reason={result.reason}
+        roundWins={result.roundWins}
+        roundsToWin={result.roundsToWin}
+        winByRounds={result.winByRounds}
+        goldenPoint={result.goldenPoint}
         stats={result.stats}
         winnerId={result.winnerId}
       />

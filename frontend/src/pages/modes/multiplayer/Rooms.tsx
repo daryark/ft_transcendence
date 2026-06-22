@@ -78,15 +78,6 @@ export default function Rooms() {
           REFRESH
         </button>
 
-        <article className="mp-room-hero">
-          <div className="mp-room-logo">RYL</div>
-          <div>
-            <h1>ROYALE</h1>
-            <p>Face off against the best in a single lobby shared by all.</p>
-          </div>
-          <div className="mp-room-count">{rooms.length}</div>
-        </article>
-
         <div className="mp-room-list">
           {rooms.length > 0 ? (
             rooms.map((room) => (

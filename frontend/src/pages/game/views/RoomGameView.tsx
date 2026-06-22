@@ -1,4 +1,4 @@
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import GameBoard from "../../../components/GameBoard/GameBoard";
 import { formatPlayerName, getModeLabel } from "../gameUtils";
 import type { GameSession } from "../hooks/useGameSession";
@@ -6,6 +6,7 @@ import GameAbortOverlay from "../components/GameAbortOverlay";
 import GameFocusOverlay from "../components/GameFocusOverlay";
 import GameGarbageQueue from "../components/GameGarbageQueue";
 import GamePreviewPanel from "../components/GamePreviewPanel";
+import LineClearToast from "../components/LineClearToast";
 import { useMusic } from "../../../music/MusicProvider";
 
 type RoomGameViewProps = {
@@ -38,6 +39,40 @@ function StockCrystals({
         />
       ))}
     </div>
+  );
+}
+
+function QuickplayAltitudeBonus({ meters }: { meters?: number }) {
+  const previousMetersRef = useRef(0);
+  const initializedRef = useRef(false);
+  const [delta, setDelta] = useState<number | null>(null);
+  const [animationKey, setAnimationKey] = useState(0);
+
+  useEffect(() => {
+    const nextMeters = meters ?? 0;
+
+    if (!initializedRef.current) {
+      initializedRef.current = true;
+      previousMetersRef.current = nextMeters;
+      return;
+    }
+
+    const nextDelta = nextMeters - previousMetersRef.current;
+
+    if (nextDelta > 0.05) {
+      setDelta(nextDelta);
+      setAnimationKey((current) => current + 1);
+    }
+
+    previousMetersRef.current = nextMeters;
+  }, [meters]);
+
+  if (delta === null) return null;
+
+  return (
+    <small className="room-game__meters-bonus" key={animationKey}>
+      +{delta.toFixed(1)}m
+    </small>
   );
 }
 
@@ -199,8 +234,14 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
   );
   const opponentCellSize =
     previewPlayers.length <= 2 ? 13 : previewPlayers.length <= 3 ? 10 : 8;
-  const mainCellSize = Math.round(32 * packageScale);
-  const previewFigureSize = Math.round(30 * packageScale);
+  const maxMainCellByHeight = Math.floor(
+    (window.innerHeight - 155) / (targetState.rows ?? 20),
+  );
+  const mainCellSize = Math.max(
+    8,
+    Math.min(Math.round(32 * packageScale), maxMainCellByHeight),
+  );
+  const previewFigureSize = Math.max(8, Math.round(mainCellSize * 0.94));
   const isQuickplay = gameConfig.mode === "quickplay";
   const targetMeters = targetPlayer ? getQuickplayMeters(targetPlayer) : 0;
   const quickplayFloor = getQuickplayFloor(targetMeters);
@@ -275,39 +316,12 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
                 type="hold"
               />
             )}
-            <div className="room-game__stats" aria-label="Player stats">
-              {quickplayStats ? (
-                <>
-                  <div>
-                    <span>TIME</span>
-                    <strong
-                      className="game-stat-pop"
-                      key={`time-${Math.floor((targetState.update.elapsedMs ?? 0) / 1000)}`}
-                    >
-                      {formatElapsedTime(targetState.update.elapsedMs)}
-                    </strong>
-                  </div>
-                  <div>
-                    <span>ALTITUDE</span>
-                    <strong
-                      className="game-stat-pop"
-                      key={`altitude-${quickplayStats.meters.toFixed(1)}`}
-                    >
-                      {quickplayStats.meters.toFixed(1)}M
-                    </strong>
-                    <small>{quickplayStats.climbSpeed.toFixed(2)}M/S</small>
-                  </div>
-                  <div>
-                    <span>FLOOR</span>
-                    <strong
-                      className="game-stat-pop"
-                      key={`floor-${quickplayStats.floor}`}
-                    >
-                      {quickplayStats.floor}
-                    </strong>
-                  </div>
-                </>
-              ) : null}
+            <div
+              className={`room-game__stats${
+                quickplayStats ? " room-game__stats--quickplay" : ""
+              }`}
+              aria-label="Player stats"
+            >
               <div>
                 <span>PIECES</span>
                 <strong
@@ -321,7 +335,7 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
                 </small>
               </div>
               <div>
-                <span>LINES</span>
+                <span>{quickplayStats ? "ATTACK" : "LINES"}</span>
                 <strong
                   className="game-stat-pop"
                   key={`lines-${targetState.lines}`}
@@ -329,6 +343,28 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
                   {targetState.lines}
                 </strong>
               </div>
+              {quickplayStats ? (
+                <div className="room-game__stat-time">
+                  <span>TIME</span>
+                  <strong
+                    className="game-stat-pop"
+                    key={`time-${Math.floor((targetState.update.elapsedMs ?? 0) / 1000)}`}
+                  >
+                    {formatElapsedTime(targetState.update.elapsedMs)}
+                  </strong>
+                </div>
+              ) : null}
+              {quickplayStats ? (
+                <div>
+                  <span>FLOOR</span>
+                  <strong
+                    className="game-stat-pop"
+                    key={`floor-${quickplayStats.floor}`}
+                  >
+                    {quickplayStats.floor}
+                  </strong>
+                </div>
+              ) : null}
               {!quickplayStats ? (
                 <div>
                   <span>SCORE</span>
@@ -345,6 +381,10 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
 
           <div className="room-game__main-board">
             <div className="room-game__board-stack">
+              <LineClearToast
+                event={targetState.update.clearEvent}
+                eventKey={targetState.piecesPlaced}
+              />
               <GameGarbageQueue
                 alwaysVisible
                 cellSize={mainCellSize}
@@ -372,22 +412,24 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
             {isQuickplay && (
               <div className="room-game__meters">
                 <strong>{targetMeters.toLocaleString()}m</strong>
+                <QuickplayAltitudeBonus
+                  meters={targetPlayer?.altitudeBonusMeters}
+                />
                 <span>{quickplayFloor.name}</span>
-                {targetPlayer?.altitudeBonusMeters ? (
-                  <small>+{targetPlayer.altitudeBonusMeters.toFixed(1)}</small>
-                ) : null}
               </div>
             )}
           </div>
 
           <div className="room-game__right-rail">
-            <GamePreviewPanel
-              className="solo-game__panel room-game__next"
-              figureSize={previewFigureSize}
-              nextCount={targetConfig.controls.nextPieces}
-              state={targetState}
-              type="next"
-            />
+            {targetConfig.controls.nextPieces > 0 && (
+              <GamePreviewPanel
+                className="solo-game__panel room-game__next"
+                figureSize={previewFigureSize}
+                nextCount={targetConfig.controls.nextPieces}
+                state={targetState}
+                type="next"
+              />
+            )}
           </div>
         </div>
 
@@ -463,17 +505,22 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
                       showGhost={false}
                     />
                   </div>
-                  <GamePreviewPanel
-                    className="solo-game__panel room-game__opponent-next"
-                    figureSize={Math.max(9, opponentCellSize - 2)}
-                    nextCount={Math.min(
-                      3,
-                      player.config?.controls.nextPieces ??
-                        gameConfig.controls.nextPieces,
-                    )}
-                    state={player.state}
-                    type="next"
-                  />
+                  {(player.config?.controls.nextPieces ??
+                    gameConfig.controls.nextPieces) > 0 ? (
+                    <GamePreviewPanel
+                      className="solo-game__panel room-game__opponent-next"
+                      figureSize={Math.max(9, opponentCellSize - 2)}
+                      nextCount={Math.min(
+                        3,
+                        player.config?.controls.nextPieces ??
+                          gameConfig.controls.nextPieces,
+                      )}
+                      state={player.state}
+                      type="next"
+                    />
+                  ) : (
+                    <div />
+                  )}
                   {isSpectating && (
                     <span className="room-game__watch">WATCH</span>
                   )}

@@ -3,6 +3,10 @@ const XP_POPUP_EVENT = "tetra:xp-popup";
 export type XpPopupDetail = {
   amount: number;
   label?: string;
+  level?: number;
+  xp?: number;
+  nextLevelXp?: number;
+  leveledUp?: boolean;
   variant?: "xp" | "ko";
 };
 

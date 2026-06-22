@@ -5,7 +5,7 @@ import type {
 } from "../../../../../shared/types/config.types";
 
 export type Visibility = "public" | "private";
-export type CustomTab = "welcome" | "room" | "match" | "game";
+export type CustomTab = "room" | "match" | "game";
 
 export type CustomRoomConfig = RoomConfig & {
   autoStart?: number;
@@ -42,6 +42,7 @@ export type CustomRoomSnapshot = {
   roomName?: string;
   visibility?: Visibility;
   status?: "lobby" | "playing" | "ended";
+  autoStartEndsAt?: number | null;
   players?: CustomRoomPlayer[];
   config?: CustomEditableConfig;
   chatMessages?: CustomChatMessage[];

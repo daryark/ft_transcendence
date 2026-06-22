@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 import { addXpPopupListener, type XpPopupDetail } from "./xpPopupEvents";
 import "./XpPopup.scss";
@@ -7,7 +7,7 @@ const POPUP_LIFETIME_MS = 2600;
 
 export default function XpPopup() {
   const [popup, setPopup] = useState<
-    { id: number; amount: number; label?: string; variant?: "xp" | "ko" } | null
+    (XpPopupDetail & { id: number }) | null
   >(null);
 
   useEffect(() => {
@@ -20,6 +20,10 @@ export default function XpPopup() {
         id,
         amount: detail.amount,
         label: detail.label,
+        level: detail.level,
+        xp: detail.xp,
+        nextLevelXp: detail.nextLevelXp,
+        leveledUp: detail.leveledUp,
         variant: detail.variant ?? "xp",
       });
       window.setTimeout(() => {
@@ -31,6 +35,14 @@ export default function XpPopup() {
   }, []);
 
   if (!popup) return null;
+  const hasLevelProgress =
+    popup.variant !== "ko" &&
+    Number.isFinite(popup.xp) &&
+    Number.isFinite(popup.nextLevelXp) &&
+    (popup.nextLevelXp ?? 0) > 0;
+  const progressPercent = hasLevelProgress
+    ? Math.min(100, Math.max(0, ((popup.xp ?? 0) / (popup.nextLevelXp ?? 1)) * 100))
+    : 0;
 
   return (
     <div
@@ -38,7 +50,17 @@ export default function XpPopup() {
       className={`xp-popup xp-popup--${popup.variant ?? "xp"}`}
       aria-live="polite"
     >
-      {popup.label ?? `+${popup.amount.toLocaleString()} XP`}
+      <strong>{popup.label ?? `+${popup.amount.toLocaleString()} XP`}</strong>
+      {hasLevelProgress && (
+        <div className="xp-popup__level">
+          <span>
+            {popup.leveledUp ? "LEVEL UP!" : `LEVEL ${popup.level ?? 1}`}
+          </span>
+          <div className="xp-popup__bar">
+            <i style={{ "--xp-progress": `${progressPercent}%` } as CSSProperties} />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

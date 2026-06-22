@@ -340,7 +340,9 @@ body.game-session-active {
 
 .versus-game__board-stack,
 .room-game__board-stack,
-.room-game__opponent-board-stack {
+.room-game__opponent-board-stack,
+.quick-game__board-stack {
+  position: relative;
   display: grid;
   grid-template-columns: auto max-content;
   align-items: start;
@@ -513,10 +515,95 @@ body.game-session-active {
   grid-area: next;
 }
 
+.solo-game__board-wrap {
+  position: relative;
+  grid-area: board;
+  display: grid;
+}
+
 .solo-game__stage .game-board {
   grid-area: board;
   width: auto;
   max-width: none;
+}
+
+.solo-game__board-wrap .game-board {
+  grid-area: auto;
+}
+
+.line-clear-toast {
+  position: absolute;
+  left: clamp(-8.7rem, -24vw, -5.4rem);
+  top: 39%;
+  z-index: 36;
+  width: max-content;
+  max-width: 12rem;
+  transform: translateY(-50%);
+  display: grid;
+  justify-items: end;
+  gap: 0.25rem;
+  color: #fff;
+  font-family: var(--app-font-display);
+  text-align: right;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 0.45rem rgba(0, 0, 0, 0.96),
+    0 0 0.9rem rgba(0, 0, 0, 0.82);
+  pointer-events: none;
+}
+
+.line-clear-toast__clear {
+  display: grid;
+  justify-items: end;
+  animation: line-clear-pop 1150ms cubic-bezier(0.18, 0.9, 0.2, 1) both;
+}
+
+.line-clear-toast__clear strong {
+  color: #fff;
+  font-size: clamp(2rem, calc(2.75rem * var(--room-package-scale, var(--solo-package-scale, 1))), 3.65rem);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: 0;
+}
+
+.line-clear-toast__clear span {
+  min-height: 1.2em;
+  color: #35ffd6;
+  font-size: clamp(0.95rem, calc(1.35rem * var(--room-package-scale, var(--solo-package-scale, 1))), 1.65rem);
+  font-weight: 900;
+  line-height: 1;
+}
+
+.line-clear-toast__clear--single strong {
+  font-size: clamp(1.8rem, calc(2.35rem * var(--room-package-scale, var(--solo-package-scale, 1))), 3rem);
+}
+
+.line-clear-toast__clear--quad strong {
+  text-shadow:
+    0 0 0.5rem rgba(255, 255, 255, 0.9),
+    0 0 1.25rem rgba(53, 255, 214, 0.68),
+    0 0 0.75rem rgba(0, 0, 0, 0.95);
+}
+
+@keyframes line-clear-pop {
+  0% {
+    opacity: 0;
+    transform: translate3d(0.55rem, 0.65rem, 0) scale(0.78);
+    filter: blur(0.08rem);
+  }
+  18% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1.08);
+    filter: blur(0);
+  }
+  42% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(-0.25rem, -1.15rem, 0) scale(0.96);
+  }
 }
 
 .solo-game__panel h2 {
@@ -1486,6 +1573,10 @@ body.game-session-active {
   overflow: hidden;
 }
 
+.room-game--quickplay .room-game__left-rail {
+  overflow: visible;
+}
+
 .room-game__main-board {
   display: grid;
   justify-items: center;
@@ -1600,6 +1691,15 @@ body.game-session-active {
   text-shadow: 0 0 0.75rem rgba(0, 0, 0, 0.7);
 }
 
+.room-game__stats--quickplay {
+  gap: calc(0.45rem * var(--room-package-scale));
+  padding-top: calc(0.3rem * var(--room-package-scale));
+}
+
+.room-game__stats--quickplay .room-game__stat-time {
+  margin-top: calc(-0.18rem * var(--room-package-scale));
+}
+
 .room-game__stats > div {
   display: grid;
   gap: 0.08rem;
@@ -1694,10 +1794,12 @@ body.game-session-active {
   font-weight: 900;
 }
 
-.room-game__meters small {
+.room-game__meters-bonus {
   color: #ff6bff;
   font-size: 1rem;
   font-weight: 900;
+  line-height: 1;
+  text-transform: lowercase;
   animation: quickplay-meter-pop 1.35s ease-out both;
 }
 

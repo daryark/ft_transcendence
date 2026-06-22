@@ -47,6 +47,11 @@ export type GameResult = {
   reason: GameEndPayload["reason"];
   stats: GameStats;
   winnerId?: GameEndPayload["winnerId"];
+  round?: number;
+  roundWins?: Record<string, number>;
+  roundsToWin?: number;
+  winByRounds?: number;
+  goldenPoint?: number;
   quickplay?: {
     meters: number;
     floor: number;
@@ -416,13 +421,23 @@ export function useGameSession() {
       );
 
       if (selfProgression?.xpDelta) {
-        emitXpPopup(selfProgression.xpDelta);
+        emitXpPopup(selfProgression.xpDelta, {
+          level: selfProgression.level,
+          xp: selfProgression.xp,
+          nextLevelXp: selfProgression.nextLevelXp,
+          leveledUp: selfProgression.leveledUp,
+        });
       }
 
       const nextResult: GameResult = {
         reason: payload.reason,
         stats: finalStats,
         winnerId: payload.winnerId,
+        round: payload.round,
+        roundWins: payload.roundWins,
+        roundsToWin: payload.roundsToWin,
+        winByRounds: payload.winByRounds,
+        goldenPoint: payload.goldenPoint,
         quickplay:
           gameConfigRef.current?.mode === "quickplay"
             ? {
@@ -469,6 +484,8 @@ export function useGameSession() {
           xpDelta: number;
           level: number;
           xp: number;
+          nextLevelXp?: number;
+          leveledUp?: boolean;
         }>;
       };
     }) => {
@@ -497,7 +514,12 @@ export function useGameSession() {
       );
 
       if (selfProgression?.xpDelta) {
-        emitXpPopup(selfProgression.xpDelta);
+        emitXpPopup(selfProgression.xpDelta, {
+          level: selfProgression.level,
+          xp: selfProgression.xp,
+          nextLevelXp: selfProgression.nextLevelXp,
+          leveledUp: selfProgression.leveledUp,
+        });
       }
 
       const nextResult: GameResult = {
@@ -710,7 +732,10 @@ export function useGameSession() {
     restartQuickplay: () => {
       const config = gameConfigRef.current;
       if (!socket || config?.mode !== "quickplay") return;
-      const modifiers = (config as { modifiers?: string[] }).modifiers ?? [];
+      const modifiers =
+        (selfPlayer?.config as { modifiers?: string[] } | undefined)?.modifiers ??
+        (config as { modifiers?: string[] }).modifiers ??
+        [];
 
       const handleStart = (payload: GameStartPayload) => {
         if (!payload.roomId) return;

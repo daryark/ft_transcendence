@@ -9,6 +9,7 @@ export interface RoomConfig {
   public: boolean;
   anonymousAllowed: boolean;
   roomName?: string;
+  autoStart?: number;
 }
 
 export interface MatchConfig {
@@ -45,12 +46,12 @@ export interface GarbageConfig {
   garbageMult: number;
   garbageCap: number;
   garbageMaxCap: number;
-  garbagePassthrough: boolean;
   allClearGarbage: number;
   garbageDelay: number;
   garbageDelayOnClear: number;
   garbageTargeting: "payback" | "even" | "random";
   garbageColumnChangeChance: number;
+  garbageHoles?: number;
 }
 
 export interface SurvivalConfig {

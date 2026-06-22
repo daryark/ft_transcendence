@@ -60,7 +60,16 @@ export interface GameStats {
 export interface GameUpdateStats extends GameStats {
   scoreAdded?: number;
   linesCleared?: number;
+  clearEvent?: LineClearEvent;
   quickplay?: QuickplayStats;
+}
+
+export interface LineClearEvent {
+  id: number;
+  lines: number;
+  label: "SINGLE" | "DOUBLE" | "TRIPLE" | "QUAD";
+  combo: number;
+  backToBack: number;
 }
 
 export interface QuickplayStats {
@@ -80,6 +89,11 @@ export interface GameStartPayload {
 export interface GameEndPayload {
   roomId: string;
   winnerId?: number | string | null;
+  round?: number;
+  roundWins?: Record<string, number>;
+  roundsToWin?: number;
+  winByRounds?: number;
+  goldenPoint?: number;
   reason:
     | "game_over"
     | "objective_complete"
@@ -95,6 +109,8 @@ export interface GameEndPayload {
       xpDelta: number;
       level: number;
       xp: number;
+      nextLevelXp?: number;
+      leveledUp?: boolean;
     }>;
   };
 }

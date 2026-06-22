@@ -6,6 +6,7 @@ import SocialPanels from "../SocialPanels/SocialPanels";
 import NotificationsPanel from "../Notifications/NotificationsPanel";
 import Dialog from "../Dialog/Dialog";
 import { apiJson } from "../../api/client";
+import { addXpPopupListener } from "../XpPopup/xpPopupEvents";
 
 import {
   clearSession,
@@ -153,6 +154,20 @@ const Header = () => {
     return () => controller.abort();
   }, [user]);
 
+  useEffect(() => {
+    return addXpPopupListener((event) => {
+      if (!(event instanceof CustomEvent)) return;
+
+      const level = Number(event.detail?.level);
+      if (!Number.isFinite(level) || level < 1) return;
+
+      setPlayerMeta((current) => ({
+        ...current,
+        level: Math.floor(level),
+      }));
+    });
+  }, []);
+
   return (
     <>
       <header className="header">
@@ -268,7 +283,9 @@ const Header = () => {
                       className="playerAvatar"
                       style={getAvatarStyle(user.avatarId)}
                     >
-                      {user.isAnonymous ? "?" : ""}
+                      {user.isAnonymous ? (
+                        <img alt="" aria-hidden="true" src="/avatar_anonymous.png" />
+                      ) : null}
                     </span>
                   </button>
                 </>

@@ -7,7 +7,8 @@ ARG DATABASE_URL=postgresql://placeholder:placeholder@localhost:5432/placeholder
 ENV DATABASE_URL=${DATABASE_URL}
 
 COPY backend/package.json backend/package-lock.json ./
-RUN npm install
+RUN npm install --omit=dev
+RUN npm install tsx bcrypt prom-client zod prisma@6.19.3 @prisma/client@6.19.3 dotenv dotenv-expand @prisma/adapter-pg@6.19.3 pg
 COPY backend ./
 RUN npx prisma generate
 RUN npm run build

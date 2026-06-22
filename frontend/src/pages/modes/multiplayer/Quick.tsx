@@ -6,6 +6,8 @@ import { authFetch } from "../../../auth/authFetch";
 import { getSessionUser } from "../../../auth/session";
 import "./MultiplayerMode.scss";
 
+const QUICKPLAY_MODIFIERS_STORAGE_KEY = "tetra.quickplay.selectedModifiers";
+
 const quickMods = [
   {
     id: "double-hole",
@@ -167,7 +169,19 @@ export default function Quick() {
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
-  const [selectedMods, setSelectedMods] = useState<string[]>([]);
+  const [selectedMods, setSelectedMods] = useState<string[]>(() => {
+    try {
+      const saved = window.localStorage.getItem(QUICKPLAY_MODIFIERS_STORAGE_KEY);
+      const parsed = saved ? JSON.parse(saved) : [];
+      if (!Array.isArray(parsed)) return [];
+      const allowed = new Set<string>(quickMods.map((modifier) => modifier.id));
+      return parsed.filter((modifier): modifier is string =>
+        typeof modifier === "string" && allowed.has(modifier),
+      );
+    } catch {
+      return [];
+    }
+  });
   const [chatMessages, setChatMessages] = useState<QuickChatMessage[]>([]);
   const [chatMessage, setChatMessage] = useState("");
   const [climbers, setClimbers] = useState<QuickLobbyPlayer[]>([]);
@@ -176,6 +190,9 @@ export default function Quick() {
   const [sentResultKey, setSentResultKey] = useState("");
   const [quickplayBest, setQuickplayBest] = useState<string | null>(null);
   const waitingToastShownRef = useRef("");
+  const pendingGameStartHandlerRef = useRef<((payload: { roomId?: string }) => void) | null>(
+    null,
+  );
   const routeResult = readQuickResultState(location.state);
   const routeResultKey = getQuickResultKey(routeResult);
   const lastResult =
@@ -208,6 +225,13 @@ export default function Quick() {
 
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      QUICKPLAY_MODIFIERS_STORAGE_KEY,
+      JSON.stringify(selectedMods),
+    );
+  }, [selectedMods]);
 
   useEffect(() => {
     const socket = getSocket();
@@ -260,6 +284,10 @@ export default function Quick() {
     socket.emit("quickplay:lobby");
 
     return () => {
+      if (pendingGameStartHandlerRef.current) {
+        socket.off("game:start", pendingGameStartHandlerRef.current);
+        pendingGameStartHandlerRef.current = null;
+      }
       socket.off("room:update", handleRoomUpdate);
       socket.off("quickplay:lobby", handleQuickplayLobby);
       socket.off("chat:message", handleChatMessage);
@@ -280,10 +308,16 @@ export default function Quick() {
 
     setHiddenResultKey(currentResultKey);
 
+    if (pendingGameStartHandlerRef.current) {
+      socket.off("game:start", pendingGameStartHandlerRef.current);
+      pendingGameStartHandlerRef.current = null;
+    }
+
     const handleGameStart = (payload: { roomId?: string }) => {
       if (!payload.roomId) return;
 
       socket.off("game:start", handleGameStart);
+      pendingGameStartHandlerRef.current = null;
       navigate(`/game/${payload.roomId}`, {
         replace: true,
         state: {
@@ -293,6 +327,7 @@ export default function Quick() {
       });
     };
 
+    pendingGameStartHandlerRef.current = handleGameStart;
     socket.once("game:start", handleGameStart);
     socket.emit("mode:join", {
       mode: "quickplay",
