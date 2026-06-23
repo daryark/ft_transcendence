@@ -803,7 +803,31 @@ body.game-session-active {
   --forty-results-panel-dark: rgba(58, 38, 27, 0.74);
   --forty-results-line: rgba(190, 117, 62, 0.72);
   --forty-results-text: #ffc79f;
+  --forty-results-value: #ffc79f;
+  --forty-results-glow: rgba(160, 103, 70, 0.2);
+  --forty-results-value-glow: rgba(255, 199, 159, 0.48);
+  --forty-results-best-bg: rgba(209, 174, 118, 0.86);
+  --forty-results-best-text: #fff8e8;
+  --forty-results-button-bg: rgba(92, 61, 42, 0.96);
+  --forty-results-button-hover: rgba(118, 77, 50, 0.98);
+}
 
+.solo-game--blitz-complete {
+  --forty-results-panel: rgba(78, 27, 32, 0.94);
+  --forty-results-panel-dark: rgba(51, 19, 24, 0.76);
+  --forty-results-line: rgba(190, 72, 82, 0.78);
+  --forty-results-text: #ffb4bc;
+  --forty-results-value: #ffc5cc;
+  --forty-results-glow: rgba(123, 45, 45, 0.28);
+  --forty-results-value-glow: rgba(255, 132, 146, 0.52);
+  --forty-results-best-bg: rgba(164, 53, 61, 0.88);
+  --forty-results-best-text: #fff1f3;
+  --forty-results-button-bg: rgba(91, 30, 36, 0.96);
+  --forty-results-button-hover: rgba(123, 45, 45, 0.98);
+}
+
+.solo-game--forty-complete,
+.solo-game--blitz-complete {
   min-height: calc(100vh - var(--app-header-height));
   display: grid;
   align-content: start;
@@ -811,7 +835,7 @@ body.game-session-active {
   padding: 0 0 calc(var(--app-footer-height) + 2rem);
   background:
     linear-gradient(90deg, rgba(7, 8, 12, 0.88), rgba(7, 8, 12, 0.32), rgba(7, 8, 12, 0.82)),
-    radial-gradient(circle at 54% 22%, rgba(160, 103, 70, 0.2), transparent 34rem);
+    radial-gradient(circle at 54% 22%, var(--forty-results-glow), transparent 34rem);
   color: var(--forty-results-text);
 }
 
@@ -867,19 +891,19 @@ body.game-session-active {
   display: grid;
   place-items: center;
   background: var(--forty-results-panel-dark);
-  color: #ffc79f;
+  color: var(--forty-results-value);
   font-size: clamp(5rem, 9vw, 8.2rem);
   font-weight: 900;
   line-height: 1;
-  text-shadow: 0 0 0.75rem rgba(255, 199, 159, 0.48);
+  text-shadow: 0 0 0.75rem var(--forty-results-value-glow);
 }
 
 .forty-results__personal-best {
   min-height: clamp(4.6rem, 9vw, 7rem);
   display: grid;
   place-items: center;
-  background: rgba(209, 174, 118, 0.86);
-  color: #fff8e8;
+  background: var(--forty-results-best-bg);
+  color: var(--forty-results-best-text);
   font-size: clamp(2.65rem, 5.4vw, 5rem);
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -896,8 +920,8 @@ body.game-session-active {
   justify-content: flex-end;
   padding: 0 1rem;
   border: 1px solid var(--forty-results-line);
-  background: rgba(92, 61, 42, 0.96);
-  color: #ffc79f;
+  background: var(--forty-results-button-bg);
+  color: var(--forty-results-text);
   font-size: clamp(2.5rem, 4vw, 4rem);
   font-weight: 900;
   letter-spacing: 0.1em;
@@ -911,7 +935,7 @@ body.game-session-active {
 
 .forty-results__again:hover,
 .forty-results__again:focus-visible {
-  background: rgba(118, 77, 50, 0.98);
+  background: var(--forty-results-button-hover);
   color: #fff0df;
   filter: brightness(1.08);
 }
