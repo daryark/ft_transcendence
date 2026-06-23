@@ -48,6 +48,29 @@ function getForwardedHeader(req: Request, name: string) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
 
+function getCookie(req: Request, name: string) {
+  const cookieHeader = req.headers.cookie;
+
+  if (!cookieHeader) {
+    return null;
+  }
+
+  const cookies = cookieHeader.split(";");
+
+  for (const cookie of cookies) {
+    const [rawName, ...rawValueParts] = cookie.split("=");
+
+    if (rawName?.trim() !== name) {
+      continue;
+    }
+
+    const rawValue = rawValueParts.join("=").trim();
+    return rawValue ? decodeURIComponent(rawValue) : null;
+  }
+
+  return null;
+}
+
 function getFrontendOrigin(req: Request) {
   const configured =
     process.env.FRONTEND_URL || process.env.FRONTEND_CALLBACK_URL;
@@ -116,6 +139,8 @@ export async function githubCallback(req: Request, res: Response) {
 
     const providerId = String(profile.id || profile.node_id || profile.login);
     const username = profile.login || undefined;
+    const country = getCookie(req, "tetra_country");
+    res.clearCookie("tetra_country", { path: "/" });
 
     const { user, token } = await findOrCreateOAuthUser({
       provider: "github",
@@ -123,6 +148,7 @@ export async function githubCallback(req: Request, res: Response) {
       email,
       username,
       request: req,
+      country,
     });
 
     const frontend = getFrontendOrigin(req);

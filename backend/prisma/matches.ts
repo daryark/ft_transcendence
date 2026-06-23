@@ -1,3 +1,4 @@
+import { gamemode as PrismaGameMode } from "@prisma/client";
 import { prisma } from "./prisma";
 
 /**
@@ -5,12 +6,7 @@ import { prisma } from "./prisma";
  */
 
 export type MatchStatus = "active" | "finished";
-export type GameMode =
-	| "quickPlay"
-	| "fortyLines"
-	| "blitz"
-	| "zen"
-	| "customGame";
+export type GameMode = PrismaGameMode;
 export type PlayerResult = "win" | "lose" | "draw";
 
 export type MatchRecord = {

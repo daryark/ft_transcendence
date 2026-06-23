@@ -1,3 +1,4 @@
+import https from "node:https";
 import type { Request } from "express";
 
 export type RequestLike = Pick<Request, "ip" | "headers" | "socket">;
@@ -39,27 +40,27 @@ export function getClientIp(request?: RequestLike): string | null {
 	const forwardedFor = request.headers["x-forwarded-for"];
 	if (typeof forwardedFor === "string" && forwardedFor.trim()) {
 		const firstForwardedIp = forwardedFor.split(",")[0]?.trim();
-		if (firstForwardedIp && !isLocalOrPrivateIp(firstForwardedIp)) {
+		if (firstForwardedIp) {
 			return normalizeIpAddress(firstForwardedIp);
 		}
 	}
 
 	const cloudflareIp = request.headers["cf-connecting-ip"];
-	if (typeof cloudflareIp === "string" && cloudflareIp.trim() && !isLocalOrPrivateIp(cloudflareIp)) {
+	if (typeof cloudflareIp === "string" && cloudflareIp.trim()) {
 		return normalizeIpAddress(cloudflareIp);
 	}
 
 	const realIp = request.headers["x-real-ip"];
-	if (typeof realIp === "string" && realIp.trim() && !isLocalOrPrivateIp(realIp)) {
+	if (typeof realIp === "string" && realIp.trim()) {
 		return normalizeIpAddress(realIp);
 	}
 
-	if (request.ip && !isLocalOrPrivateIp(request.ip)) {
+	if (request.ip) {
 		return normalizeIpAddress(request.ip);
 	}
 
 	const socketIp = request.socket?.remoteAddress;
-	if (typeof socketIp === "string" && socketIp.trim() && !isLocalOrPrivateIp(socketIp)) {
+	if (typeof socketIp === "string" && socketIp.trim()) {
 		return normalizeIpAddress(socketIp);
 	}
 
@@ -67,26 +68,64 @@ export function getClientIp(request?: RequestLike): string | null {
 }
 
 export async function resolveCountryByIp(ip: string | null | undefined): Promise<string | null> {
-	if (!ip || isLocalOrPrivateIp(ip)) {
+	if (!ip) {
 		return null;
 	}
 
-	const controller = new AbortController();
-	const timeout = setTimeout(() => controller.abort(), COUNTRY_LOOKUP_TIMEOUT_MS);
+	// For local/private IPs in development, still try to resolve
+	// the caller's actual public IP via the service
+	const normalized = normalizeIpAddress(ip);
+	
+	// Only skip the lookup entirely if the input is clearly invalid/placeholder
+	if (
+		normalized.length === 0 ||
+		normalized.toLowerCase() === "undefined" ||
+		normalized.toLowerCase() === "null"
+	) {
+		return null;
+	}
+
+	const lookupUrl = isLocalOrPrivateIp(normalized)
+		? "https://ipwho.is/"
+		: `https://ipwho.is/${encodeURIComponent(normalized)}`;
 
 	try {
-		const response = await fetch(`https://ipwho.is/${encodeURIComponent(normalizeIpAddress(ip))}`, {
-			signal: controller.signal,
-			headers: {
-				accept: "application/json",
-			},
+		const payload = await new Promise<{ success?: boolean; country?: string }>((resolve, reject) => {
+			const request = https.get(
+				lookupUrl,
+				{
+					headers: {
+						accept: "application/json",
+					},
+				},
+				(response) => {
+					let body = "";
+
+					response.setEncoding("utf8");
+					response.on("data", (chunk) => {
+						body += chunk;
+					});
+					response.on("end", () => {
+						if (response.statusCode && response.statusCode >= 200 && response.statusCode < 300) {
+							try {
+								resolve(JSON.parse(body) as { success?: boolean; country?: string });
+							} catch (error) {
+								reject(error);
+							}
+							return;
+						}
+
+						reject(new Error(`ipwho.is request failed with status ${response.statusCode ?? "unknown"}`));
+					});
+				}
+			);
+
+			request.setTimeout(COUNTRY_LOOKUP_TIMEOUT_MS, () => {
+				request.destroy(new Error("ipwho.is request timed out"));
+			});
+
+			request.on("error", reject);
 		});
-
-		if (!response.ok) {
-			return null;
-		}
-
-		const payload = (await response.json()) as { success?: boolean; country?: string };
 
 		if (!payload.success || typeof payload.country !== "string") {
 			return null;
@@ -96,8 +135,6 @@ export async function resolveCountryByIp(ip: string | null | undefined): Promise
 		return country.length > 0 ? country.slice(0, 100) : null;
 	} catch {
 		return null;
-	} finally {
-		clearTimeout(timeout);
 	}
 }
 

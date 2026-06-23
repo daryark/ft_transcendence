@@ -19,6 +19,40 @@ type AuthResponse = {
   token?: unknown;
 };
 
+type AuthRequestInput = Record<string, string | undefined>;
+
+const COUNTRY_LOOKUP_TIMEOUT_MS = 3000;
+const COUNTRY_COOKIE_NAME = "tetra_country";
+
+function setCountryCookie(country: string | null) {
+  if (!country) {
+    document.cookie = `${COUNTRY_COOKIE_NAME}=; Max-Age=0; Path=/; SameSite=Lax`;
+    return;
+  }
+
+  const secure = window.location.protocol === "https:" ? "; Secure" : "";
+  document.cookie = `${COUNTRY_COOKIE_NAME}=${encodeURIComponent(country)}; Max-Age=600; Path=/; SameSite=Lax${secure}`;
+}
+
+async function resolveBrowserCountry(): Promise<string | null> {
+  try {
+    const response = await fetch("/api/auth/country", {
+      method: "GET",
+      signal: AbortSignal.timeout(COUNTRY_LOOKUP_TIMEOUT_MS),
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as { country?: string | null };
+    const country = payload.country?.trim();
+    return country && country.length > 0 ? country.slice(0, 100) : null;
+  } catch (error) {
+    return null;
+  }
+}
+
 function isSessionUser(value: unknown): value is SessionUser {
   if (!value || typeof value !== "object") return false;
   const user = value as Record<string, unknown>;
@@ -32,7 +66,7 @@ function isSessionUser(value: unknown): value is SessionUser {
 
 async function requestAuth(
   mode: AuthMode,
-  input: Record<string, string>,
+  input: AuthRequestInput,
 ): Promise<SessionData> {
   const response = await apiJson<AuthResponse>(
     mode === "login" ? "/api/auth/login" : "/api/auth/register",
@@ -93,19 +127,24 @@ export default function Auth() {
     setError("");
 
     try {
-      const session =
-        mode === "login"
-          ? await requestAuth("login", {
-              ...(login.includes("@")
-                ? { email: login.trim() }
-                : { username: login.trim() }),
-              password,
-            })
-          : await requestAuth("register", {
-              email: email.trim(),
-              password,
-              username: username.trim(),
-            });
+      let session: SessionData;
+      
+      if (mode === "login") {
+        session = await requestAuth("login", {
+          ...(login.includes("@")
+            ? { email: login.trim() }
+            : { username: login.trim() }),
+          password,
+        });
+      } else {
+        const browserCountry = await resolveBrowserCountry();
+        session = await requestAuth("register", {
+          email: email.trim(),
+          password,
+          username: username.trim(),
+          country: browserCountry ?? undefined,
+        });
+      }
 
       saveSession(session);
       navigate(returnPath, { replace: true });
@@ -264,11 +303,12 @@ export default function Auth() {
           <div className="auth__oauth">
             <button
               className="oauth github"
-              onClick={() => {
+              onClick={async () => {
                 window.sessionStorage.setItem(
                   "tetra-auth-return-path",
                   returnPath,
                 );
+                setCountryCookie(await resolveBrowserCountry());
                 window.location.href = "/api/auth/github";
               }}
               type="button"
