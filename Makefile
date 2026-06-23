@@ -34,7 +34,7 @@ build:
 	@NGINX_HTTPS_PORT=$(NGINX_HTTPS_PORT) $(COMPOSE) up -d --build
 	@docker run --rm -v trans_es-snapshots:/snap alpine chown -R 1000:1000 /snap
 	$(PRINT_HTTPS_URL)
-	@echo "Open: https://10.64.249.107/"
+	@echo "Open remotehost(With OAuth): https://10.64.249.107/"
 
 dev-build:
 	@NGINX_HTTP_PORT=$(NGINX_HTTP_PORT) $(COMPOSE) -f docker-compose.dev.yml up -d --build
@@ -43,7 +43,7 @@ dev-build:
 up:
 	@NGINX_HTTPS_PORT=$(NGINX_HTTPS_PORT) $(COMPOSE) up -d
 	$(PRINT_HTTPS_URL)
-	@echo "Open: https://10.64.249.107/"
+	@echo "Open remotehost(With OAuth): https://10.64.249.107/"
 
 down:
 	@$(COMPOSE) down -v
@@ -61,7 +61,7 @@ fclean:
 re: down
 	@NGINX_HTTPS_PORT=$(NGINX_HTTPS_PORT) $(COMPOSE) up -d --build
 	$(PRINT_HTTPS_URL)
-	@echo "Open: https://10.64.249.107/"
+	@echo "Open remotehost(With OAuth): https://10.64.249.107/"
 
 check:
 	echo "Checking API..."
