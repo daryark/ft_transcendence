@@ -1,213 +1,389 @@
-# Distributed Multiplayer Tetris Platform
+*This project has been created as part of the 42 curriculum by dyarkovs, mperetia, asmolnya, svalchuk*
 
-**This project has been created as part of the 42 curriculum by dyarkovs, mperetia, asmolnya**
+# Tetra
 
 ## Description
 
-A distributed multiplayer Tetris platform enabling real-time gameplay through the browser.
-The project features a JavaScript game engine handling match logic, a Node.js backend built
-as microservices for authentication, matchmaking, and data management, and a React frontend
-providing the user interface.
+**Tetra** is a real-time multiplayer Tetris platform built as the final 42 Common Core web project. The goal is to provide a complete browser game where users can register, log in, customize game modes, play solo or multiplayer Tetris, interact with other players, track progression, and observe the system through production-style monitoring tools.
+
+Key features:
+
+- Browser-based Tetris with solo presets, quickplay matchmaking, custom rooms, and spectator support.
+- Real-time multiplayer with Socket.IO, including remote players and more than two players in the same match.
+- User accounts, GitHub OAuth, profiles, avatars, friends, online presence, messages, notifications, achievements, XP, statistics, match history, and leaderboards.
+- Responsive React interface with reusable UI components, legal pages, and cross-browser support target.
+- PostgreSQL persistence through Prisma ORM.
+- Dockerized deployment behind HTTPS Nginx with ELK logging and Prometheus/Grafana monitoring.
 
 ## Instructions
-(section containing any relevant information about compilation,
-installation, and/or execution).
+
+### Prerequisites
+
+- Docker and Docker Compose.
+- `make`.
+- Latest stable Google Chrome for evaluation.
+- Optional for local development: Node.js `>=22.12.0` and npm `>=10`.
+- Local environment file at project root: `.env`.
+- TLS certificate files in `tools/`:
+  - `tools/transendence.42.fr.crt`
+  - `tools/transendence.42.fr.key`
+
+### Environment Setup
+
+Create the local environment file:
+
+```bash
+cp .env.example .env
+```
+
+Then edit `.env` with real local values. The most important variables are:
+
+- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `DATABASE_URL`
+- `JWT_SECRET`
+- `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_CALLBACK_URL`
+- `FRONTEND_URL`
+- `ELASTIC_PASSWORD`, `KIBANA_SYSTEM_PASSWORD`, `LOGSTASH_INTERNAL_PASSWORD`
+- `KIBANA_ENCRYPTION_KEY`
+- `GRAFANA_ADMIN_PASSWORD`
+- `NGINX_HTTPS_PORT`
+
+### Run With Docker
+
+Build and start the full project with one command:
+
+```bash
+make build
+```
+
+Open the printed HTTPS URL in the browser. With the default configuration, the main entry point is:
+
+```text
+https://localhost
+```
+
+If port `443` is already used:
+
+```bash
+NGINX_HTTPS_PORT=8443 make build
+```
+
+Then open:
+
+```text
+https://localhost:8443
+```
+
+Useful commands:
+
+```bash
+make up          # start existing containers
+make down        # stop containers and remove volumes
+make re          # rebuild and restart
+make dev-build   # run the development compose file
+```
+
+### Service URLs
+
+- Application: `https://localhost`
+- API: `https://localhost/api`
+- WebSocket endpoint: `https://localhost/socket.io/`
+- Kibana: `https://localhost/kibana`
+- Grafana: `https://localhost/grafana`
+- Backend health check: `https://localhost/api` through Nginx, or container-local `/health`
+
+### Tests
+
+Backend:
+
+```bash
+cd backend
+npm test
+```
+
+Frontend:
+
+```bash
+cd frontend
+npm test
+npm run lint
+npm run build
+```
+
+## Team Information
+
+| Login | Member | Assigned role(s) | Responsibilities |
+| --- | --- | --- | --- |
+| `mperetia` | Mariia Peretiatko | Product Owner, Frontend Lead, Developer | Product flow, React UI, reusable components, profile/statistics screens, legal pages, gameplay views, frontend integration with sockets and API. |
+| `dyarkovs` | Daria Yarkovska | Project Manager, Game/Realtime Developer | Team coordination, Tetris engine work, Socket.IO game events, quickplay/custom room flow, multiplayer synchronization, spectator flow. |
+| `asmolnya` | Aleksandra Smolniakova | DevOps Lead, Developer | Docker infrastructure, Nginx HTTPS proxy, ELK stack, Prometheus/Grafana monitoring, log retention and dashboards. |
+| `svalchuk` | Severyn Valchuk | Backend/User Management Developer | Authentication, Prisma API work, profile/search/friends/messages/notifications backend, validation, database relations. |
+
+## Project Management
+
+The team divided the project by product areas: frontend/game UI, game engine and realtime backend, user management/API/database, and infrastructure/observability. Work was organized through Git branches, pull requests/merge commits, regular sync meetings, and direct communication for integration blockers.
+
+Communication channels used:
+
+- Discord and in-person meetings for planning, integration, and debugging.
+- Git commits and branch history for implementation tracking.
+- Shared module checklist from the subject to track required points.
+
+Coordination practices:
+
+- Features were split into smaller tasks before implementation.
+- Integration work was reviewed by at least one teammate when it affected shared contracts.
+- Backend/frontend contracts were tested manually and with automated unit/integration tests where available.
+- Risky areas such as sockets, authentication, database schema, and deployment were discussed before final wiring.
+
+## Technical Stack
+
+### Frontend
+
+- React 19 with TypeScript.
+- Vite for development/build tooling.
+- React Router for client-side routing.
+- Sass/SCSS modules and shared global styles.
+- Socket.IO client for realtime gameplay, notifications, social status, and room updates.
+- Vitest and Testing Library for frontend tests.
+
+React was chosen because the project needs a structured interactive UI with many stateful views: authentication, play menu, game board, profiles, leaderboard, statistics, achievements, notifications, and multiplayer rooms.
+
+### Backend
+
+- Node.js with TypeScript.
+- Express 5 for the HTTP API.
+- Socket.IO for realtime multiplayer events.
+- Prisma ORM with PostgreSQL.
+- JWT authentication, bcrypt password hashing, GitHub OAuth.
+- Zod validation for game configuration.
+- Jest/Supertest for backend tests.
+
+Express and Socket.IO were chosen because the project needs normal REST-like account/social APIs and low-latency bidirectional game events.
+
+### Database
+
+- PostgreSQL stores persistent user, social, match, message, notification, OAuth, and achievement data.
+- Prisma provides typed database access and schema documentation.
+
+PostgreSQL was chosen for relational data integrity: users connect to friends, OAuth accounts, matches, match players, messages, notifications, and achievements through clear foreign keys.
+
+### Infrastructure
+
+- Docker Compose for one-command deployment.
+- Nginx as HTTPS reverse proxy for frontend, backend API, WebSockets, Kibana, and Grafana.
+- Redis container for infrastructure support.
+- ELK stack: Elasticsearch, Logstash, Kibana, Filebeat.
+- Prometheus, Grafana, node-exporter, nginx-exporter, and cAdvisor.
+
+## Database Schema
+
+```mermaid
+erDiagram
+    users ||--o{ friends : "user_id"
+    users ||--o{ friends : "friend_id"
+    users ||--o{ oauth_accounts : owns
+    users ||--o{ match_players : plays
+    matches ||--o{ match_players : contains
+    users ||--o{ messages : sends
+    users ||--o{ messages : receives
+    messages ||--o{ messages : replies
+    users ||--o{ notifications : receives
+    users ||--o{ notifications : acts
+    users ||--o{ user_achievements : unlocks
+    achievements ||--o{ user_achievements : defines
+```
+
+Main tables:
+
+- `users`: account identity, email, username, password hash, avatar, country, XP, level, wins, play time, creation date.
+- `oauth_accounts`: external provider accounts linked to users.
+- `friends`: friendship, pending request, accepted friendship, and blocked relationship state.
+- `matches`: game session records with status and game mode.
+- `match_players`: per-user match results, scores, lines, pieces, holds, hard drops, combos, tetrises, duration, and win/loss result.
+- `messages`: persisted direct messages, replies, creation time, and read status.
+- `notifications`: user notifications with actor, type, title, body, optional link, JSON payload, and read state.
+- `achievements`: achievement catalog with code, name, description, rarity, and target.
+- `user_achievements`: unlocked achievements per user.
+
+Important enum types:
+
+- `friend_status`: `pending`, `accepted`, `blocked`
+- `match_status`: `active`, `finished`
+- `player_result`: `win`, `lose`, `draw`
+- `gamemode`: `quickPlay`, `fortyLines`, `blitz`, `zen`, `customGame`
+
+## Features List
+
+| Feature | Members | Description |
+| --- | --- | --- |
+| Authentication | `svalchuk`, `mperetia` | Register/login flow, JWT sessions, password hashing, protected frontend routes. |
+| GitHub OAuth | `svalchuk`, `mperetia` | OAuth redirect/callback/exchange flow and frontend callback handling. |
+| Profiles and avatars | `mperetia`, `svalchuk` | Public profile pages, profile update API, avatar selection/default avatar. |
+| Friends and online status | `svalchuk`, `mperetia` | Friend requests, accept/reject/remove/block actions, realtime online presence. |
+| Messaging | `svalchuk`, `dyarkovs`, `mperetia` | Persistent direct messages, conversations, read state, message notifications. |
+| Notifications | `svalchuk`, `mperetia` | Notification storage, read/unread state, realtime notification delivery. |
+| Tetris engine | `dyarkovs`, `mperetia` | Board state, pieces, input handling, gravity, hold, scoring, line clear logic. |
+| Solo modes | `mperetia`, `dyarkovs` | Zen, 40 Lines, Blitz, and configurable local gameplay presets. |
+| Quickplay multiplayer | `dyarkovs`, `mperetia` | Lobby, matchmaking-style entry, remote realtime matches, game-over/result flow. |
+| Custom multiplayer rooms | `dyarkovs`, `mperetia` | Room creation/joining, host start, configurable settings, multiplayer board views. |
+| 3+ player multiplayer | `dyarkovs`, `mperetia` | More than two players can join and play in synchronized multiplayer rooms. |
+| Spectator mode | `dyarkovs`, `mperetia` | Users can observe ongoing quickplay/multiplayer game state in realtime. |
+| Game customization | `mperetia`, `dyarkovs` | Board size, bag type, hold, preview pieces, gravity, garbage, targeting, modifiers. |
+| Progression and achievements | `mperetia`, `dyarkovs`, `svalchuk` | XP, levels, achievement catalog, unlock tracking, visual XP feedback. |
+| Statistics and match history | `mperetia`, `svalchuk` | User statistics, match records, wins/losses, leaderboard integration. |
+| Leaderboards | `mperetia`, `svalchuk` | Mode/scope leaderboard endpoint and channel UI. |
+| Legal pages | `mperetia` | Privacy Policy and Terms of Service accessible from the footer. |
+| Design system | `mperetia` | Reusable components such as Button, Dialog, Confirm, Toast, GameBoard, ProfileHeader, SocialPanels, NotificationsPanel, ModeLayout, ModeOptions, StateView, BackButton, ChannelButton. |
+| ELK logging | `asmolnya` | Nginx JSON logs collected by Filebeat/Logstash, indexed in Elasticsearch, displayed in Kibana. |
+| Monitoring | `asmolnya` | Prometheus metrics, exporters, cAdvisor, Grafana provisioning, dashboards and alerts. |
+| HTTPS deployment | `asmolnya`, `svalchuk` | Nginx TLS reverse proxy for frontend, API, WebSocket, Kibana, and Grafana routes. |
+
+## Modules
+
+The subject requires at least 14 points. This implementation targets **27 points**.
+
+| Category | Module | Type | Points | Implementation | Members |
+| --- | --- | --- | ---: | --- | --- |
+| Web | Use a framework for frontend and backend | Major | 2 | React frontend and Express backend. | `mperetia`, `svalchuk`, `dyarkovs` |
+| Web | Real-time features with WebSockets | Major | 2 | Socket.IO game, room, presence, notification, and social events. | `dyarkovs`, `mperetia` |
+| Web | User interaction | Major | 2 | Chat/messages, profiles, friends list, friend requests, online status. | `svalchuk`, `mperetia` |
+| Web | Use an ORM | Minor | 1 | Prisma ORM with PostgreSQL schema and generated client. | `svalchuk` |
+| Web | Notification system | Minor | 1 | Persistent notifications plus realtime delivery for social/message events. | `svalchuk`, `mperetia` |
+| Web | Custom design system | Minor | 1 | More than 10 reusable UI components and shared styling conventions. | `mperetia` |
+| Accessibility and Internationalization | Additional browser support | Minor | 1 | UI and gameplay target Chrome plus additional modern browsers such as Firefox and Edge. | `mperetia` |
+| User Management | Standard user management and authentication | Major | 2 | Secure account flow, profile update, avatar/default avatar, friends, profile pages, online status. | `svalchuk`, `mperetia` |
+| User Management | Game statistics and match history | Minor | 1 | Match records, per-player metrics, statistics page, achievements/progression, leaderboard data. | `mperetia`, `svalchuk` |
+| User Management | OAuth 2.0 remote authentication | Minor | 1 | GitHub OAuth account linking/login flow. | `svalchuk`, `mperetia` |
+| Gaming and UX | Complete web-based game | Major | 2 | Browser Tetris with rules, scoring, win/loss state, solo and multiplayer views. | `dyarkovs`, `mperetia` |
+| Gaming and UX | Remote players | Major | 2 | Separate clients play the same game through Socket.IO synchronization. | `dyarkovs`, `mperetia` |
+| Gaming and UX | Multiplayer game with more than two players | Major | 2 | Custom/quickplay multiplayer supports 3+ simultaneous players. | `dyarkovs`, `mperetia` |
+| Gaming and UX | Game customization options | Minor | 1 | Presets, board dimensions, piece bag, hold, preview, gravity, garbage, targeting, modifiers. | `mperetia`, `dyarkovs` |
+| Gaming and UX | Gamification system | Minor | 1 | Achievements, XP/level progression, leaderboard, visual XP feedback. | `mperetia`, `dyarkovs`, `svalchuk` |
+| Gaming and UX | Spectator mode | Minor | 1 | Users can subscribe to quickplay/multiplayer game updates as spectators. | `dyarkovs`, `mperetia` |
+| DevOps | ELK log management | Major | 2 | Elasticsearch, Logstash, Kibana, Filebeat, Nginx JSON logs, index/snapshot policies. | `asmolnya` |
+| DevOps | Prometheus and Grafana monitoring | Major | 2 | Prometheus config, Grafana dashboards/provisioning, alerts, node/nginx/cAdvisor exporters. | `asmolnya` |
+
+### Point Calculation
+
+- Web: `2 + 2 + 2 + 1 + 1 + 1 = 9`
+- Accessibility: `1`
+- User Management: `2 + 1 + 1 = 4`
+- Gaming and UX: `2 + 2 + 2 + 1 + 1 + 1 = 9`
+- DevOps: `2 + 2 = 4`
+
+Total: `9 + 1 + 4 + 9 + 4 = 27 points`
+
+## Individual Contributions
+
+### `mperetia` - Mariia Peretiatko
+
+- Built major parts of the React frontend: routing, protected pages, layout, play menu, game views, profile/statistics/leaderboard/achievements pages, legal pages, and reusable UI components.
+- Integrated frontend API calls and Socket.IO events for authentication, gameplay, profile, social panels, notifications, and progression feedback.
+- Worked on game UI/UX, custom mode configuration, game board display, result screens, and visual polish.
+- Challenge: keeping realtime game state, frontend navigation, and protected sessions synchronized without confusing users after reconnects or route changes.
+
+### `dyarkovs` - Daria Yarkovska
+
+- Worked on the Tetris engine, game state, multiplayer room behavior, quickplay flow, custom game flow, and Socket.IO game handlers.
+- Implemented realtime event contracts for joining/leaving modes, starting rooms, moving pieces, game resume/stop, lobby updates, and spectator entry.
+- Helped connect engine behavior with match lifecycle and multiplayer synchronization.
+- Challenge: making multiple clients receive consistent state while handling disconnects, replacement sockets, and player roles.
+
+### `asmolnya` - Aleksandra Smolniakova
+
+- Built and configured Docker infrastructure for production-style deployment.
+- Implemented Nginx HTTPS reverse proxy, ELK stack, log collection pipeline, Kibana setup, retention/index policies, and snapshot-related checks.
+- Added Prometheus/Grafana monitoring with dashboards, alerts, and exporters.
+- Challenge: making observability services work together inside Docker while keeping access routed through HTTPS.
+
+### `svalchuk` - Severyn Valchuk
+
+- Implemented backend API areas around authentication, profile, search, friends, messages, notifications, and database relations.
+- Worked on Prisma/PostgreSQL schema evolution and service functions for user management and social features.
+- Added backend validation and tests for core API behavior.
+- Challenge: keeping relational data consistent across social actions such as friend requests, blocking, message delivery, read states, and notifications.
+
+## API Overview
+
+Main HTTP routes include:
+
+- `POST /api/auth/register`
+- `POST /api/auth/login`
+- `GET /api/auth/github`
+- `GET /api/auth/github/callback`
+- `POST /api/auth/github/exchange`
+- `GET /api/auth/me`
+- `GET /api/users/search`
+- `GET /api/users/:username/profile`
+- `PATCH /api/users/me/profile`
+- `PATCH /api/users/me/password`
+- `GET /api/friends`
+- `POST /api/friends/request`
+- `POST /api/friends/respond`
+- `POST /api/friends/remove`
+- `POST /api/friends/block`
+- `GET /api/messages/conversation/:friendId`
+- `POST /api/messages`
+- `PATCH /api/messages/:id/read`
+- `GET /api/notifications`
+- `PATCH /api/notifications/read`
+- `GET /api/leaderboards`
+- `GET /api/achievements`
+
+Main Socket.IO events include:
+
+- `mode:join`, `mode:leave`
+- `rooms:list`, `rooms:update`
+- `room:start`, `room:update`
+- `quickplay:lobby`, `quickplay:spectate`
+- `player:move`
+- `game:start`, `game:update`, `game:resume`, `game:end`, `game:stop`
+- `round:start`, `round:end`
+- `social:update`
+- `notifications`
+- `server:error`
+
+## Privacy and Terms
+
+The application includes accessible legal pages:
+
+- Privacy Policy: `/privacy-policy`
+- Terms of Service: `/terms-of-service`
+
+Both pages are linked from the application footer and contain project-specific content about accounts, gameplay, chat/messages, profiles, leaderboards, OAuth, data storage, security, fair play, and availability.
+
+## Known Limitations
+
+- The HTTPS certificate is local/self-signed for the project environment, so browsers may require trusting it manually.
+- The project is a 42 student project and is not intended for production or commercial use.
+- Some observability containers need enough local memory and Docker resources, especially Elasticsearch and Grafana.
+- If a claimed module is evaluated, it should be demonstrated through the running application, not only through code.
 
 ## Resources
-Resources will be added in the process of work under the project.
 
-## Main plan:
+Project references:
 
-- Web: Use frameworks (frontend + backend = 2pts) + ORM (1pt) + Allow users to interact with other users->chat (2 pts) = 5 points
-- Accessibility and Internationalization: 3 browsers supoport (1pt) = 1 point
-- Gaming and user experience: Web-based game (2pts) + Remote players (2pts) + Multiplayer (2pts) + Game customization (1pt) + Spectator mode (1pt)  = 8 points
-- User Management: Standard user management (2pts) + OAuth (1pt) + Game statistics (1pt) = 4 points
+- React documentation: https://react.dev/
+- Vite documentation: https://vite.dev/
+- React Router documentation: https://reactrouter.com/
+- Express documentation: https://expressjs.com/
+- Socket.IO documentation: https://socket.io/docs/
+- Prisma documentation: https://www.prisma.io/docs
+- PostgreSQL documentation: https://www.postgresql.org/docs/
+- Docker Compose documentation: https://docs.docker.com/compose/
+- Nginx documentation: https://nginx.org/en/docs/
+- Elasticsearch documentation: https://www.elastic.co/guide/
+- Kibana documentation: https://www.elastic.co/guide/en/kibana/
+- Logstash documentation: https://www.elastic.co/guide/en/logstash/
+- Filebeat documentation: https://www.elastic.co/guide/en/beats/filebeat/
+- Prometheus documentation: https://prometheus.io/docs/
+- Grafana documentation: https://grafana.com/docs/
+- Web Content Accessibility Guidelines: https://www.w3.org/WAI/standards-guidelines/wcag/
+- OAuth 2.0 overview: https://oauth.net/2/
+- OWASP Password Storage Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
 
-#### Total points: 3 + 1 + 8 + 4 + 2 = 18 points
+### AI Usage
 
-<br/>
+AI tools were used as support for documentation, code review prompts, debugging ideas, test-case brainstorming, and README organization. For this README, AI was used to summarize the subject requirements, compare them with the repository structure, and draft a clear English document.
 
-#### Additional features (optional to do):
-
-- Web: public API with 5 endpoints (2 pts) + advanced search and filters/sorting (1pt) = 3 points
-- Accessibility and Internationalization: Multiple languages support (1pt) + Right-to-Left (1pt) = 2 points
-- Gaming and user experience: + Tournament system (1pt) + Another game (2pts) + 3D Graphics in game (2pts) + Gamification system/achievement (1pt) = 6 points
-- User Management: + Advanced permission system (2pts) = 2 points
-- Artificial Intelligence: AI Opponent (2pts) = 2 points
-- Cybersecurity: WAF/ModSecurity and HashiCorp Vault (2pts) = 2 points
-- DevOps: ELK (2pts) + Prometheus and Grafana (2pts) + Backend as microservices (2pts) = 6 points
-
-##### Total points: 3 + 2 + 6 + 2 + 2 + 2 + 6 = 23 points
-
-## IV.1 Web
-#### Major: Use a framework for both the frontend and backend. +  
-- Use a frontend framework (React). - Masha  
-- Use a backend framework (Express/Fastify, Node.js). - Sasha, Dasha  
-
-#### Major: Implement real-time features using WebSockets or similar technology.   + Dasha  
-- Real-time updates across clients.  
-- Handle connection/disconnection gracefully.  
-- Efficient message broadcasting.  
-
-#### Major: Allow users to interact with other users.  + Masha(Front), Sasha (Back) 
-The minimum requirements are:
-- A basic chat system (send/receive messages between users).  
-- A profile system (view user information).  
-- A friends system (add/remove friends, see friends list).  
-
-#### Major: A public API to interact with the database with a secured API key, rate   + Sasha(Back, DB), maybe Masha(if the secure key is needed on Front to be approved)  
-limiting, documentation, and at least 5 endpoints:  
-- GET /api/{something}  
-- POST /api/{something}  
-- PUT /api/{something}  
-- DELETE /api/{something}  
-
-#### Minor: Use an ORM for the database. (Sqlite, Sequalize, Prisma - on Postgres)  +/- Sasha
-
-#### Minor: A complete notification system for all creation, update, and deletion actions.  
-
-#### Minor: Implement advanced search functionality with filters, sorting, and pagination. (one table and place)  - Masha(Front), Sasha(back, DB)
-
-## IV.2 Accessibility and Internationalization
-#### Minor: Support for multiple languages (at least 3 languages).   (We're doing only if we have a time and need it!) ?  
-- Implement i18n (internationalization) system.  
-- At least 3 complete language translations.  
-- Language switcher in the UI.  
-- All user-facing text must be translatable.  
-
-#### Minor: Right-to-left (RTL) language support.   (Do we need to thing about it in advance in terms of Frontend components placement?. Still do only if have time.) ?  
-- Support for at least one RTL language (Arabic, Hebrew, etc.).  
-- Complete layout mirroring (not just text direction).  
-- RTL-specific UI adjustments where needed.  
-- Seamless switching between LTR and RTL.  
-
-#### Minor: Support for additional browsers.   + Masha (Front)  
-- Full compatibility with at least 2 additional browsers (Firefox, Safari, Edge, etc.).  
-- Test and fix all features in each browser.  
-- Document any browser-specific limitations.  
-- Consistent UI/UX across all supported browsers.
-
-## IV.3 User Management
-#### Major: Standard user management and authentication.  Sasha(back), Masha (Front) + 
-- Users can update their profile information.  
-- Users can upload an avatar (with a default avatar if none provided).  
-- Users can add other users as friends and see their online status.  
-- Users have a profile page displaying their information.  
-
-#### Minor: Game statistics and match history (requires a game module).   + Masha(Front), Sasha(Back)  
-- Track user game statistics (wins, losses, level, XP, etc.).  
-- Display match history (1v1 games, dates, results, opponents).  
-- Show achievements and progression.  
-- Leaderboard integration.  
-
-#### Minor: Implement remote authentication with OAuth 2.0 (Google, GitHub, 42, etc.).    +  
-
-#### Major: Advanced permissions system:   ?  
-- View, edit, and delete users (CRUD).  
-- Roles management (admin, user, guest, moderator, etc.).  
-- Different views and actions based on user role.
-
-## IV.4 Artificial Intelligence 
-#### Major: Introduce an AI Opponent for games.    +/- ? 
-- The AI must be challenging and able to win occasionally.  
-- The AI should simulate human-like behavior (not perfect play).  
-- If you implement game customization options, the AI must be able to use them.  
-- You must be able to explain your AI implementation during evaluation.
-
-## IV.5 Cybersecurity 
-#### Major: Implement WAF/ModSecurity (hardened) + HashiCorp Vault for secrets:    + Sasha 
-- Configure strict ModSecurity/WAF.  
-- Manage secrets in Vault (API keys, credentials, environment variables), encrypted and isolated.
-
-## IV.6 Gaming and user experience
-#### Major: Implement a complete web-based game where users can play against each    + Masha (Front and logics), Dasha (Back server) other.  
-- The game can be real-time multiplayer (e.g., Pong, Chess, Tic-Tac-Toe, Card games, etc.).  
-- Players must be able to play live matches.  
-- The game must have clear rules and win/loss conditions.  
-- The game can be 2D or 3D.  
-
-#### Major: Remote players — Enable two players on separate computers to play the    + Masha (Front and logics), Dasha (Back server)
-same game in real-time.  
-- Handle network latency and disconnections gracefully.  
-- Provide a smooth user experience for remote gameplay.  
-- Implement reconnection logic.  
-
-#### Major: Multiplayer game (more than two players).   + Masha (Front and logics), Dasha (Back server)  
-- Support for three or more players simultaneously.  
-- Fair gameplay mechanics for all participants.  
-- Proper synchronization across all clients.  
-
-#### Major: Add another game with user history and matchmaking.    ? -/+  
-- Implement a second distinct game.  
-- Track user history and statistics for this game.  
-- Implement a matchmaking system.  
-- Maintain performance and responsiveness.  
-
-#### Major: Implement advanced 3D graphics using a library like Three.js or Babylon.js.    ? -/+  
-- Create an immersive 3D environment.  
-- Implement advanced rendering techniques.  
-- Ensure smooth performance and user interaction.  
-
-#### Minor: Advanced chat features (enhances the basic chat from "User interaction" module).    ? -/+  
-- Ability to block users from messaging you.  
-- Invite users to play games directly from chat.  
-- Game/tournament notifications in chat.  
-- Access to user profiles from chat interface.  
-- Chat history persistence.  
-- Typing indicators and read receipts.  
-
-#### Minor: Implement a tournament system.    + ?  
-- Clear matchup order and bracket system.  
-- Track who plays against whom.  
-- Matchmaking system for tournament participants.  
-- Tournament registration and management.  
-
-#### Minor: Game customization options.    + Masha  
-- Power-ups, attacks, or special abilities.  
-- Different maps or themes.  
-- Customizable game settings.  
-- Default options must be available.  
-
-#### Minor: A gamification system to reward users for their actions.    +/-  
-- Implement at least 3 of the following: achievements, badges, leaderboards, XP/level system, daily challenges, rewards  
-- System must be persistent (stored in database)
-- Visual feedback for users (notifications, progress bars, etc.)  
-- Clear rules and progression mechanics  
-
-#### Minor: Implement spectator mode for games.   + (Dasha)  
-- Allow users to watch ongoing games.  
-- Real-time updates for spectators.  
-- Optional: spectator chat.
-
-## IV.7 DevOps
-#### Major: Infrastructure for log management using ELK (Elasticsearch, Logstash, Kibana).    + Sasha
-- Elasticsearch to store and index logs.  
-- Logstash to collect and transform logs.  
-- Kibana for visualization and dashboards.  
-- Implement log retention and archiving policies.  
-- Secure access to all components.  
-
-#### Major: Monitoring system with Prometheus and Grafana.    + Sasha  
-- Set up Prometheus to collect metrics.  
-- Configure exporters and integrations.  
-- Create custom Grafana dashboards.  
-- Set up alerting rules.  
-- Secure access to Grafana.  
-
-#### Major: Backend as microservices.    + Sasha  
-- Design loosely-coupled services with clear interfaces.  
-- Use REST APIs or message queues for communication.  
-- Each service should have a single responsibility**
-
-
-
-### DevOps
-#### ELK
-- To open kibana dashboard 
-```
-https://localhost/kibana
-```
-- to check policies, archiving and log retention
-```
-make show-policies
-```
+AI-generated suggestions were reviewed against the actual codebase before inclusion. The team remains responsible for understanding, explaining, testing, and maintaining every implemented feature.
