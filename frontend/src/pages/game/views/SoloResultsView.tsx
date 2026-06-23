@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { apiJson } from "../../../api/client";
 import { getSessionUser } from "../../../auth/session";
+import BackButton from "../../../components/BackButton/BackButton";
 import {
   getModeLabel,
   getResultBanner,
@@ -15,6 +16,9 @@ type SoloResultsViewProps = {
 type ProfileResponse = {
   modes?: {
     fortyLines?: {
+      value?: string | null;
+    } | null;
+    blitz?: {
       value?: string | null;
     } | null;
   };
@@ -58,11 +62,19 @@ const formatPreciseRunTime = (milliseconds: number) => {
     .padStart(3, "0")}`;
 };
 
+const parseResultScore = (value: string | null | undefined) => {
+  if (!value) return null;
+
+  const score = Number(value.replace(/[^\d]/g, ""));
+  return Number.isFinite(score) ? score : null;
+};
+
 export default function SoloResultsView({
   session,
 }: SoloResultsViewProps) {
   const { gameConfig, result } = session;
   const [isFortyLinesPersonalBest, setIsFortyLinesPersonalBest] = useState(false);
+  const [isBlitzPersonalBest, setIsBlitzPersonalBest] = useState(false);
   const isSoloResult = gameConfig?.mode === "solo" && Boolean(result);
   const isCompletedObjective = result?.reason === "objective_complete";
   const isSimpleObjectiveMode =
@@ -72,6 +84,10 @@ export default function SoloResultsView({
   const shouldShowFortyLinesComplete =
     gameConfig?.mode === "solo" &&
     gameConfig.preset === "40Lines" &&
+    isCompletedObjective;
+  const shouldShowBlitzComplete =
+    gameConfig?.mode === "solo" &&
+    gameConfig.preset === "blitz" &&
     isCompletedObjective;
 
   useEffect(() => {
@@ -107,6 +123,40 @@ export default function SoloResultsView({
 
     return () => controller.abort();
   }, [result?.stats.elapsedMs, shouldShowFortyLinesComplete]);
+
+  useEffect(() => {
+    if (!shouldShowBlitzComplete) {
+      return;
+    }
+
+    const user = getSessionUser();
+    if (!user || user.isAnonymous) {
+      return;
+    }
+
+    const controller = new AbortController();
+
+    void apiJson<unknown>(
+      `/api/users/${encodeURIComponent(user.username)}/profile`,
+      { signal: controller.signal },
+    )
+      .then((data) => {
+        const profile = normalizeProfile(data);
+        const profileBestScore = parseResultScore(profile.modes?.blitz?.value);
+
+        setIsBlitzPersonalBest(
+          profileBestScore === null ||
+            (result?.stats.score ?? Number.NEGATIVE_INFINITY) >= profileBestScore,
+        );
+      })
+      .catch((error: unknown) => {
+        if (!(error instanceof DOMException && error.name === "AbortError")) {
+          setIsBlitzPersonalBest(false);
+        }
+      });
+
+    return () => controller.abort();
+  }, [result?.stats.score, shouldShowBlitzComplete]);
 
   if (!isSoloResult || gameConfig?.mode !== "solo" || !result) return null;
 
@@ -145,9 +195,7 @@ export default function SoloResultsView({
   if (shouldShowFortyLinesComplete) {
     return (
       <main className="solo-game solo-game--forty-complete">
-        <header className="forty-results__topbar">
-          <h1>RESULTS</h1>
-        </header>
+        <BackButton to={session.returnPath} />
 
         <section className="forty-results__panel" aria-label="40 Lines result">
           <span className="forty-results__label">FINAL TIME</span>
@@ -155,6 +203,32 @@ export default function SoloResultsView({
             {formatPreciseRunTime(result.stats.elapsedMs)}
           </strong>
           {isFortyLinesPersonalBest && (
+            <div className="forty-results__personal-best">PERSONAL BEST</div>
+          )}
+        </section>
+
+        <button
+          className="forty-results__again"
+          onClick={session.restartSolo}
+          type="button"
+        >
+          AGAIN
+        </button>
+      </main>
+    );
+  }
+
+  if (shouldShowBlitzComplete) {
+    return (
+      <main className="solo-game solo-game--blitz-complete">
+        <BackButton to={session.returnPath} />
+
+        <section className="forty-results__panel" aria-label="Blitz result">
+          <span className="forty-results__label">FINAL SCORE</span>
+          <strong className="forty-results__time">
+            {result.stats.score.toLocaleString("en-US")}
+          </strong>
+          {isBlitzPersonalBest && (
             <div className="forty-results__personal-best">PERSONAL BEST</div>
           )}
         </section>
