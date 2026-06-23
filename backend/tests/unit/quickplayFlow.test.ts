@@ -58,7 +58,12 @@ describe("quickplay flow", () => {
     const firstSocket = createSocket("s1", "p1");
     const secondSocket = createSocket("s2", "p2");
 
-    const firstState = joinQuickplay(firstSocket, { roomService, playerService }, {});
+    const firstState = joinQuickplay(firstSocket, { roomService, playerService }, {
+      gameConfig: {
+        mode: "quickplay",
+        modifiers: ["messier-garbage", "double-hole"],
+      },
+    });
     const room = firstState ? roomService.getRoom(firstState.id) : undefined;
 
     expect(room?.status).toBe("lobby");
@@ -81,6 +86,13 @@ describe("quickplay flow", () => {
       expect.objectContaining({
         roomId: room?.id,
         mode: "quickplay",
+        players: expect.objectContaining({
+          p1: expect.objectContaining({
+            config: expect.objectContaining({
+              modifiers: ["messier-garbage", "double-hole"],
+            }),
+          }),
+        }),
       }),
     );
     expect(firstSocket.emit).not.toHaveBeenCalledWith(

@@ -6,7 +6,7 @@ import { authFetch } from "../../../auth/authFetch";
 import { getSessionUser } from "../../../auth/session";
 import "./MultiplayerMode.scss";
 
-const QUICKPLAY_MODIFIERS_STORAGE_KEY = "tetra.quickplay.selectedModifiers";
+const QUICKPLAY_MODIFIERS_STORAGE_PREFIX = "tetra.quickplay.selectedModifiers";
 
 const quickMods = [
   {
@@ -66,6 +66,7 @@ type QuickResultState = {
     floorName?: string;
     previousBestMeters: number | null;
     isPersonalBest: boolean;
+    modifiers?: string[];
   };
   stats?: {
     elapsedMs?: number;
@@ -115,6 +116,35 @@ function getQuickResultKey(result: QuickResultState | null) {
     result.stats?.elapsedMs ?? 0,
     result.stats?.piecesPlaced ?? 0,
   ].join(":");
+}
+
+function normalizeModifierIds(modifiers: unknown): string[] {
+  if (!Array.isArray(modifiers)) return [];
+
+  const allowed = new Set<string>(quickMods.map((modifier) => modifier.id));
+  return modifiers.filter((modifier): modifier is string =>
+    typeof modifier === "string" && allowed.has(modifier),
+  );
+}
+
+function getQuickplayModifierStorageKey() {
+  const user = getSessionUser();
+  const identity = user
+    ? user.isAnonymous
+      ? `anon:${user.id}:${user.username}`
+      : `user:${user.id}`
+    : "guest";
+
+  return `${QUICKPLAY_MODIFIERS_STORAGE_PREFIX}:${identity}`;
+}
+
+function clearStoredQuickplayModifiers() {
+  for (let index = window.sessionStorage.length - 1; index >= 0; index -= 1) {
+    const key = window.sessionStorage.key(index);
+    if (key?.startsWith(`${QUICKPLAY_MODIFIERS_STORAGE_PREFIX}:`)) {
+      window.sessionStorage.removeItem(key);
+    }
+  }
 }
 
 function normalizeQuickChatMessage(
@@ -171,13 +201,9 @@ export default function Quick() {
   const { showToast } = useToast();
   const [selectedMods, setSelectedMods] = useState<string[]>(() => {
     try {
-      const saved = window.localStorage.getItem(QUICKPLAY_MODIFIERS_STORAGE_KEY);
+      const saved = window.sessionStorage.getItem(getQuickplayModifierStorageKey());
       const parsed = saved ? JSON.parse(saved) : [];
-      if (!Array.isArray(parsed)) return [];
-      const allowed = new Set<string>(quickMods.map((modifier) => modifier.id));
-      return parsed.filter((modifier): modifier is string =>
-        typeof modifier === "string" && allowed.has(modifier),
-      );
+      return normalizeModifierIds(parsed);
     } catch {
       return [];
     }
@@ -186,6 +212,7 @@ export default function Quick() {
   const [chatMessage, setChatMessage] = useState("");
   const [climbers, setClimbers] = useState<QuickLobbyPlayer[]>([]);
   const [waitingStatus, setWaitingStatus] = useState("");
+  const [submittedMods, setSubmittedMods] = useState<string[] | null>(null);
   const [hiddenResultKey, setHiddenResultKey] = useState("");
   const [sentResultKey, setSentResultKey] = useState("");
   const [quickplayBest, setQuickplayBest] = useState<string | null>(null);
@@ -199,6 +226,11 @@ export default function Quick() {
     routeResult && routeResultKey !== hiddenResultKey ? routeResult : null;
   const currentResultKey = getQuickResultKey(lastResult);
   const resultSent = Boolean(currentResultKey && currentResultKey === sentResultKey);
+  const resultSelectedMods = Array.isArray(lastResult?.quickplay?.modifiers)
+    ? normalizeModifierIds(lastResult.quickplay.modifiers)
+    : null;
+  const visibleSelectedMods =
+    submittedMods ?? (resultSelectedMods !== null ? resultSelectedMods : selectedMods);
 
   useEffect(() => {
     document.body.classList.add("mp-quick-active");
@@ -227,11 +259,11 @@ export default function Quick() {
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(
-      QUICKPLAY_MODIFIERS_STORAGE_KEY,
-      JSON.stringify(selectedMods),
+    window.sessionStorage.setItem(
+      getQuickplayModifierStorageKey(),
+      JSON.stringify(visibleSelectedMods),
     );
-  }, [selectedMods]);
+  }, [visibleSelectedMods]);
 
   useEffect(() => {
     const socket = getSocket();
@@ -277,10 +309,16 @@ export default function Quick() {
         normalizeQuickChatMessage(data, current.length),
       ]);
     };
+    const handleDisconnect = () => {
+      clearStoredQuickplayModifiers();
+      setSelectedMods([]);
+      setSubmittedMods(null);
+    };
 
     socket.on("room:update", handleRoomUpdate);
     socket.on("quickplay:lobby", handleQuickplayLobby);
     socket.on("chat:message", handleChatMessage);
+    socket.on("disconnect", handleDisconnect);
     socket.emit("quickplay:lobby");
 
     return () => {
@@ -291,14 +329,17 @@ export default function Quick() {
       socket.off("room:update", handleRoomUpdate);
       socket.off("quickplay:lobby", handleQuickplayLobby);
       socket.off("chat:message", handleChatMessage);
+      socket.off("disconnect", handleDisconnect);
     };
   }, [showToast]);
 
   const toggleMod = (modifier: string) => {
-    setSelectedMods((current) =>
-      current.includes(modifier)
-        ? current.filter((item) => item !== modifier)
-        : [...current, modifier],
+    setHiddenResultKey(currentResultKey);
+    setSubmittedMods(null);
+    setSelectedMods(
+      visibleSelectedMods.includes(modifier)
+        ? visibleSelectedMods.filter((item) => item !== modifier)
+        : [...visibleSelectedMods, modifier],
     );
   };
 
@@ -307,6 +348,8 @@ export default function Quick() {
     if (!socket) return;
 
     setHiddenResultKey(currentResultKey);
+    const modifiersToSubmit = visibleSelectedMods;
+    setSubmittedMods(modifiersToSubmit);
 
     if (pendingGameStartHandlerRef.current) {
       socket.off("game:start", pendingGameStartHandlerRef.current);
@@ -323,6 +366,7 @@ export default function Quick() {
         state: {
           ...payload,
           from: "/play/multiplayer/quick",
+          quickplayPreviousResult: lastResult,
         },
       });
     };
@@ -334,7 +378,7 @@ export default function Quick() {
       payload: {
         gameConfig: {
           mode: "quickplay",
-          modifiers: selectedMods,
+          modifiers: modifiersToSubmit,
         },
       },
     });
@@ -395,7 +439,11 @@ export default function Quick() {
       <button
         className="mp-back"
         type="button"
-        onClick={() => navigate("/play/multiplayer")}
+        onClick={() => {
+          clearStoredQuickplayModifiers();
+          setSubmittedMods(null);
+          navigate("/play/multiplayer");
+        }}
       >
         EXIT
       </button>
@@ -508,7 +556,7 @@ export default function Quick() {
               {quickMods.map((mod, index) => (
                 <button
                   className={`mp-mod-card mp-mod-card--${index + 1}${
-                    selectedMods.includes(mod.id) ? " is-selected" : ""
+                    visibleSelectedMods.includes(mod.id) ? " is-selected" : ""
                   }`}
                   key={mod.id}
                   onClick={() => toggleMod(mod.id)}
@@ -529,7 +577,7 @@ export default function Quick() {
               ))}
             </div>
             <div className="mp-mod-footer">
-              <strong>{selectedMods.length ? selectedMods.length : 0}</strong>
+              <strong>{visibleSelectedMods.length ? visibleSelectedMods.length : 0}</strong>
               <span>MODIFIERS SELECTED</span>
             </div>
           </div>

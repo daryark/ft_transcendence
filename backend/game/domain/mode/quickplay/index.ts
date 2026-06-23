@@ -107,6 +107,12 @@ function getAttackLines(linesCleared: number) {
     return 4;
 }
 
+function getBackToBackBonusLines(linesCleared: number, state: Room["state"]) {
+    if (linesCleared < 4) return 0;
+
+    return Math.max(0, (state?.backToBack ?? 0) - 1);
+}
+
 function getRoomPlayerAltitudes(room: Room) {
     let altitudes = quickplayPlayerAltitudes.get(room);
     if (!altitudes) {
@@ -133,7 +139,9 @@ function updateQuickplayAltitude(room: Room, playerId: string, state: Room["stat
 
     if (piecesPlaced > altitude.lastPiecesPlaced) {
         const linesCleared = Math.max(0, state.update?.linesCleared ?? 0);
-        const sentLines = getAttackLines(linesCleared);
+        const sentLines =
+            getAttackLines(linesCleared) +
+            getBackToBackBonusLines(linesCleared, state);
         altitude.bonusMeters +=
             (linesCleared * LINE_CLEAR_ALTITUDE_SECONDS + sentLines * ATTACK_ALTITUDE_SECONDS) *
             CLIMB_METERS_PER_SECOND;
@@ -195,6 +203,22 @@ function applyQuickplayModifiers(
     }
 
     return config;
+}
+
+function getExplicitQuickplayModifiers(payload: ConfigPatch) {
+    const gameConfig = payload.gameConfig;
+
+    if (!gameConfig || !("modifiers" in gameConfig)) return null;
+
+    return Array.isArray(gameConfig.modifiers)
+        ? (gameConfig.modifiers as QuickplayModifier[])
+        : [];
+}
+
+function getStoredQuickplayModifiers(room: Room, playerId: string) {
+    const playerConfig = getRoomPlayerConfigs(room).get(playerId);
+
+    return playerConfig?.mode === "quickplay" ? playerConfig.modifiers ?? [] : [];
 }
 
 function getRoomPlayerConfigs(room: Room) {
@@ -313,6 +337,9 @@ function buildQuickplayPlayerResult(
     const state = playerEngine?.room?.state ?? null;
     const meters = getQuickplayMeters(room, playerId, state);
     const floor = getQuickplayFloor(meters);
+    const playerConfig = getRoomPlayerConfigs(room).get(playerId);
+    const modifiers =
+        playerConfig?.mode === "quickplay" ? playerConfig.modifiers ?? [] : [];
 
     return {
         roomId: room.id,
@@ -322,6 +349,7 @@ function buildQuickplayPlayerResult(
             meters,
             floor: floor.index,
             floorName: floor.name,
+            modifiers,
             previousBestMeters: best?.previousBestMeters ?? null,
             isPersonalBest: best?.isPersonalBest ?? false,
         },
@@ -767,7 +795,8 @@ export function join(
     payload: ConfigPatch = {}
 ): RoomServiceRoomState | null {
     const baseConfig: Config = applyConfigPatch(createConfig("quickplay"), payload);
-    const modifiers =
+    const explicitModifiers = getExplicitQuickplayModifiers(payload);
+    const requestedModifiers =
         baseConfig.gameConfig.mode === "quickplay"
             ? baseConfig.gameConfig.modifiers ?? []
             : [];
@@ -814,6 +843,7 @@ export function join(
 
         activeQuickplayRoom.spectators?.delete(player.id);
         roomService.addPlayer(activeQuickplayRoom.id, player);
+        const modifiers = explicitModifiers ?? requestedModifiers;
         getRoomPlayerConfigs(activeQuickplayRoom).set(
             String(player.id),
             applyQuickplayModifiers(activeQuickplayRoom.gameConfig, modifiers),
@@ -858,12 +888,16 @@ export function join(
     if (!wasPlayerInRoom) {
         roomService.addPlayer(room.id, player);
     }
+    const playerId = String(player.id);
+    const modifiers =
+        explicitModifiers ??
+        (wasPlayerInRoom ? getStoredQuickplayModifiers(room, playerId) : requestedModifiers);
     getRoomPlayerConfigs(room).set(
-        String(player.id),
+        playerId,
         applyQuickplayModifiers(room.gameConfig, modifiers),
     );
     if (!wasPlayerInRoom) {
-        resetQuickplayAltitude(room, String(player.id));
+        resetQuickplayAltitude(room, playerId);
     }
     socket.join(room.id);
     socket.data.roomId = room.id;

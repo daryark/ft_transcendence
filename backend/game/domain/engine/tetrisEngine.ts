@@ -290,7 +290,6 @@ export default function createEngine(room: Room, roomService: RoomService) {
       }
     } else {
       state.currentCombo = 0;
-      state.backToBack = 0;
     }
 
     if (scoreAdd > 0) {

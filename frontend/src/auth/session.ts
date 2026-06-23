@@ -15,6 +15,7 @@ export type SessionData = {
 const SESSION_EVENT = "tetra-session-change";
 const SESSION_STORAGE_KEY = "tetra-session";
 const ANONYMOUS_SESSION_STORAGE_KEY = "tetra-anonymous-session";
+const QUICKPLAY_MODIFIERS_STORAGE_PREFIX = "tetra.quickplay.selectedModifiers";
 let currentSession: SessionData | null = null;
 
 const emitSessionChange = () => {
@@ -141,6 +142,12 @@ export const saveSessionUser = (user: SessionUser, token?: string) => {
 export const clearSession = () => {
   currentSession = null;
   persistSession(null);
+  for (let index = window.sessionStorage.length - 1; index >= 0; index -= 1) {
+    const key = window.sessionStorage.key(index);
+    if (key?.startsWith(`${QUICKPLAY_MODIFIERS_STORAGE_PREFIX}:`)) {
+      window.sessionStorage.removeItem(key);
+    }
+  }
   emitSessionChange();
 };
 
