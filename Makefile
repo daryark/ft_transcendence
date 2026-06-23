@@ -10,12 +10,13 @@ HOST_IP ?=
 ES_AUTH := elastic:$(ELASTIC_PASSWORD)
 ES_CURL = docker exec elasticsearch curl -s -u '$(ES_AUTH)'
 
-define PRINT_HTTPS_URL
-	@host_ip="$${HOST_IP:-$$(ip route get 1.1.1.1 2>/dev/null | awk '{for (i=1; i<=NF; i++) if ($$i == "src") {print $$(i+1); exit}}')}"; \
-	host_ip="$${host_ip:-$$(hostname -I 2>/dev/null | awk '{print $$1}')}"; \
-	if [ -z "$$host_ip" ]; then echo "Could not detect local IP. Run: HOST_IP=<ip> make $@"; exit 1; fi; \
-	echo "Open: https://$$host_ip"
-endef
+PRINT_HTTPS_URL = https://10.64.249.107/
+# define PRINT_HTTPS_URL
+# 	@host_ip="$${HOST_IP:-$$(ip route get 1.1.1.1 2>/dev/null | awk '{for (i=1; i<=NF; i++) if ($$i == "src") {print $$(i+1); exit}}')}"; \
+# 	host_ip="$${host_ip:-$$(hostname -I 2>/dev/null | awk '{print $$1}')}"; \
+# 	if [ -z "$$host_ip" ]; then echo "Could not detect local IP. Run: HOST_IP=<ip> make $@"; exit 1; fi; \
+# 	echo "Open: https://$$host_ip"
+# endef
 
 define PRINT_HTTP_URL
 	@host_ip="$${HOST_IP:-$$(ip route get 1.1.1.1 2>/dev/null | awk '{for (i=1; i<=NF; i++) if ($$i == "src") {print $$(i+1); exit}}')}"; \
