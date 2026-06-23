@@ -8,6 +8,12 @@ import { createGarbageService } from "./garbageService.js";
 const COUNTDOWN_STEP_MS = 900;
 const COUNTDOWN_STEPS = 5;
 
+function getGameUpdateBroadcastMs(playerCount: number) {
+  if (playerCount > 6) return 1000 / 15;
+  if (playerCount > 4) return 1000 / 20;
+  return 1000 / 30;
+}
+
 type PlayerEngine = {
   player: Player;
   room: Room;
@@ -184,6 +190,7 @@ export function createMultiplayerEngine({
         : room.gameConfig.garbage;
     },
   );
+  let lastGameUpdateBroadcastAt = 0;
 
   function getStateMap() {
     const states = new Map();
@@ -334,6 +341,7 @@ export function createMultiplayerEngine({
 
   multiplayerEngine.interval = setInterval(() => {
     if (room.status !== "playing") return;
+    const now = Date.now();
 
     for (const [playerId, playerEngine] of playerEngines.entries()) {
       if (playerEngine.room.state?.gameOver) {
@@ -343,6 +351,13 @@ export function createMultiplayerEngine({
 
     room.state = getFirstMultiplayerState(multiplayerEngine);
     if (onMaybeEnd(multiplayerEngine)) return;
+
+    const broadcastIntervalMs = getGameUpdateBroadcastMs(room.players.size);
+    if (now - lastGameUpdateBroadcastAt < broadcastIntervalMs) {
+      return;
+    }
+
+    lastGameUpdateBroadcastAt = now;
 
     roomService.broadcast(
       room.id,
