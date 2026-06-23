@@ -124,6 +124,16 @@ export default function SoloModePage() {
 
   useEffect(() => {
     if (!isSoloModeId(modeId)) return undefined;
+    if (modeId === "zen") {
+      setPersonalBestState(null);
+      return undefined;
+    }
+
+    const user = getSessionUser();
+    if (!user || user.isAnonymous) {
+      setPersonalBestState(null);
+      return undefined;
+    }
 
     const controller = new AbortController();
 
@@ -143,7 +153,7 @@ export default function SoloModePage() {
   }, [modeId]);
 
   const personalBest =
-    isSoloModeId(modeId) && personalBestState?.modeId === modeId
+    isSoloModeId(modeId) && modeId !== "zen" && personalBestState?.modeId === modeId
       ? personalBestState.value
       : undefined;
 
