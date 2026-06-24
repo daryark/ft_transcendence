@@ -238,16 +238,25 @@ export function useGameControls({
     const refreshFocusState = () => {
       setFocused(document.hasFocus() && document.visibilityState === "visible");
     };
+    const handleFocus = () => setFocused(document.visibilityState === "visible");
+    const handleBlur = () => setFocused(false);
+    const handleVisibilityChange = () => {
+      setFocused(document.visibilityState === "visible" && document.hasFocus());
+    };
 
     refreshFocusState();
-    window.addEventListener("focus", refreshFocusState);
-    window.addEventListener("blur", refreshFocusState);
-    document.addEventListener("visibilitychange", refreshFocusState);
+    window.addEventListener("focus", handleFocus);
+    window.addEventListener("blur", handleBlur);
+    window.addEventListener("pagehide", handleBlur);
+    window.addEventListener("pageshow", refreshFocusState);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      window.removeEventListener("focus", refreshFocusState);
-      window.removeEventListener("blur", refreshFocusState);
-      document.removeEventListener("visibilitychange", refreshFocusState);
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("blur", handleBlur);
+      window.removeEventListener("pagehide", handleBlur);
+      window.removeEventListener("pageshow", refreshFocusState);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);
 

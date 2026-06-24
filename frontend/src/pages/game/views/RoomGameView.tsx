@@ -548,7 +548,13 @@ export default function RoomGameView({ session }: RoomGameViewProps) {
 
       <GameAbortOverlay progress={session.escProgress} />
       <GameFocusOverlay
-        active={!isSpectating && !session.focused && !session.result}
+        active={
+          !session.focused &&
+          !session.result &&
+          (isQuickplay
+            ? session.isParticipant && !session.isPlayerEliminated
+            : !isSpectating)
+        }
       />
     </main>
   );

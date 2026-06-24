@@ -140,7 +140,10 @@ export function createGarbageService(
     const config = getConfig(playerId);
     if (linesCleared <= 1) return 0;
 
-    const lineAttack = linesCleared === 2 ? 1 : linesCleared === 3 ? 2 : 4;
+    const b2bBonus =
+      linesCleared >= 4 ? Math.max(0, (state?.backToBack ?? 0) - 1) : 0;
+    const lineAttack =
+      (linesCleared === 2 ? 1 : linesCleared === 3 ? 2 : 4) + b2bBonus;
     const boardEmpty = state?.board?.every((row) => row.every((cell) => !cell));
     const allClearBonus = boardEmpty ? config.allClearGarbage : 0;
 
