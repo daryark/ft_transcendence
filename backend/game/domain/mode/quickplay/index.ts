@@ -32,6 +32,9 @@ const quickplayLastPlayerTimers = new WeakMap<
     { playerId: string; timeout: ReturnType<typeof setTimeout> }
 >();
 const quickplayPersistedPlayers = new WeakMap<Room, Set<string>>();
+const quickplayLobbyBroadcastAt = new WeakMap<Room, number>();
+
+const QUICKPLAY_LOBBY_BROADCAST_MS = 200;
 
 type QuickplayAltitude = {
     bonusMeters: number;
@@ -267,6 +270,14 @@ function serializeQuickplayLobby(room: Room, engine?: MultiplayerEngine | null) 
 }
 
 function broadcastQuickplayLobby(roomService: RoomService, room: Room) {
+    const now = Date.now();
+    const lastBroadcastAt = quickplayLobbyBroadcastAt.get(room) ?? 0;
+
+    if (now - lastBroadcastAt < QUICKPLAY_LOBBY_BROADCAST_MS) {
+        return;
+    }
+
+    quickplayLobbyBroadcastAt.set(room, now);
     roomService.broadcast(
         room.id,
         "quickplay:lobby",
@@ -691,7 +702,7 @@ function startQuickplay(room: Room, roomService: RoomService) {
             getRoomPlayerConfigs(room).get(String(player.id)) ?? room.gameConfig,
         serializeGame: (engine) => {
             const payload = serializeQuickplayGame(room, engine);
-            roomService.broadcast(room.id, "quickplay:lobby", serializeQuickplayLobby(room, engine));
+            broadcastQuickplayLobby(roomService, room);
             return payload;
         },
     });

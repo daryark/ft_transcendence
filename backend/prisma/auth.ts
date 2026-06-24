@@ -18,6 +18,7 @@ const registerSchema = z.object({
   email: z.string().trim().email(),
   username: z.string().trim().min(3).max(100),
   password: z.string().min(8).max(128),
+  country: z.string().trim().min(1).max(100).optional(),
 });
 
 const loginSchema = z.object({
@@ -44,6 +45,7 @@ export type OAuthUserInput = {
   email?: string | null;
   username?: string | null;
   request?: RequestLike;
+  country?: string | null;
 };
 
 const UNKNOWN_COUNTRY = "Undefined";
@@ -51,6 +53,28 @@ const UNKNOWN_COUNTRY = "Undefined";
 const changePasswordSchema = z.object({
   newPassword: z.string().min(8).max(128),
 });
+
+function normalizeCountry(country: string | null | undefined): string | undefined {
+  if (!country) {
+    return undefined;
+  }
+
+  const trimmed = country.trim();
+
+  if (!trimmed || trimmed.toLowerCase() === "undefined" || trimmed.toLowerCase() === "null") {
+    return undefined;
+  }
+
+  return trimmed;
+}
+
+async function resolveAssignedCountry(country: string | null | undefined, request?: RequestLike): Promise<string> {
+  return (
+    normalizeCountry((await resolveCountryFromRequest(request)) ?? null) ??
+    normalizeCountry(country) ??
+    UNKNOWN_COUNTRY
+  );
+}
 
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET;
@@ -101,7 +125,7 @@ export async function registerUser(rawInput: RegisterInput, request?: RequestLik
   }
 
   const password_hash = await bcrypt.hash(input.password, 10);
-  const country = (await resolveCountryFromRequest(request)) ?? UNKNOWN_COUNTRY;
+  const country = await resolveAssignedCountry(input.country, request);
 
   const user = await prisma.users.create({
     data: {
@@ -203,7 +227,7 @@ export async function changeUserPassword(userId: number, rawInput: unknown): Pro
  * password is generated for accounts created via OAuth.
  */
 export async function findOrCreateOAuthUser(rawInput: OAuthUserInput): Promise<AuthResult> {
-  const { provider, providerId, email, username, request } = rawInput;
+  const { provider, providerId, email, username, request, country } = rawInput;
   // 1) Check if this oauth account is already linked
   const existingLink: Array<{ user_id: number }> = (await prisma.$queryRaw`
     SELECT user_id FROM oauth_accounts WHERE provider = ${provider} AND provider_user_id = ${providerId} LIMIT 1
@@ -258,14 +282,14 @@ export async function findOrCreateOAuthUser(rawInput: OAuthUserInput): Promise<A
 
   const randomPassword = (await import("crypto")).randomBytes(16).toString("hex");
   const password_hash = await bcrypt.hash(randomPassword, 10);
-  const country = (await resolveCountryFromRequest(request)) ?? UNKNOWN_COUNTRY;
+  const resolvedCountry = await resolveAssignedCountry(country, request);
 
   const created = await prisma.users.create({
     data: {
       email: email ?? `${provider}_${providerId}@noemail.local`,
       username: candidate,
       password_hash,
-      country,
+      country: resolvedCountry,
     },
     select: { id: true, email: true, username: true, created_at: true },
   });

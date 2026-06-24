@@ -178,6 +178,16 @@ api.post("/auth/login", async (req: ApiRequest, res: Response) => {
   }
 });
 
+api.get("/auth/country", async (req: ApiRequest, res: Response) => {
+  try {
+    const { resolveCountryFromRequest } = await import("./prisma/ip.js");
+    const country = await resolveCountryFromRequest(req);
+    res.json({ country: country || null });
+  } catch (error) {
+    res.json({ country: null });
+  }
+});
+
 // OAuth routes (GitHub)
 api.get("/auth/github", oauthController.redirectToGitHub);
 api.get("/auth/github/callback", oauthController.githubCallback);
