@@ -1,4 +1,4 @@
-FROM nginx:latest
+FROM mirror.gcr.io/library/nginx:latest
 
 
 RUN rm /etc/nginx/nginx.conf

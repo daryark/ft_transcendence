@@ -152,7 +152,7 @@ services:
     restart: always
   
   prometheus:
-    image: prom/prometheus
+    image: mirror.gcr.io/prom/prometheus
     container_name: prometheus
     depends_on:
       - nginx
@@ -165,7 +165,7 @@ services:
     restart: always
   
   grafana:
-    image: grafana/grafana
+    image: mirror.gcr.io/grafana/grafana
     container_name: grafana
     depends_on:
       - prometheus
@@ -185,7 +185,7 @@ services:
     restart: always
   
   node-exporter:
-    image: prom/node-exporter:latest
+    image: mirror.gcr.io/prom/node-exporter:latest
     container_name: node-exporter
     ports:
       - 9100:9100
@@ -202,7 +202,7 @@ services:
 
 
   nginx-exporter:
-    image: nginx/nginx-prometheus-exporter
+    image: mirror.gcr.io/nginx/nginx-prometheus-exporter
     container_name: nginx-exporter
     command:
       - '-nginx.scrape-uri=http://nginx:8080/nginx_status'
