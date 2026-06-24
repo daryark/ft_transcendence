@@ -107,6 +107,35 @@ function formatElapsedTime(elapsedMs?: number) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
+function formatMeters(meters: number) {
+  return `${meters.toLocaleString("en-US", {
+    maximumFractionDigits: 2,
+  })} m`;
+}
+
+function readMeters(value: string | null) {
+  if (!value) return null;
+
+  const meters = Number(value.replace(/,/g, "").replace(/\s*m$/i, ""));
+  return Number.isFinite(meters) ? meters : null;
+}
+
+function getUpdatedQuickplayBest(
+  current: string | null,
+  result: QuickResultState | null,
+) {
+  const resultMeters = result?.quickplay?.meters;
+
+  if (typeof resultMeters !== "number" || !Number.isFinite(resultMeters)) {
+    return current;
+  }
+
+  const currentMeters = readMeters(current);
+  return currentMeters !== null && currentMeters >= resultMeters
+    ? current
+    : formatMeters(resultMeters);
+}
+
 function getQuickResultKey(result: QuickResultState | null) {
   if (!result?.quickplay) return "";
 
@@ -231,6 +260,10 @@ export default function Quick() {
     : null;
   const visibleSelectedMods =
     submittedMods ?? (resultSelectedMods !== null ? resultSelectedMods : selectedMods);
+  const displayedQuickplayBest = getUpdatedQuickplayBest(
+    quickplayBest,
+    routeResult,
+  );
 
   useEffect(() => {
     document.body.classList.add("mp-quick-active");
@@ -541,7 +574,7 @@ export default function Quick() {
                 <p>Leaderboards reset every week. How far can you get?</p>
                 <div className="mp-best">
                   Personal best
-                  <strong>{quickplayBest ?? "NO RECORD"}</strong>
+                  <strong>{displayedQuickplayBest ?? "NO RECORD"}</strong>
                 </div>
               </>
             )}

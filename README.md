@@ -4,7 +4,9 @@
 
 ## Description
 
-**Tetra** is a real-time multiplayer Tetris platform built as the final 42 Common Core web project. The goal is to provide a complete browser game where users can register, log in, customize game modes, play solo or multiplayer Tetris, interact with other players, track progression, and observe the system through production-style monitoring tools.
+**Tetra** is a real-time multiplayer Tetris platform built as the final 42 Common Core web project.
+
+The goal is to provide a complete browser game where users can register, log in, customize game modes, play solo or multiplayer Tetris, interact with other players, track progression, and observe the system through production-style monitoring tools.
 
 Key features:
 
@@ -21,7 +23,6 @@ Key features:
 
 - Docker and Docker Compose.
 - `make`.
-- Latest stable Google Chrome for evaluation.
 - Optional for local development: Node.js `>=22.12.0` and npm `>=10`.
 - Local environment file at project root: `.env`.
 - TLS certificate files in `tools/`:
@@ -38,14 +39,12 @@ cp .env.example .env
 
 Then edit `.env` with real local values. The most important variables are:
 
-- `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `DATABASE_URL`
-- `JWT_SECRET`
-- `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_CALLBACK_URL`
-- `FRONTEND_URL`
-- `ELASTIC_PASSWORD`, `KIBANA_SYSTEM_PASSWORD`, `LOGSTASH_INTERNAL_PASSWORD`
-- `KIBANA_ENCRYPTION_KEY`
-- `GRAFANA_ADMIN_PASSWORD`
-- `NGINX_HTTPS_PORT`
+- database: `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB`, `DATABASE_URL`
+- authentication: `JWT_SECRET`
+- GitHub OAuth: `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`, `GITHUB_CALLBACK_URL`
+- application URL: `FRONTEND_URL`
+- observability: `ELASTIC_PASSWORD`, `KIBANA_SYSTEM_PASSWORD`, `LOGSTASH_INTERNAL_PASSWORD`, `KIBANA_ENCRYPTION_KEY`, `GRAFANA_ADMIN_PASSWORD`
+- HTTPS port: `NGINX_HTTPS_PORT`
 
 ### Run With Docker
 
@@ -55,7 +54,7 @@ Build and start the full project with one command:
 make build
 ```
 
-Open the printed HTTPS URL in the browser. With the default configuration, the main entry point is:
+Default entry point:
 
 ```text
 https://localhost
@@ -130,50 +129,50 @@ Communication channels used:
 
 Coordination practices:
 
-- Features were split into smaller tasks before implementation.
-- Integration work was reviewed by at least one teammate when it affected shared contracts.
-- Backend/frontend contracts were tested manually and with automated unit/integration tests where available.
-- Risky areas such as sockets, authentication, database schema, and deployment were discussed before final wiring.
+- features were divided into small tasks before implementation;
+- shared contracts such as sockets, auth, and database schema were discussed before final wiring;
+- risky changes were reviewed by at least one teammate;
+- automated unit/integration tests and manual browser checks were used where applicable.
+
 
 ## Technical Stack
 
 ### Frontend
 
-- React 19 with TypeScript.
-- Vite for development/build tooling.
-- React Router for client-side routing.
-- Sass/SCSS modules and shared global styles.
-- Socket.IO client for realtime gameplay, notifications, social status, and room updates.
-- Vitest and Testing Library for frontend tests.
+- React 19 with TypeScript
+- Vite
+- React Router
+- Sass/SCSS
+- Socket.IO client
+- Vitest and Testing Library
 
-React was chosen because the project needs a structured interactive UI with many stateful views: authentication, play menu, game board, profiles, leaderboard, statistics, achievements, notifications, and multiplayer rooms.
+React was chosen because the application has many stateful interactive screens: authentication, menus, rooms, game boards, profiles, leaderboards, social panels, and realtime notifications.
 
 ### Backend
 
-- Node.js with TypeScript.
-- Express 5 for the HTTP API.
-- Socket.IO for realtime multiplayer events.
-- Prisma ORM with PostgreSQL.
-- JWT authentication, bcrypt password hashing, GitHub OAuth.
-- Zod validation for game configuration.
-- Jest/Supertest for backend tests.
+- Node.js with TypeScript
+- Express 5
+- Socket.IO
+- Prisma ORM
+- JWT authentication, bcrypt password hashing, GitHub OAuth
+- Zod validation for game configuration
+- Jest and Supertest
 
-Express and Socket.IO were chosen because the project needs normal REST-like account/social APIs and low-latency bidirectional game events.
+Express handles HTTP APIs, while Socket.IO handles low-latency bidirectional game, room, presence, and notification events.
 
 ### Database
 
-- PostgreSQL stores persistent user, social, match, message, notification, OAuth, and achievement data.
-- Prisma provides typed database access and schema documentation.
+- PostgreSQL
+- Prisma schema and generated client
 
-PostgreSQL was chosen for relational data integrity: users connect to friends, OAuth accounts, matches, match players, messages, notifications, and achievements through clear foreign keys.
+PostgreSQL was chosen for relational integrity between users, OAuth accounts, friends, matches, match players, messages, notifications, and achievements.
 
 ### Infrastructure
 
-- Docker Compose for one-command deployment.
-- Nginx as HTTPS reverse proxy for frontend, backend API, WebSockets, Kibana, and Grafana.
-- Redis container for infrastructure support.
-- ELK stack: Elasticsearch, Logstash, Kibana, Filebeat.
-- Prometheus, Grafana, node-exporter, nginx-exporter, and cAdvisor.
+- Docker Compose for one-command deployment
+- Nginx as HTTPS reverse proxy for frontend, API, WebSockets, Kibana, and Grafana
+- ELK stack: Elasticsearch, Logstash, Kibana, Filebeat
+- Prometheus, Grafana, node-exporter, nginx-exporter, and cAdvisor
 
 ## Database Schema
 
@@ -195,14 +194,14 @@ erDiagram
 
 Main tables:
 
-- `users`: account identity, email, username, password hash, avatar, country, XP, level, wins, play time, creation date.
+- `users`: identity, email, username, password hash, avatar, country, XP, level, wins, play time, creation date.
 - `oauth_accounts`: external provider accounts linked to users.
-- `friends`: friendship, pending request, accepted friendship, and blocked relationship state.
+- `friends`: pending, accepted, and blocked relationships.
 - `matches`: game session records with status and game mode.
-- `match_players`: per-user match results, scores, lines, pieces, holds, hard drops, combos, tetrises, duration, and win/loss result.
-- `messages`: persisted direct messages, replies, creation time, and read status.
-- `notifications`: user notifications with actor, type, title, body, optional link, JSON payload, and read state.
-- `achievements`: achievement catalog with code, name, description, rarity, and target.
+- `match_players`: per-player match results, scores, metric value, lines, pieces, holds, drops, combos, tetrises, duration, and win/loss result.
+- `messages`: persisted direct messages, replies, read state, and timestamps.
+- `notifications`: user notifications with actor, type, title, body, JSON payload, and read state.
+- `achievements`: achievement catalog.
 - `user_achievements`: unlocked achievements per user.
 
 Important enum types:
@@ -307,38 +306,69 @@ Total: `9 + 1 + 4 + 9 + 4 = 27 points`
 
 Main HTTP routes include:
 
+Auth:
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 - `GET /api/auth/github`
+
+OAuth:
 - `GET /api/auth/github/callback`
 - `POST /api/auth/github/exchange`
 - `GET /api/auth/me`
+
+users/profile:
 - `GET /api/users/search`
 - `GET /api/users/:username/profile`
 - `PATCH /api/users/me/profile`
 - `PATCH /api/users/me/password`
+
+friends:
 - `GET /api/friends`
 - `POST /api/friends/request`
 - `POST /api/friends/respond`
 - `POST /api/friends/remove`
 - `POST /api/friends/block`
+
+messages:
 - `GET /api/messages/conversation/:friendId`
 - `POST /api/messages`
 - `PATCH /api/messages/:id/read`
+
+notifications:
 - `GET /api/notifications`
 - `PATCH /api/notifications/read`
+
+game/progression:
 - `GET /api/leaderboards`
 - `GET /api/achievements`
 
 Main Socket.IO events include:
 
-- `mode:join`, `mode:leave`
-- `rooms:list`, `rooms:update`
-- `room:start`, `room:update`
-- `quickplay:lobby`, `quickplay:spectate`
+rooms/modes:
+- `mode:join`
+- `mode:leave`
+- `rooms:list`
+- `rooms:update`
+- `room:start`
+- `room:update`
+
+quickplay:
+- `quickplay:lobby`
+- `quickplay:spectate`
+
+game:
 - `player:move`
-- `game:start`, `game:update`, `game:resume`, `game:end`, `game:stop`
-- `round:start`, `round:end`
+- `game:start`
+- `game:update`
+- `game:resume`
+- `game:end`
+- `game:stop`
+
+rounds:
+- `round:start`
+- `round:end`
+
+social/system:
 - `social:update`
 - `notifications`
 - `server:error`
@@ -354,10 +384,10 @@ Both pages are linked from the application footer and contain project-specific c
 
 ## Known Limitations
 
-- The HTTPS certificate is local/self-signed for the project environment, so browsers may require trusting it manually.
+- The HTTPS certificate is local/self-signed, so browsers may require manual trust.
+- Observability containers need enough Docker memory, especially Elasticsearch and Grafana.
 - The project is a 42 student project and is not intended for production or commercial use.
-- Some observability containers need enough local memory and Docker resources, especially Elasticsearch and Grafana.
-- If a claimed module is evaluated, it should be demonstrated through the running application, not only through code.
+- Claimed modules should be demonstrated through the running application during evaluation.
 
 ## Resources
 
@@ -381,6 +411,8 @@ Project references:
 - Web Content Accessibility Guidelines: https://www.w3.org/WAI/standards-guidelines/wcag/
 - OAuth 2.0 overview: https://oauth.net/2/
 - OWASP Password Storage Cheat Sheet: https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html
+- Tetris Wiki: https://tetris.wiki/
+- TETR.IO Wiki: https://tetrio.wiki.gg/
 
 ### AI Usage
 
