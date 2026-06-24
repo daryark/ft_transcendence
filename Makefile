@@ -32,7 +32,7 @@ prep:
 
 build:
 	@NGINX_HTTPS_PORT=$(NGINX_HTTPS_PORT) $(COMPOSE) up -d --build
-	@docker run --rm -v trans_es-snapshots:/snap alpine chown -R 1000:1000 /snap
+	@docker run --rm -v trans_es-snapshots:/snap mirror.gcr.io/library/alpine:latest chown -R 1000:1000 /snap
 	$(PRINT_HTTPS_URL)
 	@echo "Open remotehost(With OAuth): https://10.64.249.107/"
 
@@ -52,7 +52,7 @@ clean: down
 	@docker system prune -a
 
 fclean:
-	@docker stop $$(docker ps -qa)
+	-@docker stop $$(docker ps -qa)
 	@docker system prune --all --force --volumes
 	@docker network prune --force
 	@docker volume prune --force
@@ -100,8 +100,7 @@ cert:
 	mv mkcert-v*-linux-amd64 mkcert
 	chmod a+x mkcert
 	sudo mv mkcert /usr/local/bin/
-	cd tools/
-	mkcert ft-transcendence.42.fr
+	cd tools && mkcert ft-transcendence.42.fr
 
 #docker exec -it 7ef22cde1b09 psql -U myuser -d mydatabase -c "SELECT * FROM users;"
 .PHONY: prep build dev-build up down clean fclean re check cert

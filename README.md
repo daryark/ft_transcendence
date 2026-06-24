@@ -48,6 +48,8 @@ Then edit `.env` with real local values. The most important variables are:
 
 ### Run With Docker
 
+This repository uses `mirror.gcr.io` for the Docker base images in the project Dockerfiles to avoid Docker Hub pull timeouts in restricted or unstable network environments.
+
 Build and start the full project with one command:
 
 ```bash
