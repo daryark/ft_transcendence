@@ -1,0 +1,21 @@
+.channel {
+  width: min(72vw, 1450px);
+  min-height: calc(100vh - var(--app-header-height));
+  margin: 0 auto;
+  padding: 4.2rem 0 calc(var(--app-footer-height) + 2rem);
+  display: grid;
+  align-content: start;
+  gap: 0.8rem;
+}
+
+.channel__menu {
+  display: grid;
+  gap: 0.8rem;
+}
+
+@media (max-width: 900px) {
+  .channel {
+    width: calc(100vw - 1.5rem);
+    padding-top: 3.8rem;
+  }
+}

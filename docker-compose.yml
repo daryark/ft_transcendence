@@ -1,0 +1,260 @@
+services:
+  nginx:
+    build:
+      context: .
+      dockerfile: infra/nginx/Dockerfile
+    container_name: nginx
+    depends_on:
+      - backend
+      - frontend
+      - kibana
+    ports:
+      #- "80:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    networks:
+      - trancendence
+    volumes:
+      - ./tools/:/etc/nginx/ssl/
+      - nginx-logs:/var/log/nginx
+    restart: always
+
+  database:
+    build:
+      context: .
+      dockerfile: infra/postgres/Dockerfile
+    container_name: database
+    env_file:
+      - .env
+    #environment:
+     # POSTGRES_USER: ${POSTGRES_USER:-myuser}
+     # POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-mypassword}
+     # POSTGRES_DB: ${POSTGRES_DB:-mydatabase}
+     # DATABASE_URL: postgresql://${POSTGRES_USER:-myuser}:${POSTGRES_PASSWORD:-mypassword}@database:5432/${POSTGRES_DB:-mydatabase}
+    ports:
+      - "5432:5432"
+    networks:
+      - trancendence
+    restart: always
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: backend
+    depends_on:
+      - database
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    networks:
+      - trancendence
+    restart: always
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: frontend
+    ports:
+      - "5001:5001"
+    networks:
+      - trancendence
+    restart: always
+
+  redis:
+    build:
+      context: .
+      dockerfile: infra/redis/Dockerfile
+    container_name: redis
+    ports:
+      - "6380:6379"
+    networks:
+      - trancendence
+    restart: always
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.17.27
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+      - path.repo=/usr/share/elasticsearch/snapshots
+      - xpack.security.enabled=true
+      - xpack.security.transport.ssl.enabled=true
+      - ELASTIC_PASSWORD=${ELASTIC_PASSWORD}
+    #ports:
+    #  - "9200:9200"
+    env_file:
+      - .env
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+      - es-snapshots:/usr/share/elasticsearch/snapshots
+    networks:
+      - trancendence
+    restart: always
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:7.17.27
+    container_name: logstash
+    depends_on:
+    - elasticsearch
+    - kibana
+    environment:
+      - LOGSTASH_INTERNAL_PASSWORD=${LOGSTASH_INTERNAL_PASSWORD}
+    env_file:
+      - .env
+    #ports: ["5044:5044"]
+    volumes:
+      - ./infra/elk/logstash/pipeline/logstash.conf:/usr/share/logstash/pipeline/logstash.conf
+    networks:
+      - trancendence
+    restart: always
+
+  filebeat:
+    image: docker.elastic.co/beats/filebeat:7.17.27
+    container_name: filebeat
+    depends_on: 
+      - nginx
+      - logstash
+    volumes:
+      - nginx-logs:/var/log/nginx:ro
+      - ./infra/elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml
+    networks:
+      - trancendence
+    restart: always
+    
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.17.27
+    container_name: kibana
+    depends_on:
+      - elasticsearch
+    volumes:
+      - ./infra/elk/kibana/basic_dash.ndjson:/tmp/dashboard.ndjson:ro
+      - ./infra/elk/kibana/setup-kibana.sh:/tmp/setup-kibana.sh:ro
+      - ./infra/elk/elastic:/tmp/elastic:ro
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - ELASTICSEARCH_USERNAME=kibana_system
+      - ELASTICSEARCH_PASSWORD=${KIBANA_SYSTEM_PASSWORD}
+      - SERVER_BASEPATH=/kibana
+      - SERVER_PUBLICBASEURL=https://localhost/kibana
+      - SERVER_REWRITEBASEPATH=true
+      - XPACK_SECURITY_ENABLED=true
+      - XPACK_ENCRYPTEDSAVEDOBJECTS_ENCRYPTIONKEY=${KIBANA_ENCRYPTION_KEY}
+    #ports: ["5601:5601"]
+    env_file:
+    - .env
+    entrypoint: ["sh"]
+    command: ["/tmp/setup-kibana.sh"]
+    networks:
+      - trancendence
+    restart: always
+  
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    depends_on:
+      - nginx
+    #ports: ["9090:9090"]
+    volumes:
+      - ./infra/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    networks:
+      - trancendence
+    restart: always
+  
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    depends_on:
+      - prometheus
+    #ports: ["3001:3000"]
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_SERVER_ROOT_URL=https://localhost/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
+      - GF_SERVER_DOMAIN=localhost
+    networks:
+      - trancendence
+    restart: always
+  
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    ports:
+      - 9100:9100
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.ignored-mount-points="^/(sys|proc|dev|host|etc)($$|/)"'
+    networks:
+      - trancendence
+
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter
+    container_name: nginx-exporter
+    command:
+      - '-nginx.scrape-uri=http://nginx:8080/nginx_status'
+    depends_on:
+      - nginx
+    ports: ["9113:9113"]
+    networks:
+      - trancendence
+    restart: always
+  
+  #postgres-exporter:
+  #  image: prometheuscommunity/postgres-exporter
+  #  container_name: postgres-exporter
+  #  depends_on:
+  #    - database
+  #  ports: ["9187:9187"]
+  #  networks:
+  #    - trancendence
+  #  restart: always
+  
+  #redis-exporter:
+  #  image: oliver006/redis-exporter
+  #  container_name: redis-exporter
+  #  depends_on:
+  #    - redis
+  #  ports: ["9121:9121"]
+  #  networks:
+  #    - trancendence
+  #  restart: always
+  
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    privileged: true
+    ports:
+      - 8080:8080
+    volumes:
+      - /:/rootfs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks:
+      - trancendence
+    restart: always
+
+volumes:
+  esdata:
+  es-snapshots:
+  nginx-logs:
+  prometheus_data: {}
+  grafana_data: {}
+
+networks:
+  trancendence:
+    driver: bridge

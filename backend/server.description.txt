@@ -1,0 +1,17 @@
+Node.js Backend (Express)
+
+Handles:
+
+auth (JWT, OAuth)
+
+profiles
+
+friends
+
+tournaments
+
+rankings
+
+match history
+
+persistence (DB)

@@ -1,0 +1,870 @@
+.socialOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 91;
+  pointer-events: none;
+  background:
+    linear-gradient(120deg, rgba(0, 0, 0, 0.82), rgba(0, 0, 0, 0.54)),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.025) 0 1px,
+      transparent 1px 28px
+    );
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.socialOverlay.open {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+.socialPanel {
+  position: fixed;
+  top: 0;
+  bottom: var(--app-footer-height);
+  left: 0;
+  z-index: 100;
+  width: min(32rem, 76vw);
+  height: auto;
+  overflow: hidden;
+  border-right: 2px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.98);
+  box-shadow: 1rem 0 2rem rgba(0, 0, 0, 0.42);
+  transform: translateX(-100%);
+  transition: transform 180ms ease;
+}
+
+.socialPanel.open {
+  transform: translateX(0);
+}
+
+.peopleMode {
+  display: flex;
+  flex-direction: column;
+}
+
+.peopleHeader {
+  min-height: 5.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 1.25rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.07);
+}
+
+.peopleHeader h2 {
+  margin: 0;
+  color: #f5f6f7;
+  font-family: var(--app-font-display);
+  font-size: clamp(2rem, 4vw, 2.65rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.peopleHeader > div {
+  min-width: 0;
+}
+
+.peopleEyebrow {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: rgba(255, 255, 255, 0.35);
+  font-family: var(--app-font-display);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.socialClose {
+  min-height: 2.35rem;
+  padding: 0 0.85rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(255, 255, 255, 0.6);
+  font-family: var(--app-font-display);
+  font-weight: 900;
+}
+
+.socialClose:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.presenceLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 1.05rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.presenceDiamond {
+  width: 1rem;
+  height: 1rem;
+  background: #40f777;
+  box-shadow: 0 0 1rem rgba(64, 247, 119, 0.38);
+  transform: rotate(45deg);
+}
+
+.peopleSearchWrap {
+  position: relative;
+  display: block;
+  margin: 0.9rem 0.7rem 0;
+}
+
+.peopleSearch {
+  width: 100%;
+  min-height: 3rem;
+  padding: 0.3rem 1rem 0.3rem 2.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  outline: 0;
+  background: #070707;
+  color: #f6f6f6;
+  font-family: var(--app-font-display);
+  font-size: 1.45rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.peopleSearch::placeholder {
+  color: rgba(255, 255, 255, 0.16);
+}
+
+.searchGlyph {
+  position: absolute;
+  top: 50%;
+  left: 0.95rem;
+  width: 0.9rem;
+  height: 0.9rem;
+  border: 3px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  transform: translateY(-50%);
+}
+
+.searchGlyph::after {
+  position: absolute;
+  right: -0.5rem;
+  bottom: -0.28rem;
+  width: 0.6rem;
+  height: 3px;
+  content: "";
+  background: rgba(255, 255, 255, 0.16);
+  transform: rotate(45deg);
+}
+
+.peopleTabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  min-height: 3.75rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.07);
+}
+
+.peopleTabs button {
+  position: relative;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
+  font-family: var(--app-font-display);
+  font-size: 1.18rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.peopleTabs button span {
+  min-width: 1.45rem;
+  display: inline-grid;
+  place-items: center;
+  margin-left: 0.25rem;
+  padding: 0.1rem 0.32rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.75rem;
+}
+
+.peopleTabs button::after {
+  position: absolute;
+  right: 0.85rem;
+  bottom: 0;
+  left: 0.85rem;
+  height: 4px;
+  content: "";
+  background: transparent;
+}
+
+.peopleTabs button:hover,
+.peopleTabs button.active {
+  color: #f3f3f3;
+}
+
+.peopleTabs button.active::after {
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.peopleList {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+  padding-bottom: 0.75rem;
+}
+
+.peopleSection h3 {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 0.62rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(5, 5, 5, 0.97);
+  color: rgba(255, 255, 255, 0.34);
+  font-family: var(--app-font-display);
+  font-size: 0.78rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+}
+
+.friendRow {
+  width: 100%;
+  min-height: 5rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: transparent;
+  color: #fff;
+  text-align: left;
+}
+
+.friendRow:hover {
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.friendRow--incoming {
+  box-shadow: inset 0.28rem 0 0 rgba(72, 242, 121, 0.72);
+}
+
+.friendRow--outgoing {
+  box-shadow: inset 0.28rem 0 0 rgba(255, 207, 103, 0.72);
+}
+
+.friendIdentity {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+.friendActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.3rem;
+}
+
+.friendAction {
+  min-height: 1.9rem;
+  padding: 0 0.55rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.72);
+  font-family: var(--app-font-display);
+  font-size: 0.7rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.friendAction:hover:not(:disabled) {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.friendAction:disabled {
+  cursor: wait;
+  opacity: 0.35;
+}
+
+.friendAction--positive {
+  border-color: rgba(72, 242, 121, 0.32);
+  background: rgba(72, 242, 121, 0.1);
+  color: #8dffa8;
+}
+
+.friendAction--danger {
+  border-color: rgba(255, 91, 116, 0.3);
+  background: rgba(255, 91, 116, 0.08);
+  color: #ff98a8;
+}
+
+.friendAvatar,
+.chatFriendAvatar,
+.miniProfileAvatar {
+  flex: 0 0 auto;
+  background:
+    linear-gradient(
+      90deg,
+      transparent 0 20%,
+      var(--avatar-color, #d6cc1e) 20% 80%,
+      transparent 80%
+    ),
+    linear-gradient(
+      var(--avatar-color, #d6cc1e) 0 36%,
+      transparent 36% 58%,
+      var(--avatar-color, #d6cc1e) 58% 100%
+    );
+  image-rendering: pixelated;
+}
+
+.friendAvatar {
+  width: 2.35rem;
+  height: 2.35rem;
+}
+
+.friendInfo {
+  min-width: 0;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.friendName {
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.82);
+  font-family: var(--app-font-display);
+  font-size: 1.35rem;
+  font-weight: 900;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.friendStatus {
+  color: rgba(255, 255, 255, 0.45);
+  font-family: var(--app-font-display);
+  font-size: 1rem;
+  font-style: italic;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: capitalize;
+}
+
+.friendStatus--online {
+  color: #4af579;
+}
+
+.friendStatus--offline {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.friendStatus--blocked {
+  color: #ff667d;
+}
+
+.friendStatus--pending {
+  color: #ffcf67;
+}
+
+.socialNotice {
+  margin: 0.7rem 0.7rem 0;
+  padding: 0.68rem 0.8rem;
+  border: 1px solid rgba(72, 242, 121, 0.24);
+  background: rgba(72, 242, 121, 0.08);
+  color: #a9ffbc;
+  font-family: var(--app-font-display);
+  font-size: 0.8rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.panelState {
+  margin: 1rem;
+  padding: 0.9rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.46);
+  font-family: var(--app-font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.errorState {
+  color: #ffd9df;
+  border-color: rgba(255, 91, 116, 0.36);
+  background: rgba(255, 91, 116, 0.12);
+}
+
+.chatMode {
+  width: min(32rem, 82vw);
+}
+
+.chatLayout {
+  height: 100%;
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+}
+
+.chatRail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  border-right: 2px solid rgba(255, 255, 255, 0.08);
+  background: #030303;
+}
+
+.chatRail button {
+  width: 3.6rem;
+  height: 3.6rem;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-family: var(--app-font-display);
+  font-size: 2rem;
+  font-weight: 900;
+}
+
+.chatRail button:hover,
+.chatRail button.active {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.railBack {
+  width: 100% !important;
+  height: 5.75rem !important;
+  font-size: 2.5rem !important;
+}
+
+.railSearch {
+  position: relative;
+}
+
+.railSearch .searchGlyph {
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.railFriend {
+  position: relative;
+}
+
+.railFriend::after {
+  position: absolute;
+  top: -0.2rem;
+  right: 0.3rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  content: "";
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  background: rgba(0, 0, 0, 0.7);
+  transform: rotate(45deg);
+}
+
+.directChat {
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.directChatHeader {
+  min-height: 11rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 1.3rem;
+  padding: 1rem 1.05rem;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.08);
+}
+
+.chatFriendAvatar {
+  width: 5.7rem;
+  height: 5.7rem;
+}
+
+.chatFriendTitle {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  justify-content: start;
+  gap: 0.45rem;
+}
+
+.chatFriendTitle h2 {
+  min-width: 0;
+  grid-column: 1 / -1;
+  margin: 0;
+  overflow: hidden;
+  color: #fff;
+  font-family: var(--app-font-display);
+  font-size: clamp(1.7rem, 3.2vw, 2.25rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.chatPresence {
+  min-height: 2.2rem;
+  display: inline-grid;
+  align-items: center;
+  padding: 0 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.42);
+  font-family: var(--app-font-display);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.chatPresence.online {
+  border-color: rgba(74, 245, 121, 0.28);
+  background: rgba(74, 245, 121, 0.08);
+  color: #8dffa8;
+}
+
+.chatPresence.offline {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.profileAction {
+  min-height: 2.2rem;
+  padding: 0 1rem;
+  border: 0;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-family: var(--app-font-display);
+  font-size: 1rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.profileAction:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.profileAction--danger {
+  background: rgba(255, 91, 116, 0.14);
+  color: #ffb1bd;
+}
+
+.chatNotice {
+  margin: 0.85rem 0.9rem 0;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: var(--app-font-display);
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.messagesList {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  overflow-y: auto;
+  padding: 0.8rem 0.75rem;
+}
+
+.messageBubble {
+  max-width: 88%;
+  padding: 0.62rem 0.72rem;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.messageBubble.mine {
+  align-self: flex-end;
+  border-color: rgba(95, 219, 124, 0.32);
+  background: rgba(95, 219, 124, 0.12);
+}
+
+.messageBubble.theirs {
+  align-self: flex-start;
+}
+
+.messageBubble p {
+  margin: 0;
+  color: #f4f4f4;
+  overflow-wrap: anywhere;
+}
+
+.messageBubble time {
+  display: block;
+  margin-top: 0.3rem;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.75rem;
+}
+
+.messageForm {
+  padding: 0.7rem;
+  border-top: 2px solid rgba(255, 255, 255, 0.08);
+}
+
+.messageInput {
+  width: 100%;
+  min-height: 3.15rem;
+  padding: 0 0.85rem;
+  border: 0;
+  outline: 0;
+  background: #060606;
+  color: #fff;
+  font-family: var(--app-font-display);
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.messageInput::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.miniProfileLayer {
+  width: min(37rem, 94vw);
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.miniProfileCard {
+  width: 100%;
+  border: 2px solid rgba(151, 255, 160, 0.22);
+  background:
+    linear-gradient(180deg, rgba(39, 91, 46, 0.96), rgba(24, 64, 30, 0.98)),
+    repeating-linear-gradient(
+      -45deg,
+      rgba(255, 255, 255, 0.035) 0 1px,
+      transparent 1px 24px
+    );
+  box-shadow: 0 1.2rem 4rem rgba(0, 0, 0, 0.62);
+}
+
+.miniProfileTop {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.8rem;
+  align-items: center;
+  padding: 0.75rem 0.85rem 0.55rem;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.miniProfileAvatar {
+  width: 4.2rem;
+  height: 4.2rem;
+}
+
+.miniProfileIdentity {
+  min-width: 0;
+}
+
+.miniProfileIdentity h2 {
+  margin: 0;
+  overflow: hidden;
+  color: #c5ffc8;
+  font-family: var(--app-font-display);
+  font-size: clamp(1.7rem, 4vw, 2.25rem);
+  font-weight: 900;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.miniProfileIdentity p {
+  margin: 0.25rem 0 0;
+  color: rgba(208, 255, 211, 0.68);
+  font-family: var(--app-font-display);
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.miniProfileActions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.miniProfileActions button,
+.fullProfileButton {
+  min-height: 2rem;
+  border: 0;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.13);
+  color: #d4ffd6;
+  font-family: var(--app-font-display);
+  font-size: 0.92rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.miniProfileActions button {
+  padding: 0 0.55rem;
+}
+
+.miniProfileActions button:hover,
+.fullProfileButton:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.miniProfileState {
+  margin: 0.85rem;
+  padding: 0.8rem;
+  color: rgba(220, 255, 224, 0.78);
+  font-family: var(--app-font-display);
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.miniProfileLevel {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.85rem 0.8rem;
+}
+
+.miniProfileLevel span {
+  min-width: 2.5rem;
+  padding: 0.25rem 0.5rem;
+  background: rgba(255, 255, 255, 0.78);
+  color: #1f4d25;
+  font-family: var(--app-font-display);
+  font-size: 1rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.miniProfileLevelBar {
+  height: 0.9rem;
+  background: rgba(0, 0, 0, 0.32);
+}
+
+.miniProfileLevelBar i {
+  height: 100%;
+  display: block;
+  background: #70ff7d;
+}
+
+.miniStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.35rem;
+  padding: 0 0.85rem 0.75rem;
+}
+
+.miniStatsGrid article {
+  min-width: 0;
+  padding: 0.55rem;
+  background: rgba(0, 0, 0, 0.16);
+  color: rgba(220, 255, 224, 0.84);
+  text-align: center;
+}
+
+.miniStatsGrid span,
+.miniStatsGrid small {
+  display: block;
+  color: rgba(220, 255, 224, 0.48);
+  font-family: var(--app-font-display);
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.miniStatsGrid strong {
+  display: block;
+  margin-top: 0.25rem;
+  color: #c5ffc8;
+  font-family: var(--app-font-display);
+  font-size: clamp(1.05rem, 2.8vw, 1.55rem);
+  font-weight: 900;
+  line-height: 1.05;
+  overflow-wrap: anywhere;
+}
+
+.miniStatsWide {
+  grid-column: 1 / -1;
+}
+
+.fullProfileButton {
+  width: 100%;
+  min-height: 2.65rem;
+  border-radius: 0;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 1.22rem;
+}
+
+@media (max-width: 720px) {
+  .socialPanel,
+  .chatMode {
+    width: 100vw;
+  }
+
+  .presenceLabel {
+    display: none;
+  }
+
+  .peopleTabs button {
+    font-size: 0.85rem;
+  }
+
+  .friendRow {
+    grid-template-columns: 1fr;
+  }
+
+  .friendActions {
+    justify-content: flex-start;
+    padding-left: 3.35rem;
+  }
+
+  .chatLayout {
+    grid-template-columns: 4.4rem minmax(0, 1fr);
+  }
+
+  .directChatHeader {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+  }
+
+  .chatFriendAvatar {
+    width: 4.5rem;
+    height: 4.5rem;
+  }
+
+  .miniProfileTop,
+  .miniStatsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .miniProfileActions {
+    justify-content: stretch;
+  }
+
+  .miniProfileActions button {
+    flex: 1;
+  }
+}

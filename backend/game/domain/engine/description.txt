@@ -1,0 +1,13 @@
+Game Engine (JavaScript)
+
+Pure logic:
+
+board
+
+piece
+
+collision
+
+line clear
+
+scoring

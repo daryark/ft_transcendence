@@ -1,0 +1,32 @@
+.system-page {
+  min-height: calc(100vh - var(--app-header-height));
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  color: #fff;
+}
+
+.system-page section {
+  width: min(34rem, 100%);
+  padding: 1.6rem;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(7, 10, 14, 0.9);
+}
+
+.system-page span {
+  color: #ff765e;
+  font-weight: 900;
+}
+
+.system-page a,
+.system-page button {
+  display: inline-grid;
+  min-height: 2.7rem;
+  place-items: center;
+  margin: 0.75rem 0.5rem 0 0;
+  padding: 0 1rem;
+  background: #fff;
+  color: #090b0f;
+  font-weight: 900;
+  text-decoration: none;
+}

@@ -1,0 +1,73 @@
+.channel-button {
+  position: relative;
+  display: block;
+  min-height: 5.75rem;
+  padding: 1rem 1.1rem;
+  overflow: hidden;
+  border: 1px solid rgba(101, 226, 111, 0.34);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0 14%, transparent 14% 50%, rgba(0, 0, 0, 0.12) 50% 64%, transparent 64%),
+    linear-gradient(90deg, rgba(26, 82, 39, 0.9), rgba(38, 118, 54, 0.82));
+  background-size: 5.4rem 5.4rem, 100% 100%;
+  box-shadow: 0 0.22rem 0 rgba(0, 0, 0, 0.78);
+  opacity: 0.9;
+  transition:
+    transform 120ms ease,
+    filter 120ms ease,
+    opacity 120ms ease;
+}
+
+.channel-button:hover {
+  transform: translateX(-1.5rem);
+  opacity: 1;
+  filter: brightness(1.18);
+}
+
+.channel-button--disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+  filter: grayscale(0.25) brightness(0.78);
+}
+
+.channel-button--disabled:hover {
+  transform: none;
+  opacity: 0.56;
+  filter: grayscale(0.18) brightness(0.88);
+}
+
+.channel-button h2 {
+  margin: 0;
+  color: #baffbf;
+  font-size: clamp(1.7rem, 4vw, 2.8rem);
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.channel-button p {
+  margin: 0.35rem 0 0;
+  color: #cfead0;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.channel-button__disabledReason {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  align-items: center;
+  padding: 0.75rem 1.1rem;
+  background: rgba(0, 22, 4, 0.72);
+  color: #fff;
+  font-size: clamp(1.1rem, 2.5vw, 1.85rem);
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.05;
+  text-shadow: 0 0.08rem 0 #000;
+  text-transform: uppercase;
+}
+
+.channel-button--me,
+.channel-button--players {
+  min-height: 4.75rem;
+}

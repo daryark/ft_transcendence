@@ -1,0 +1,54 @@
+{
+    "name": "ft_transcendence-backend",
+    "version": "1.0.0",
+    "description": "Backend for ft_transcendence, a 42 project. Provides an Express API and Socket.IO server for real-time communication.",
+    "main": "server/index.js",
+    "directories": {
+        "test": "tests"
+    },
+    "scripts": {
+        "build": "tsc",
+        "start": "npm run build && node dist/server/index.js",
+        "dev": "tsc -w & nodemon dist/server/index.js",
+        "test": "jest",
+        "prisma:test:auth": "npx tsx ../tests/prisma/test-auth.ts",
+        "prisma:test:auth:keep": "KEEP_TEST_USER=1 npx tsx ../tests/prisma/test-auth.ts",
+        "prisma:test:leaderboard": "npx tsx ../tests/prisma/test-leaderboard.ts",
+        "prisma:test:leaderboard:keep": "KEEP_TEST_DATA=1 npx tsx ../tests/prisma/test-leaderboard.ts",
+        "prisma:test:matches": "npx tsx ../tests/prisma/test-matches.ts",
+        "prisma:test:matches:keep": "KEEP_TEST_DATA=1 npx tsx ../tests/prisma/test-matches.ts",
+        "prisma:test:friends": "npx tsx ../tests/prisma/test-friends.ts",
+        "prisma:test:friends:keep": "KEEP_TEST_DATA=1 npx tsx ../tests/prisma/test-friends.ts",
+        "prisma:test:messages": "npx tsx ../tests/prisma/test-messages.ts",
+        "prisma:test:messages:keep": "KEEP_TEST_DATA=1 npx tsx ../tests/prisma/test-messages.ts"
+    },
+    "dependencies": {
+        "@prisma/adapter-pg": "6.19.3",
+        "@prisma/client": "^6.19.3",
+        "bcrypt": "^6.0.0",
+        "cors": "^2.8.6",
+        "dotenv": "^17.4.2",
+        "dotenv-expand": "^12.0.3",
+        "express": "^5.2.1",
+        "jsonwebtoken": "^9.0.3",
+        "pg": "^8.20.0",
+        "socket.io": "^4.8.3",
+        "ts-node": "^10.9.2",
+        "typescript": "^6.0.3",
+        "zod": "^4.4.3"
+    },
+    "devDependencies": {
+        "@types/bcrypt": "^6.0.0",
+        "@types/express": "^5.0.6",
+        "@types/jest": "^30.0.0",
+        "@types/jsonwebtoken": "^9.0.10",
+        "@types/node": "^22.15.21",
+        "concurrently": "^9.2.1",
+        "jest": "^30.3.0",
+        "nodemon": "^3.1.14",
+        "prisma": "^6.19.3",
+        "socket.io-client": "^4.8.3",
+        "supertest": "^7.2.2",
+        "ts-jest": "^29.4.9"
+    }
+}

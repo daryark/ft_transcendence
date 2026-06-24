@@ -1,0 +1,119 @@
+@use "./reset";
+@use "./variables" as *;
+
+:root {
+  --app-bg: #{$color-bg};
+  --app-topbar: #{$color-topbar};
+  --app-topbar-soft: #{$color-topbar-soft};
+  --app-panel: #{$color-panel};
+  --app-panel-solid: #{$color-panel-solid};
+  --app-text: #{$color-text};
+  --app-muted: #{$color-muted};
+  --app-soft: #{$color-soft};
+  --app-border: #{$color-border};
+  --app-shadow: #{$color-shadow};
+  --app-pink: #{$color-pink};
+  --app-red: #{$color-red};
+  --app-violet: #{$color-violet};
+  --app-blue: #{$color-blue};
+  --app-cyan: #{$color-cyan};
+  --app-green: #{$color-green};
+  --app-yellow: #{$color-yellow};
+  --app-orange: #{$color-orange};
+  --app-font-ui: #{$font-ui};
+  --app-font-display: #{$font-display};
+  --app-page-max: #{$page-max};
+  --app-header-height: #{$header-height};
+  --app-footer-height: #{$footer-height};
+}
+
+body {
+  min-height: 100vh;
+  overflow-x: hidden;
+  background: var(--app-bg);
+  color: var(--app-text);
+  font-family: var(--app-font-ui);
+  font-stretch: condensed;
+  letter-spacing: 0.055em;
+  line-height: 1.25;
+}
+
+#root {
+  min-height: 100vh;
+  isolation: isolate;
+}
+
+body::before {
+  position: fixed;
+  inset: var(--app-header-height) 0 var(--app-footer-height);
+  z-index: -1;
+  pointer-events: none;
+  content: "";
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.025) 0 12%, transparent 12% 50%, rgba(255, 255, 255, 0.018) 50% 62%, transparent 62%),
+    linear-gradient(180deg, transparent 0 55%, rgba(0, 0, 0, 0.42) 100%);
+  background-size: 5.8rem 5.8rem, 100% 100%;
+  opacity: 0.72;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+button {
+  border: 0;
+  border-radius: 0;
+}
+
+button:not(:disabled),
+a[href] {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+}
+
+input,
+select {
+  width: 100%;
+  min-height: 2.35rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 0;
+  background: rgba(0, 0, 0, 0.68);
+  color: var(--app-soft);
+  padding: 0 0.75rem;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.64);
+}
+
+input::placeholder {
+  color: rgba(190, 190, 198, 0.42);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.55);
+  outline-offset: 2px;
+}
+
+.container {
+  width: 100%;
+}
+
+.active {
+  color: var(--app-text);
+}
+
+body.reduced-game-effects *,
+body.reduced-game-effects *::before,
+body.reduced-game-effects *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}

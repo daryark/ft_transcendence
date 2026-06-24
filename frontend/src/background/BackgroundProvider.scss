@@ -1,0 +1,66 @@
+.app-background {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  overflow: hidden;
+  pointer-events: none;
+  background: #07090d;
+}
+
+.app-background__layer,
+.app-background__shade,
+.app-background__menu-dim {
+  position: absolute;
+  inset: 0;
+}
+
+.app-background__layer {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  transform: scale(1.015);
+}
+
+.app-background__layer--outgoing {
+  z-index: 1;
+  animation: app-background-fade-out 1400ms ease-in-out forwards;
+}
+
+.app-background__shade {
+  z-index: 2;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(2, 5, 9, 0.14),
+      rgba(2, 5, 9, 0.3) 55%,
+      rgba(2, 5, 9, 0.62)
+    ),
+    radial-gradient(circle at center, transparent 36%, rgba(0, 0, 0, 0.28));
+}
+
+.app-background__menu-dim {
+  z-index: 3;
+  background: rgba(0, 0, 0, 0.3);
+  opacity: 1;
+  transition: opacity 500ms ease;
+}
+
+body.game-screen-active .app-background__menu-dim {
+  opacity: 0;
+}
+
+@keyframes app-background-fade-out {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-background__layer--outgoing {
+    animation-duration: 1ms;
+  }
+}

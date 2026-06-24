@@ -1,0 +1,29 @@
+.confirm-dialog {
+  width: min(30rem, calc(100vw - 2rem));
+  padding: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: #0b0e13;
+  color: #fff;
+}
+
+.confirm-dialog h2 {
+  margin: 0 0 0.7rem;
+}
+
+.confirm-dialog div {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.confirm-dialog button {
+  min-height: 2.5rem;
+  padding: 0 0.9rem;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.confirm-dialog button:last-child {
+  background: #b93440;
+}

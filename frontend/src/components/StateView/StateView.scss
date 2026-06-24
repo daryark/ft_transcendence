@@ -1,0 +1,31 @@
+.skeleton {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem;
+}
+
+.skeleton span {
+  height: 2.3rem;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.06),
+    rgba(255, 255, 255, 0.14),
+    rgba(255, 255, 255, 0.06)
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shift 1.3s linear infinite;
+}
+
+.empty-state {
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.38);
+  color: #fff;
+  text-align: center;
+}
+
+@keyframes skeleton-shift {
+  to {
+    background-position: -200% 0;
+  }
+}
