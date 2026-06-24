@@ -166,7 +166,7 @@ export async function loginUser(rawInput: LoginInput): Promise<AuthResult | null
       : null;
 
   if (!loginData) {
-    return null;
+    throw new Error("Invalid email or password");
   }
 
   const user = await prisma.users.findUnique({
@@ -181,12 +181,12 @@ export async function loginUser(rawInput: LoginInput): Promise<AuthResult | null
   });
 
   if (!user) {
-    return null;
+    throw new Error("Invalid email or password");
   }
 
   const ok = await bcrypt.compare(input.password, user.password_hash);
   if (!ok) {
-    return null;
+    throw new Error("Invalid email or password");
   }
 
   const publicUser = {

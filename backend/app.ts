@@ -150,7 +150,7 @@ api.post("/auth/register", async (req: ApiRequest, res: Response) => {
     res.status(201).json({ message: "User registered!", ...auth });
   } catch (error) {
     res
-      .status(400)
+      // .status(400)
       .json({
         message: "Failed to register user",
         error: error instanceof Error ? error.message : String(error),
@@ -161,16 +161,10 @@ api.post("/auth/register", async (req: ApiRequest, res: Response) => {
 api.post("/auth/login", async (req: ApiRequest, res: Response) => {
   try {
     const auth = await loginUser(req.body);
-
-    if (!auth) {
-      // return res.status(401).json({ message: "Invalid email or password" });
-      return res.status(400).json({ message: "Invalid email or password" });
-    }
-
     res.status(200).json({ message: "User is logged in!", ...auth });
   } catch (error) {
     res
-      .status(400)
+      // .status(401)
       .json({
         message: "Failed to log in!",
         error: error instanceof Error ? error.message : String(error),
