@@ -3,6 +3,18 @@ import { join as joinQuickplay } from "../../game/domain/mode/quickplay";
 import PlayerService from "../../game/services/playerService";
 import RoomService from "../../game/services/roomService";
 
+type TestSocket = {
+  id: string;
+  data: {
+    identity: {
+      id: string;
+      type: "anonymous";
+    };
+  };
+  emit: jest.Mock;
+  join: jest.Mock;
+};
+
 function createIo() {
   const roomEmitter = { emit: jest.fn() };
 
@@ -13,7 +25,7 @@ function createIo() {
   };
 }
 
-function createSocket(id: string, playerId: string) {
+function createSocket(id: string, playerId: string): TestSocket {
   return {
     id,
     data: {
@@ -24,7 +36,7 @@ function createSocket(id: string, playerId: string) {
     },
     emit: jest.fn(),
     join: jest.fn(),
-  } as never;
+  };
 }
 
 function createPlayerService() {
@@ -58,7 +70,7 @@ describe("quickplay flow", () => {
     const firstSocket = createSocket("s1", "p1");
     const secondSocket = createSocket("s2", "p2");
 
-    const firstState = joinQuickplay(firstSocket, { roomService, playerService }, {
+    const firstState = joinQuickplay(firstSocket as never, { roomService, playerService }, {
       gameConfig: {
         mode: "quickplay",
         modifiers: ["messier-garbage", "double-hole"],
@@ -73,10 +85,10 @@ describe("quickplay flow", () => {
       expect.objectContaining({ players: 1, waitingFor: 2 }),
     );
 
-    joinQuickplay(firstSocket, { roomService, playerService }, {});
+    joinQuickplay(firstSocket as never, { roomService, playerService }, {});
     expect(room?.players.size).toBe(1);
 
-    joinQuickplay(secondSocket, { roomService, playerService }, {});
+    joinQuickplay(secondSocket as never, { roomService, playerService }, {});
 
     expect(room?.status).toBe("playing");
     expect(room?.players.has("p1" as never)).toBe(true);
