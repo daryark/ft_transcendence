@@ -1,4 +1,5 @@
 import { describe, expect, jest, test } from '@jest/globals';
+import '../helpers/mockPrisma';
 import joinSolo from '../../game/domain/mode/solo';
 import { createConfig } from '../../game/config/configBase';
 import type Player from '../../game/domain/player';

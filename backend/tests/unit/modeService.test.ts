@@ -1,4 +1,5 @@
 import { describe, expect, jest, test } from '@jest/globals';
+import '../helpers/mockPrisma';
 import createModeService from '../../game/services/modeService';
 
 describe('ModeService solo registry flow', () => {

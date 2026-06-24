@@ -1,5 +1,6 @@
 process.env.JWT_SECRET = process.env.JWT_SECRET || 'test_secret';
 
+import '../helpers/mockPrisma';
 import socketSetup from '../../sockets';
 
 describe('sockets/index connection', () => {
