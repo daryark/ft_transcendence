@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, jest, test } from '@jest/globals';
+import '../helpers/mockPrisma';
 import startGame from '../../game/domain/match/startGame';
 import { createConfig } from '../../game/config/configBase';
 import type Room from '../../game/domain/room';

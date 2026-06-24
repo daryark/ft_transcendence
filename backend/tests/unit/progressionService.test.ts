@@ -1,4 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
+import "../helpers/mockPrisma";
 import type { UserId } from "../../auth/identity";
 import { createConfig } from "../../game/config/configBase";
 import { initGame } from "../../game/domain/engine/state";
