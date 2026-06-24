@@ -150,7 +150,7 @@ api.post("/auth/register", async (req: ApiRequest, res: Response) => {
     res.status(201).json({ message: "User registered!", ...auth });
   } catch (error) {
     res
-      .status(400)
+      // .status(400)
       .json({
         message: "Failed to register user",
         error: error instanceof Error ? error.message : String(error),
@@ -161,16 +161,10 @@ api.post("/auth/register", async (req: ApiRequest, res: Response) => {
 api.post("/auth/login", async (req: ApiRequest, res: Response) => {
   try {
     const auth = await loginUser(req.body);
-
-    if (!auth) {
-      // return res.status(401).json({ message: "Invalid email or password" });
-      return res.status(400).json({ message: "Invalid email or password" });
-    }
-
     res.status(200).json({ message: "User is logged in!", ...auth });
   } catch (error) {
     res
-      .status(400)
+      // .status(401)
       .json({
         message: "Failed to log in!",
         error: error instanceof Error ? error.message : String(error),
@@ -214,19 +208,6 @@ api.get("/achievements", authenticateToken, async (req: ApiRequest, res: Respons
     });
   }
 });
-
-// to check
-// curl http://localhost:3000/api/something
-// curl http://localhost:3000/api/users/7
-
-//app.get("/", (req, res) => {
-//  res.send("Hello World!");
-//});
-
-// GET /api/something  → exact path
-//api.get("/something", (req, res) => {
-//  res.json({ message: "handled /api/something" });
-//});
 
 // GET /api/users/search?nickname=...&query=...
 api.get("/users/search", async (req: ApiRequest, res: Response) => {
@@ -353,12 +334,6 @@ api.patch("/users/me/password", authenticateToken, async (req: ApiRequest, res: 
     return res.status(status).json({ message: "Failed to update password", error: message });
   }
 });
-
-// -----------------------------------------------------------------------------
-// TODO: API route stubs — add real logic later (placeholders return 501)
-// These endpoints were noted in `backend/prisma/todo.txt` and should be
-// implemented when wiring actual services/DB logic.
-// -----------------------------------------------------------------------------
 
 // GET /api/friends
 api.get("/friends", authenticateToken, async (req: ApiRequest, res: Response) => {
@@ -731,19 +706,9 @@ api.patch("/messages/conversation/:friendId/read", authenticateToken, async (req
   }
 });
 
-// POST /api/items  (example)
-//api.post("/items", (req, res) => {
-//  res.status(201).json({ received: req.body });
-//});
-
 app.use("/api", api);
 
 app.get("/health", (req: ApiRequest, res: Response) => {
   res.json({ status: "OK" });
 }); //#3
 
-// app.use("/api/auth", authRoutes); //#1
-// app.use("/api/user", require("./routes/user.routes")); //!can be normally named as in prev line
-// app.use("/api/game", require("./routes/matchmaking.routes"));//! -||-
-
-// all about server info is in "server.about.txt" in the root of the "backend" folder.
