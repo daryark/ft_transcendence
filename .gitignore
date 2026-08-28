@@ -421,3 +421,9 @@ FodyWeavers.xsd
 
 # Prisma generated client
 backend/generated/prisma
+
+# WSL + 42 Eval Cleanup
+*.Identifier
+.env*
+*.crt
+*.key
