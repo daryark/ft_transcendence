@@ -16,6 +16,8 @@ Key features:
 - Responsive React interface with reusable UI components, legal pages, and cross-browser support target.
 - PostgreSQL persistence through Prisma ORM.
 - Dockerized deployment behind HTTPS Nginx with ELK logging and Prometheus/Grafana monitoring.
+   
+### Link to the Linkedin short [video overview](https://www.linkedin.com/feed/update/urn:li:activity:7483129602417106945/) of the project
 
 ## Instructions
 
@@ -115,8 +117,8 @@ npm run build
 | Login | Member | Assigned role(s) | Responsibilities |
 | --- | --- | --- | --- |
 | `mperetia` | Mariia Peretiatko | Product Owner, Frontend Lead, Developer | Product flow, React UI, reusable components, profile/statistics screens, legal pages, gameplay views, frontend integration with sockets and API. |
-| `dyarkovs` | Daria Yarkovska | Project Manager, Game/Realtime Developer | Team coordination, Tetris engine work, Socket.IO game events, quickplay/custom room flow, multiplayer synchronization, spectator flow. |
-| `asmolnya` | Aleksandra Smolniakova | DevOps Lead, Developer | Docker infrastructure, Nginx HTTPS proxy, ELK stack, Prometheus/Grafana monitoring, log retention and dashboards. |
+| `dyarkovs` | Daria Yarkovska | Tech Lead, Game/Realtime Developer | System Architecture, Tetris engine work, Socket.IO game events, quickplay/custom room flow, multiplayer synchronization, spectator flow. |
+| `asmolnya` | Aleksandra Smolniakova | Project Manager, DevOps Lead, Developer | Team coordination,, Docker infrastructure, Nginx HTTPS proxy, ELK stack, Prometheus/Grafana monitoring, log retention and dashboards. |
 | `svalchuk` | Severyn Valchuk | Backend/User Management Developer | Authentication, Prisma API work, profile/search/friends/messages/notifications backend, validation, database relations. |
 
 ## Project Management
